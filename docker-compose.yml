@@ -1,0 +1,50 @@
+# docker-compose.yml (位於部署資料夾)
+version: '3.8'
+
+services:
+  # 1. Go 後端服務
+  api:
+    build: 
+      context: ./lending-backend # 指定 Go 專案路徑
+      dockerfile: Dockerfile
+    container_name: lending_api
+    ports:
+      - "8000:8000"
+    environment:
+      # 在容器內，DB_HOST 必須是 'db' (服務名稱)
+      DB_HOST: db 
+      DB_PORT: 5432
+      DB_USER: lending_user
+      DB_PASSWORD: mypassword
+      DB_NAME: lending_db
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # 2. Svelte 前端服務
+  frontend:
+    build:
+      context: ./lending-frontend # 指定 Svelte 專案路徑
+      dockerfile: Dockerfile
+    container_name: lending_frontend
+    ports:
+      - "80:80" # 將主機 80 埠映射到容器 80 埠
+
+  # 3. PostgreSQL 資料庫
+  db:
+    image: postgres:16-alpine
+    container_name: lending_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: lending_db
+      POSTGRES_USER: lending_user
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

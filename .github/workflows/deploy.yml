@@ -1,0 +1,56 @@
+# .github/workflows/deploy.yml
+
+name: CI/CD Deployment
+
+on:
+  push:
+    branches:
+      - main # 只有推送到 main 分支時觸發
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        # 確保可以同時取得兩個專案的程式碼
+        with:
+          repository: onon1101/lending-system # 假設這是您的 Monorepo
+
+      # 1. 登入 Docker Hub 或其他註冊表 (如果需要發佈映像檔)
+      # - name: Login to Docker Hub
+      #   uses: docker/login-action@v3
+      #   with:
+      #     username: ${{ secrets.DOCKER_USERNAME }}
+      #     password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      # 2. SSH 連線到目標伺服器並部署
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}              # 您的伺服器 IP
+          username: ${{ secrets.SSH_USERNAME }}      # 伺服器使用者名稱 (e.g., ubuntu)
+          key: ${{ secrets.SSH_PRIVATE_KEY }}        # 私鑰 (儲存在 Secrets 中)
+          script: |
+            # 使用使用者的家目錄作為部署目錄
+            DEPLOY_DIR="/home/ubuntu/lending-system" 
+            REPO_URL="https://github.com/${{ github.repository }}.git"
+
+            # 1. 處理首次部署 (Clone) 和後續更新 (Pull)
+            if [ -d "$DEPLOY_DIR" ]; then
+                echo "Repository already exists. Pulling latest code..."
+                cd $DEPLOY_DIR
+                git pull origin main
+            else
+                echo "First time deployment. Cloning repository..."
+                mkdir -p $DEPLOY_DIR 
+                git clone $REPO_URL $DEPLOY_DIR
+                cd $DEPLOY_DIR
+            fi
+            
+            # 2. 執行 Docker Compose 部署 (不需要 sudo，因為使用者已在 docker 群組中)
+            # 注意：這裡假設您已將 ubuntu 使用者加入 docker 群組
+            /usr/bin/docker compose up -d --build --force-recreate
+            
+            echo "Deployment finished successfully."
