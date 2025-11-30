@@ -186,6 +186,7 @@ func (r *ItemRepository) GetAllItems() ([]model.GetAllItemsResponse, error) {
 	var items []model.GetAllItemsResponse
 	for rows.Next() {
 		var item model.GetAllItemsResponse
+		var imageURL sql.NullString
 
 		err := rows.Scan(
 			&item.ObjectID,
@@ -194,11 +195,15 @@ func (r *ItemRepository) GetAllItems() ([]model.GetAllItemsResponse, error) {
 			&item.CurrentStatus,
 			&item.OwnerName,
 			&item.OwnerEmail,
-			&item.ImageURL,
+			&imageURL,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("掃描物品記錄時發生錯誤: %w", err)
 		}
+
+			if imageURL.Valid {
+		item.ImageURL = imageURL.String
+	}
 
 		items = append(items, item)
 	}

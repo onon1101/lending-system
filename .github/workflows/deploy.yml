@@ -65,6 +65,7 @@ jobs:
              mkdir -p $DEPLOY_DIR 
              git clone $REPO_URL $DEPLOY_DIR
              cd $DEPLOY_DIR || exit 1
+             cp ~/.env ./.env
 
              echo "--- 3. 執行 Docker Compose 部署 ---"
              # 使用 --build 確保重新編譯 Go 和 Svelte 服務

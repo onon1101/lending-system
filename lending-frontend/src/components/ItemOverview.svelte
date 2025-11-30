@@ -72,7 +72,7 @@
                 {
                     console.log(item.image_url)
                 }
-                    <img src="{item.image_url.replace("localhost:9000", "192.168.2.110:9000")}"
+                    <img src="{"https://lending-minio.onon1101.org" + item.image_url}"
                      alt="{item.object_name}"
                     class="item-image"/>
                 {:else}

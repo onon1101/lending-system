@@ -55,12 +55,12 @@ func main() {
 	if strings.HasPrefix(minioEndPoint, "minio:") {
 		publicEndPoint = "http://localhost:9000"
 	} else {
-		publicEndPoint = "http://" + minioEndPoint
+		publicEndPoint = minioEndPoint
 	}
 
 	minioClient, err := storage.InitMinioClient(minioEndPoint, minioAccessKey, minioSecretKey, minioBucket)
 	if err != nil {
-		log.Fatalf("Minio 連線失敗: %v", err)
+		log.Fatalf("Minio 連線失敗。URL: %s, err: %v", publicEndPoint, err)
 	}
 	log.Println("成功連線到 Minio")
 
@@ -75,7 +75,6 @@ func main() {
 	loanHandler := api.NewLoanHandler(loanRepo)
 	itemHandler := api.NewItemHandler(itemRepo, storageRepo)
 
-
 	r := mux.NewRouter()
 
 	r.HandleFunc("/api/health", healthCheck).Methods("GET")
@@ -83,7 +82,7 @@ func main() {
 
 	r.HandleFunc("/api/users", userHandler.CreateUser).Methods("POST")
 	r.HandleFunc("/api/users/{user_id}", userHandler.GetUserByID).Methods("GET")
-	r.HandleFunc("/api/users/{user_id}/loans", loanHandler.GetUserActiveLoans).Methods("GET") 
+	r.HandleFunc("/api/users/{user_id}/loans", loanHandler.GetUserActiveLoans).Methods("GET")
 
 	r.HandleFunc("/api/items", itemHandler.GetAllItems).Methods("GET")
 	r.HandleFunc("/api/items", itemHandler.CreateItem).Methods("POST")
@@ -96,21 +95,24 @@ func main() {
 	// --- CORS 配置與處理器包裝 ---
 	c := cors.New(cors.Options{
 		// 允許 Svelte 前端連線
-		// AllowedOrigins: []string{"", "http://192.168.2.110:5173"}, 
+		// AllowedOrigins: []string{"", "http://192.168.2.110:5173"},
 		AllowedOrigins: []string{
-			"http://localhost:5173",          // 宿主機的 Vite/前端
-			"http://127.0.0.1:5173",          // 宿主機的 Vite/前端
-			"http://192.168.2.110:5173",      // 虛擬機 IP (Svelte frontend)
-			"http://192.168.2.110:80",         // 虛擬機 IP (Docker Nginx Port 80)},
+			"http://localhost:5173",     // 宿主機的 Vite/前端
+			"http://127.0.0.1:5173",     // 宿主機的 Vite/前端
+			"http://192.168.2.110:5173", // 虛擬機 IP (Svelte frontend)
+			"http://192.168.2.110:80",   // 虛擬機 IP (Docker Nginx Port 80)},
 			"http://192.168.50.67",
 			"http://192.168.2.228",
+			"http://daki.onon1101.org",
+			"https://daki.onon1101.org",
+			"https://lending-api.onon1101.org",
 		},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{"Content-Type", "Authorization"}, // 通常需要 Content-Type
 		// AllowCredentials: true,
 	})
 
-    // 使用 c.Handler(r) 包裝路由器，得到一個新的 handler
+	// 使用 c.Handler(r) 包裝路由器，得到一個新的 handler
 	finalHandler := c.Handler(r) // 使用新的變數名 finalHandler
 
 	fmt.Printf("Server listening on port %s...\n", port)
