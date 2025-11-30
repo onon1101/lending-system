@@ -4,8 +4,10 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"object-borrow-system/internal/db"
+	"object-borrow-system/internal/model"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -55,4 +57,40 @@ func (h *LoanHandler) GetUserActiveLoans(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusOK)
 	// 如果沒有記錄，會回傳空列表 []
 	json.NewEncoder(w).Encode(loans)
+}
+
+// internal/api/loan_handler.go (新增)
+
+// @Summary 創建新的借閱訂單
+// @Description 建立一筆新的借閱交易，並將所有指定物品的狀態更新為 'On Loan'。
+// @Tags Loans
+// @Accept json
+// @Produce json
+// @Param loan body model.CreateLoanRequest true "創建借閱請求"
+// @Success 201 {object} model.UserLoanResponse "成功創建的訂單記錄"
+// @Failure 400 {object} map[string]string "請求資料格式錯誤或物品不可用"
+// @Failure 500 {object} map[string]string "內部伺服器或資料庫錯誤"
+// @Router /api/loans [post]
+func (h *LoanHandler) CreateLoan(w http.ResponseWriter, r *http.Request) {
+    var req model.CreateLoanRequest
+    
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
+        return
+    }
+    // 簡易驗證
+    if req.UserID == 0 || len(req.ItemsID) == 0 || req.DurationHours == 0 {
+        http.Error(w, `{"error": "Missing required fields (user_id, items_id, duration_hours)"}`, http.StatusBadRequest)
+        return
+    }
+
+    loan, err := h.LoanRepo.CreateLoan(req)
+    if err != nil {
+        http.Error(w, fmt.Sprintf(`{"error": "Failed to create loan: %s"}`, err.Error()), http.StatusBadRequest)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(loan)
 }

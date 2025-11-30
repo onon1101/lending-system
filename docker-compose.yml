@@ -12,23 +12,55 @@ services:
       - "8000:8000"
     environment:
       # 在容器內，DB_HOST 必須是 'db' (服務名稱)
-      DB_HOST: db 
-      DB_PORT: 5432
-      DB_USER: lending_user
-      DB_PASSWORD: mypassword
-      DB_NAME: lending_db
+      # DB_HOST: db 
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+
+      # MINIO_ENDPOINT: minio:9000
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
     depends_on:
       db:
         condition: service_healthy
+      minio:
+        condition: service_started
 
   # 2. Svelte 前端服務
   frontend:
     build:
       context: ./lending-frontend # 指定 Svelte 專案路徑
       dockerfile: Dockerfile
+      args:
+        # 在生產環境中，API 服務名稱為 'api'
+        VITE_APP_API_URL: ${BACKEND_ENDPOINT}
     container_name: lending_frontend
     ports:
       - "80:80" # 將主機 80 埠映射到容器 80 埠
+
+  minio:
+    image: minio/minio:latest
+    container_name: lending_minio
+    ports:
+      - "9000:9000" # MinIO API 埠號
+      - "9001:9001" # MinIO Console (網頁介面) 埠號
+    volumes:
+      - minio_data:/data # 持久化儲存圖片資料
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+      # 建議將這些變數設定在 .env 檔案中
+      MINIO_SERVER_URL: ${MINIO_ENDPOINT}
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
 
   # 3. PostgreSQL 資料庫
   db:
@@ -37,9 +69,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      POSTGRES_PASSWORD: mypassword
-      POSTGRES_DB: lending_db
-      POSTGRES_USER: lending_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -47,4 +79,5 @@ services:
       retries: 5
 
 volumes:
+  minio_data:
   postgres_data:

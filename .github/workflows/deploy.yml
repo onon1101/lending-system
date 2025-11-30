@@ -33,24 +33,41 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}      # 伺服器使用者名稱 (e.g., ubuntu)
           key: ${{ secrets.SSH_PRIVATE_KEY }}        # 私鑰 (儲存在 Secrets 中)
           script: |
-            # 使用使用者的家目錄作為部署目錄
             DEPLOY_DIR="/home/ubuntu/lending-system" 
-            REPO_URL="https://github.com/${{ github.repository }}.git"
+             REPO_URL="https://github.com/${{ github.repository }}.git"
 
-            # 1. 處理首次部署 (Clone) 和後續更新 (Pull)
-            if [ -d "$DEPLOY_DIR" ]; then
-                echo "Repository already exists. Pulling latest code..."
-                cd $DEPLOY_DIR
-                git pull origin main
-            else
-                echo "First time deployment. Cloning repository..."
-                mkdir -p $DEPLOY_DIR 
-                git clone $REPO_URL $DEPLOY_DIR
-                cd $DEPLOY_DIR
-            fi
-            
-            # 2. 執行 Docker Compose 部署 (不需要 sudo，因為使用者已在 docker 群組中)
-            # 注意：這裡假設您已將 ubuntu 使用者加入 docker 群組
-            /usr/bin/docker compose up -d --build --force-recreate
-            
-            echo "Deployment finished successfully."
+             echo "--- 1. 清理舊的 Docker 服務和部署目錄 ---"
+
+             # 檢查部署目錄是否存在
+             if [ -d "$DEPLOY_DIR" ]; then
+                 echo "找到舊的部署目錄 ($DEPLOY_DIR)。"
+                 cd $DEPLOY_DIR || exit 1
+                 
+                 # 停止並移除所有容器、網路和 Volume
+                 # -v 會移除具名 Volume (例如 postgres_data, minio_data)
+                 # --rmi all 會移除所有由 docker compose up 建立的映像檔
+                 echo "正在停止並移除所有 Docker 容器、網路和 Volume..."
+                 /usr/bin/docker compose down -v --rmi all
+                 
+                 # 返回使用者的家目錄
+                 cd ~
+                 
+                 # 刪除部署目錄
+                 echo "正在刪除部署目錄..."
+                 rm -rf $DEPLOY_DIR
+             else
+                 echo "部署目錄不存在，跳過清理舊的 Docker 服務。"
+             fi
+             
+             echo "--- 2. 複製新的 Repository ---"
+             
+             echo "正在複製 Repository..."
+             mkdir -p $DEPLOY_DIR 
+             git clone $REPO_URL $DEPLOY_DIR
+             cd $DEPLOY_DIR || exit 1
+
+             echo "--- 3. 執行 Docker Compose 部署 ---"
+             # 使用 --build 確保重新編譯 Go 和 Svelte 服務
+             /usr/bin/docker compose up -d --build --force-recreate api frontend
+             
+             echo "✅ 部署成功完成。"

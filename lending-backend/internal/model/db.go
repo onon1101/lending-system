@@ -1,4 +1,5 @@
 package model
+
 import (
 	"database/sql"
 )
@@ -10,4 +11,3 @@ type DBClient interface {
 type RealDB struct {
 	*sql.DB
 }
-

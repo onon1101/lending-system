@@ -35,6 +35,319 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/items": {
+            "get": {
+                "description": "獲取系統中所有可供借閱的物品列表。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Items"
+                ],
+                "summary": "查詢所有物品列表",
+                "responses": {
+                    "200": {
+                        "description": "成功回傳物品列表",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.GetAllItemsResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "內部伺服器或資料庫錯誤",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "新增一個可供借閱的物品實體。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Items"
+                ],
+                "summary": "創建新物品",
+                "parameters": [
+                    {
+                        "description": "物品創建請求",
+                        "name": "item",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "成功創建的物品記錄",
+                        "schema": {
+                            "$ref": "#/definitions/model.Item"
+                        }
+                    },
+                    "400": {
+                        "description": "請求資料格式錯誤",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "內部伺服器或資料庫錯誤",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/items/{object_id}": {
+            "get": {
+                "description": "根據物品 ID 查詢其詳細資訊。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Items"
+                ],
+                "summary": "查詢特定物品",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "物品 ID",
+                        "name": "object_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功找到並回傳物品資訊",
+                        "schema": {
+                            "$ref": "#/definitions/model.Item"
+                        }
+                    },
+                    "404": {
+                        "description": "找不到指定 ID 的物品",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "內部伺服器或資料庫錯誤",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "根據物品 ID 更新物品名稱、描述或狀態。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Items"
+                ],
+                "summary": "更新物品資訊",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "物品 ID",
+                        "name": "object_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "物品更新請求",
+                        "name": "item",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功更新的物品記錄",
+                        "schema": {
+                            "$ref": "#/definitions/model.Item"
+                        }
+                    },
+                    "400": {
+                        "description": "請求資料格式錯誤",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "找不到指定 ID 的物品",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "內部伺服器或資料庫錯誤",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/items/{object_id}/image": {
+            "post": {
+                "description": "上傳圖片並將返回的 URL 更新到指定的物品 (object_id)。",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Items"
+                ],
+                "summary": "上傳物品圖片",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "物品 ID",
+                        "name": "object_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "圖片檔案 (Key must be 'file')",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功更新圖片 URL 的物品記錄",
+                        "schema": {
+                            "$ref": "#/definitions/model.Item"
+                        }
+                    },
+                    "400": {
+                        "description": "請求錯誤或檔案類型錯誤",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "找不到指定 ID 的物品",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "圖片上傳或資料庫更新失敗",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/loans": {
+            "post": {
+                "description": "建立一筆新的借閱交易，並將所有指定物品的狀態更新為 'On Loan'。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Loans"
+                ],
+                "summary": "創建新的借閱訂單",
+                "parameters": [
+                    {
+                        "description": "創建借閱請求",
+                        "name": "loan",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateLoanRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "成功創建的訂單記錄",
+                        "schema": {
+                            "$ref": "#/definitions/model.UserLoanResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "請求資料格式錯誤或物品不可用",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "內部伺服器或資料庫錯誤",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/status": {
             "get": {
                 "description": "檢查 API 服務是否運行，以及 PostgreSQL 資料庫連線是否成功。",
@@ -227,6 +540,20 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "model.CreateItemRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "object_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.CreateLoanRequest": {
+            "type": "object"
+        },
         "model.CreateUserRequest": {
             "type": "object",
             "properties": {
@@ -237,6 +564,52 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "password_hash": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.GetAllItemsResponse": {
+            "type": "object",
+            "properties": {
+                "current_status": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "image_url": {
+                    "type": "string"
+                },
+                "object_id": {
+                    "type": "integer"
+                },
+                "object_name": {
+                    "type": "string"
+                },
+                "owner_email": {
+                    "type": "string"
+                },
+                "owner_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Item": {
+            "type": "object",
+            "properties": {
+                "current_status": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "image_url": {
+                    "type": "string"
+                },
+                "object_id": {
+                    "type": "integer"
+                },
+                "object_name": {
                     "type": "string"
                 }
             }
@@ -252,6 +625,23 @@ const docTemplate = `{
                 },
                 "object_id": {
                     "type": "integer"
+                },
+                "object_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.UpdateItemRequest": {
+            "type": "object",
+            "properties": {
+                "current_status": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "image_url": {
+                    "type": "string"
                 },
                 "object_name": {
                     "type": "string"
@@ -304,8 +694,8 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8000",
-	BasePath:         "/api",
+	Host:             "192.168.2.110:8000",
+	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "物品借閱系統 API",
 	Description:      "這是一個基於 Go 語言和 PostgreSQL 構建的物品借閱系統後端 API。",
