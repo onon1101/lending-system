@@ -3,15 +3,19 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
- "scripts": {
-    "dev": "VITE_APP_API_URL=http://192.168.2.110:8000 vite --host 0.0.0.0 --port 5173", 
-    "dev-api": "vite", 
+  "scripts": {
+    "dev": "VITE_APP_API_URL=http://192.168.2.110:8000 vite --host 0.0.0.0 --port 5173",
+    "dev-api": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
+    "@tailwindcss/postcss": "^4.1.17",
+    "autoprefixer": "^10.4.22",
+    "postcss": "^8.5.6",
     "svelte": "^5.43.8",
+    "tailwindcss": "^4.1.17",
     "vite": "^7.2.4"
   }
 }

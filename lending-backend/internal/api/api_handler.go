@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"object-borrow-system/internal/model"
 )
@@ -40,4 +41,15 @@ func (h *APIHandler) GetSystemStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(response)
+}
+
+// @Summary 健康檢查
+// @Description 檢查服務是否正常運行
+// @Tags System
+// @Produce plain
+// @Success 200 {string} string "Service is running!"
+// @Router /api/health [get]
+func (h *APIHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
+    w.WriteHeader(http.StatusOK)
+    fmt.Fprint(w, "Service is running!")
 }

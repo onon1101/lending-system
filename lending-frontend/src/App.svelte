@@ -1,118 +1,113 @@
 <script>
-    import ItemOverview from './components/ItemOverview.svelte';
-    import UserCreation from './routes/UserCreation.svelte';
-    import UserLoans from './routes/UserLoans.svelte';
-    // --- 新增 ItemManagement 元件 ---
-    // import ItemManagement from './routes/ItemManagement.svelte'; 
+// 狀態管理
+let count = 0;
+let taskInput = '';
+let tasks = [
+{ id: 1, text: '學習 Svelte 基礎語法', completed: true },
+{ id: 2, text: '設定 Tailwind CSS 環境', completed: false },
+];
 
-    // 使用 Map 來儲存視圖和元件的映射
-    const views = {
-        'home': ItemOverview,
-        'creation': UserCreation,
-        'loans': UserLoans,
-        // 'item_manage': ItemManagement, // <-- 註冊 Item 管理視圖
-    }
-    
-    let currentView = 'home';
-    let currentItemId = null; // <-- 新增：用於儲存當前正在編輯的 Item ID
+// 響應式聲明
+$: nextCount = count + 1;
+$: pendingTasks = tasks.filter(t => !t.completed).length;
 
-    // 處理 ItemOverview 傳遞的導航事件
-    function handleNavigate(event) {
-        const { view, id } = event.detail;
-        currentView = view;
-        currentItemId = id; // <-- 將 Item ID 儲存起來
-        console.log(`切換到 ${view}, ID: ${id}`);
-    }
+// 函式：增加計數
+function increment() {
+count += 1;
+}
 
-    // 導航欄點擊處理器：重設 Item ID
-    function navigateTo(view) {
-        currentView = view;
-        // 如果切換到非 Item 管理頁面，清除 Item ID
-        if (view !== 'item_manage') {
-            currentItemId = null;
-        }
-    }
+// 函式：新增任務
+function addTask() {
+if (taskInput.trim()) {
+tasks = [...tasks, {
+id: Date.now(),
+text: taskInput.trim(),
+completed: false
+}];
+taskInput = ''; // 清空輸入框
+}
+}
+
+// 函式：切換任務完成狀態
+function toggleTask(taskId) {
+tasks = tasks.map(task =>
+task.id === taskId ? { ...task, completed: !task.completed } : task
+);
+}
 </script>
 
-<main>
-    <h1>物品借閱管理系統</h1>
+<div class="min-h-screen bg-gray-50 flex items-center justify-center p-4 sm:p-8">
 
-    <nav>
-        <button 
-            on:click={() => navigateTo('home')} 
-            class:active={currentView === 'home'}
-        >
-            🏠 系統概覽
-        </button>
-        <button 
-            on:click={() => navigateTo('creation')} 
-            class:active={currentView === 'creation'}
-        >
-            👤 創建使用者
-        </button>
-        <button 
-            on:click={() => navigateTo('loans')} 
-            class:active={currentView === 'loans'}
-        >
-            📖 查詢借閱記錄
-        </button>
-        <button 
-            on:click={() => navigateTo('item_manage')} 
-            class:active={currentView === 'item_manage'}
-        >
-            🛠️ 物品管理
-        </button>
-    </nav>
-    
-    <div class="content">
-        <svelte:component 
-            this={views[currentView]} 
-            on:navigate={handleNavigate}      itemId={currentItemId}            /> 
-    </div>
-</main>
+<!-- 主容器：寬度調整為 max-w-xl 以容納列表 -->
+
+<div class="bg-white shadow-2xl rounded-xl p-6 sm:p-10 w-full max-w-xl transition duration-500 border-t-4 border-indigo-500">
+
+<!-- 標題與計數器 -->
+<h1 class="text-3xl font-extrabold text-gray-800 mb-2 text-center">
+  Svelte + Tailwind 任務列表
+</h1>
+<p class="text-sm text-gray-500 mb-6 text-center">
+  待完成任務數：<span class="font-bold text-indigo-600">{pendingTasks}</span>
+</p>
+
+<!-- 任務輸入區 -->
+<div class="flex gap-3 mb-6">
+  <input
+    type="text"
+    bind:value={taskInput}
+    on:keydown={(e) => { if (e.key === 'Enter') addTask(); }}
+    placeholder="新增一項任務..."
+    class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+  />
+  <button
+    on:click={addTask}
+    class="bg-indigo-600 text-white p-3 rounded-lg font-semibold shadow-md hover:bg-indigo-700 transition duration-200 focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50"
+  >
+    新增
+  </button>
+</div>
+
+<!-- 任務列表 -->
+<ul class="space-y-3">
+  {#each tasks as task (task.id)}
+    <li 
+      class="flex items-center justify-between p-4 bg-gray-50 rounded-lg shadow-sm cursor-pointer hover:bg-gray-100 transition duration-150"
+      on:click={() => toggleTask(task.id)}
+    >
+      <!-- 任務文字：根據完成狀態套用不同樣式 -->
+      <span 
+        class="text-gray-700 text-base flex-grow {task.completed ? 'line-through text-gray-400' : ''}"
+      >
+        {task.text}
+      </span>
+      
+      <!-- 狀態標籤 -->
+      <span class="text-xs font-semibold px-2 py-0.5 rounded-full {task.completed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">
+        {task.completed ? '完成' : '待辦'}
+      </span>
+    </li>
+  {:else}
+    <p class="text-center text-gray-400 py-4">目前沒有待辦事項！</p>
+  {/each}
+</ul>
+
+<!-- 獨立計數器範例 -->
+<div class="mt-8 pt-6 border-t border-gray-200 flex justify-between items-center">
+    <span class="text-lg font-medium text-gray-700">總點擊次數: <span class="text-indigo-600 font-bold">{count}</span></span>
+    <button
+        on:click={increment}
+        class="py-2 px-4 bg-blue-500 text-white rounded-full text-sm hover:bg-blue-600 transition duration-200"
+    >
+        點擊 ({nextCount})
+    </button>
+</div>
+
+
+</div>
+</div>
 
 <style>
-    /* 這裡定義應用程式的主題樣式 */
-    :global(body) {
-        background-color: #1a1a1a; 
-        color: #e0e0e0;
-        font-family: Arial, sans-serif;
-        margin: 0;
-        padding: 0;
-    }
-    
-    main {
-        max-width: 1200px; /* 增加最大寬度 */
-        margin: 0 auto;
-        padding: 20px;
-    }
-
-    /* 導航欄樣式保持不變或優化 */
-    nav {
-        margin-bottom: 20px;
-        border-bottom: 2px solid #333;
-        padding-bottom: 10px;
-        display: flex;
-        gap: 10px;
-    }
-    nav button {
-        padding: 10px 15px;
-        cursor: pointer;
-        border: none;
-        background-color: #333; /* 按鈕背景 */
-        color: #fff;
-        border-radius: 4px;
-        transition: background-color 0.2s, color 0.2s;
-    }
-    nav button.active {
-        background-color: #007bff;
-        color: white;
-    }
-    
-    .content {
-        min-height: 500px;
-        padding: 20px;
-        background-color: #1f1f1f; /* 內容區塊的背景 */
-        border-radius: 8px;
-    }
+/* 這裡可以放置您專門為這個組件編寫的 CSS。
+注意：所有 Tailwind 的類別都寫在 HTML 結構中。
+*/
 </style>
