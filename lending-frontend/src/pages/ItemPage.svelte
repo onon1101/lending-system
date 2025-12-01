@@ -46,11 +46,11 @@
 <div class="bg-gray-50 min-h-screen p-6 md:px-32 md:py-28">
   <div class="mx-auto max-w-6xl">
     <div class="flex justify-center mb-10">
-      <SearchBar
+      <!-- <SearchBar
         customClass="max-w-sm w-full"
         bind:value={currentSearchTerm}
         on:search={handleSearchEvent}
-      />
+      /> -->
     </div>
 
     <div class="grid gird-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12">
@@ -74,10 +74,12 @@
       />
     </div>
 
-    <div class="bg-gray-50 min-h-screen shadow-gray-200">
-      <div class="max-w-6xl mx-auto">
+    <div class="mb-10"></div>
+
+    <div class="bg-gray-100 min-h-screen shadow-gray-200 rounded-xl shadow-lg">
+      <div class="max-w-5xl mx-auto">
         <div
-          class="grid gird-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12 mb-10"
+          class="grid gird-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-10"
         ></div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
