@@ -399,6 +399,59 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/loans/items/history/{object_id}": {
+            "get": {
+                "description": "根據物品 ID (object_id) 獲取該物品過去所有的借閱紀錄，包含借閱者名稱、開始時間與預計歸還時間。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Loans"
+                ],
+                "summary": "查詢物品借閱歷史紀錄",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "物品 ID",
+                        "name": "object_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "借閱歷史紀錄列表",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.LoanRecord"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "無效的物品 ID 格式",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "伺服器內部錯誤",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/status": {
             "get": {
                 "description": "檢查 API 服務是否運行，以及 PostgreSQL 資料庫連線是否成功。",
@@ -737,6 +790,20 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "object_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.LoanRecord": {
+            "type": "object",
+            "properties": {
+                "end_time": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "start_time": {
                     "type": "string"
                 }
             }

@@ -210,3 +210,4 @@ func (r *ItemRepository) GetAllItems() ([]model.GetAllItemsResponse, error) {
 
 	return items, nil
 }
+

@@ -61,6 +61,15 @@ definitions:
       object_name:
         type: string
     type: object
+  model.LoanRecord:
+    properties:
+      end_time:
+        type: string
+      name:
+        type: string
+      start_time:
+        type: string
+    type: object
   model.Media:
     properties:
       created_at:
@@ -374,6 +383,41 @@ paths:
               type: string
             type: object
       summary: 創建新的借閱訂單
+      tags:
+      - Loans
+  /api/loans/items/history/{object_id}:
+    get:
+      consumes:
+      - application/json
+      description: 根據物品 ID (object_id) 獲取該物品過去所有的借閱紀錄，包含借閱者名稱、開始時間與預計歸還時間。
+      parameters:
+      - description: 物品 ID
+        in: path
+        name: object_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 借閱歷史紀錄列表
+          schema:
+            items:
+              $ref: '#/definitions/model.LoanRecord'
+            type: array
+        "400":
+          description: 無效的物品 ID 格式
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 伺服器內部錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 查詢物品借閱歷史紀錄
       tags:
       - Loans
   /api/status:

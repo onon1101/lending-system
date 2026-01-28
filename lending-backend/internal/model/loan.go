@@ -28,3 +28,10 @@ type CreateLoanRequest struct {
 	ItemsID       []int `json:"items_id" example:"[101, 102]" binding:"required"`
 	DurationHours int   `json:"duration_hours" example:"72" binding:"required"` // 借閱時長 (小時)
 }
+
+// 全部都用 pointer 是因為有可能會有 null 值
+type LoanRecord struct {
+	StartTime  *time.Time `json:"start_time"`
+	EndTime    *time.Time `json:"end_time"`
+	ObjectName *string    `json:"name"`
+}

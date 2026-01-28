@@ -172,3 +172,51 @@ func (r *LoanRepository) CreateLoan(req model.CreateLoanRequest) (model.UserLoan
         // Items 列表省略，可調用 GetItemByID 填充
     }, nil
 }
+
+// 查詢某物品的使用紀錄
+func (r *LoanRepository) GetLoanHistoryByItemID(itemID int) ([]model.LoanRecord, error) {
+    query := `
+        SELECT
+            c.start_time,
+            c.end_time,
+            d.name
+        FROM items a
+        LEFT JOIN order_details b ON b.object_id = a.object_id
+        LEFT JOIN orders c ON c.order_id = b.order_id
+        LEFT JOIN users d ON d.user_id = c.user_id
+        WHERE a.object_id = $1
+        ORDER BY c.start_time DESC`
+
+    dbConn, ok := r.DB.(*model.RealDB)
+    if !ok || dbConn.DB == nil {
+        return []model.LoanRecord{}, fmt.Errorf("資料庫連線錯誤: 無法取得底層 DB 實例")
+    }
+
+    rows, err := dbConn.DB.Query(query, itemID)
+    if err != nil {
+        return nil, fmt.Errorf("查詢借閱紀錄失敗: %w", err)
+    }
+    defer rows.Close()
+
+    var history []model.LoanRecord
+    for rows.Next() {
+        var record model.LoanRecord
+
+        err := rows.Scan(
+            &record.StartTime,
+            &record.EndTime,
+            &record.ObjectName,
+        )
+        if err != nil {
+            return nil, fmt.Errorf("解析借閱紀錄失敗: %w", err)
+        }
+
+        history = append(history, record)
+    }
+
+    if err = rows.Err(); err != nil {
+        return nil, err
+    }
+
+    return history, nil
+} 

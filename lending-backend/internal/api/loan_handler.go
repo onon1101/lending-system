@@ -94,3 +94,33 @@ func (h *LoanHandler) CreateLoan(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusCreated)
     json.NewEncoder(w).Encode(loan)
 }
+
+// @Summary 查詢物品借閱歷史紀錄
+// @Description 根據物品 ID (object_id) 獲取該物品過去所有的借閱紀錄，包含借閱者名稱、開始時間與預計歸還時間。
+// @Tags Loans
+// @Accept json
+// @Produce json
+// @Param object_id path int true "物品 ID"
+// @Success 200 {array} model.LoanRecord "借閱歷史紀錄列表"
+// @Failure 400 {object} map[string]string "無效的物品 ID 格式"
+// @Failure 500 {object} map[string]string "伺服器內部錯誤"
+// @Router /api/loans/items/history/{object_id} [get]
+func (h *LoanHandler) GetLoanHistoryByItemID(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	idStr := vars["object_id"]
+
+	objectID, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, `{"error": "Invalid object ID format"}`, http.StatusBadRequest)
+		return
+	}
+
+	records, err := h.LoanRepo.GetLoanHistoryByItemID(objectID)
+	if err != nil {
+		http.Error(w, `{"error": "系統處理錯誤"}`, http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(records)
+}
