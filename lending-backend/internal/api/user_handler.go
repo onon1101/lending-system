@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
 	"object-borrow-system/internal/db"
 	"object-borrow-system/internal/model"
 	"strconv"
@@ -52,7 +53,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(newUser)
 }
 
-// @Summary 查詢特定使用者
+// @Summary 使用者 ID 查詢特定使用者
 // @Description 根據使用者 ID (user_id) 查詢其詳細資訊。
 // @Tags Users
 // @Produce json
@@ -66,6 +67,7 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	idStr := vars["user_id"]
 
+	// 將使用者 ID String 轉換成 Int 
 	userID, err := strconv.Atoi(idStr)
 	if err != nil {
 		http.Error(w, `{"error": "Invalid user ID format"}`, http.StatusBadRequest)
@@ -84,6 +86,48 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
         log.Printf("DB Error fetching user: %v", err)
 		http.Error(w, `{"error": "Failed to retrieve user due to server error"}`, http.StatusInternalServerError)
 		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(user)
+}
+
+// @Summary 使用者名稱查詢特定使用者
+// @Description 根據使用者 Name 查詢其詳細資訊。
+// @Tags Users
+// @Produce json
+// @Param username path string true "使用者名稱"
+// @Success 200 {object} model.UserResponse "成功找到並回傳使用者資訊"
+// @Failure 400 {object} map[string]string "姓名格式錯誤"
+// @Failure 404 {object} map[string]string "找不到指定姓名的使用者"
+// @Failure 500 {object} map[string]string "內部伺服器或資料庫錯誤"
+// @Router /api/users/{username} [get]
+func (h *UserHandler) GetUserByName(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	rawUsername := vars["username"]
+
+	// 如果 encoding 失敗的話
+	username, err := url.QueryUnescape(rawUsername)
+	if err != nil {
+		http.Error(w, `{"error": "Invalid encoding in username."}`, http.StatusBadRequest)
+		return 
+	}
+
+	// 使用模糊查詢使用者
+	user, err := h.UserRepo.SearchUserByName(username)
+	if err != nil {
+		
+		// 如何使用者不存在的情況
+		if strings.Contains(err.Error(), "不存在") {
+			http.Error(w, `{"error": "User not found"}`, http.StatusNotFound)
+			return
+		}
+
+		// 其他資料庫錯誤的情況
+		log.Printf("DB Error fetching user: %v", err)
+		http.Error(w, `{"error": "Failed to retrieve user due to server error"}`, http.StatusInternalServerError)
+		return 
 	}
 
 	w.Header().Set("Content-Type", "application/json")

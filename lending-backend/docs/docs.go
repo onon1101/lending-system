@@ -537,6 +537,62 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/api/users/{username}": {
+            "get": {
+                "description": "根據使用者 Name 查詢其詳細資訊。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "查詢特定使用者",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "使用者名稱",
+                        "name": "username",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功找到並回傳使用者資訊",
+                        "schema": {
+                            "$ref": "#/definitions/model.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "姓名格式錯誤",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "找不到指定姓名的使用者",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "內部伺服器或資料庫錯誤",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -623,6 +679,9 @@ const docTemplate = `{
                 "detail_status": {
                     "type": "string"
                 },
+                "object_detail_id": {
+                    "type": "integer"
+                },
                 "object_id": {
                     "type": "integer"
                 },
@@ -694,7 +753,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "192.168.2.110:8000",
+	Host:             "localhost:8000",
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "物品借閱系統 API",

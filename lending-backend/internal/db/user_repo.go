@@ -63,12 +63,46 @@ func (r *UserRepository) GetUserByID (userID int) (model.UserResponse, error) {
 		&user.Email,
 	)
 
-if err != nil {
+	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) { 
 			return model.UserResponse{}, fmt.Errorf("使用者 ID %d 不存在", userID)
 		}
 		// 其他資料庫錯誤
 		return model.UserResponse{}, fmt.Errorf("查詢使用者失敗: %w", err)
+	}
+
+	return user, nil
+}
+
+func (r *UserRepository) SearchUserByName(username string) (model.UserResponse, error) {
+	sqlStatement := `
+			SELECT user_id, name, email
+			FROM users
+			WHERE name like '%' || $1 || '%';
+	`
+
+	// 如果發現 DB 的 instance 並沒有被建立
+	dbConn, ok := r.DB.(*model.RealDB)
+	if !ok || dbConn.DB == nil {
+		return model.UserResponse{}, fmt.Errorf("資料庫連線錯誤：無法取得底層 DB 實例")
+	}
+
+	user := model.UserResponse{}
+
+	err := dbConn.DB.QueryRow(sqlStatement, username).Scan(
+		&user.UserID,
+		&user.Name,
+		&user.Email,
+	)
+
+	if err != nil {
+		// 使用者名稱沒有存在於資料庫
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.UserResponse{}, fmt.Errorf("使用者名稱 %s 不存在", username)
+		}
+
+		// 其他資料庫錯誤
+		return model.UserResponse{}, fmt.Errorf("查詢使用者失敗: %w", err);
 	}
 
 	return user, nil

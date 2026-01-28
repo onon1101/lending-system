@@ -23,7 +23,8 @@ func NewRouter(
 
     // Users
     r.HandleFunc("/api/users", users.CreateUser).Methods("POST")
-    r.HandleFunc("/api/users/{user_id}", users.GetUserByID).Methods("GET")
+    r.HandleFunc("/api/users/{user_id:[0-9]+}", users.GetUserByID).Methods("GET")
+    r.HandleFunc("/api/users/{username:[^/]+}", users.GetUserByName).Methods("GET")
     r.HandleFunc("/api/users/{user_id}/loans", loans.GetUserActiveLoans).Methods("GET")
 
     // Items
