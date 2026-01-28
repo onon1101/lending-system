@@ -45,7 +45,8 @@ func (r *UserRepository) CreateUser(req model.CreateUserRequest) (model.UserResp
 }
 
 func (r *UserRepository) GetUserByID (userID int) (model.UserResponse, error) {
-	sqlStatement := `SELECT user_id, name, email
+	sqlStatement := `
+			SELECT user_id, name, email
 			FROM users
 			WHERE user_id = $1;`
 

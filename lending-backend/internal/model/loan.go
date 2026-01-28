@@ -3,6 +3,7 @@ package model
 import "time"
 
 type LoanItemDetail struct {
+	ObjectDetailID   int       `json:"object_detail_id"`
 	ObjectID         int       `json:"object_id"`
 	ObjectName       string    `json:"object_name"`
 	DetailStatus     string    `json:"detail_status"`
@@ -22,8 +23,8 @@ type UserLoanResponse struct {
 
 // CreateLoanRequest 用於接收創建借閱訂單的請求
 type CreateLoanRequest struct {
-	UserID    int   `json:"user_id" example:"1" binding:"required"`
+	UserID int `json:"user_id" example:"1" binding:"required"`
 	// 由於我們假設一個物品只有一個實體，ItemsID 是一個要借出的物品 ID 列表
-	ItemsID   []int `json:"items_id" example:"[101, 102]" binding:"required"` 
-	DurationHours int `json:"duration_hours" example:"72" binding:"required"` // 借閱時長 (小時)
+	ItemsID       []int `json:"items_id" example:"[101, 102]" binding:"required"`
+	DurationHours int   `json:"duration_hours" example:"72" binding:"required"` // 借閱時長 (小時)
 }
