@@ -19,13 +19,15 @@ import (
 type ItemHandler struct {
 	ItemRepo    *db.ItemRepository
 	storageRepo *storage.StorageRepository
+	mediaRepo   *db.MediaRepository
 }
 
 // NewItemHandler 創建 ItemHandler 實例
-func NewItemHandler(repo *db.ItemRepository, storageRepo *storage.StorageRepository) *ItemHandler {
+func NewItemHandler(repo *db.ItemRepository, storageRepo *storage.StorageRepository, mediaRepo *db.MediaRepository) *ItemHandler {
 	return &ItemHandler{
 		ItemRepo:    repo,
 		storageRepo: storageRepo,
+		mediaRepo:   mediaRepo,
 	}
 }
 
@@ -51,8 +53,6 @@ func (h *ItemHandler) UploadItemImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
-
 	const maxUploadSize = 10 << 20 // 10MB
 	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
 	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
@@ -73,7 +73,7 @@ func (h *ItemHandler) UploadItemImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	imageURL, objectName,err := h.storageRepo.UploadItemImage(file, handler.Size, handler.Filename, contentType)
+	imageURL, objectName, err := h.storageRepo.UploadItemImage(file, handler.Size, handler.Filename, contentType)
 	if err != nil {
 		log.Printf("Storage upload failed: %v", err)
 		http.Error(w, `{"error": "Image upload failed due to server error"}`, http.StatusInternalServerError)
@@ -237,4 +237,113 @@ func (h *ItemHandler) GetAllItems(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(items)
+}
+
+// @Summary 上傳物品的媒體 (影片或圖片)
+// @Description 上傳檔案並在資料庫建立媒體記錄，關聯到特定訂單與物品。
+// @Tags Items
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "媒體檔案"
+// @Param order_id formData int false "訂單 ID"
+// @Param object_id formData int true "物品 ID"
+// @Param description formData string false "媒體描述"
+// @Success 201 {object} model.Media "成功建立的媒體記錄"
+// @Router /api/items/media [post]
+func (h *ItemHandler) UploadItemMedia(w http.ResponseWriter, r *http.Request) {
+	// 1. 設定最大上傳限制 (例如影片較大，設為 100MB)
+	const maxUploadSize = 100 << 20
+	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
+		http.Error(w, `{"error": "File too large"}`, http.StatusBadRequest)
+		return
+	}
+
+	orderIDStr := r.FormValue("order_id")
+	objectIDStr := r.FormValue("object_id")
+	description := r.FormValue("description")
+
+	// objectIDStr 轉換型別從 string 到 int
+	objectID, err := strconv.Atoi(objectIDStr)
+	if err != nil {
+		http.Error(w, `{"error": "Invalid object_id"}`, http.StatusBadRequest)
+		return
+	}
+
+	// orderID 轉換從 string 到 int
+	var orderID *int
+	if orderIDStr != "" && orderIDStr != "0"{
+		val, err := strconv.Atoi(orderIDStr)
+		if err != nil {
+			http.Error(w, `{"error": "Invalid order_id"}`, http.StatusBadRequest)
+			return
+		}
+
+		orderID = &val
+	}
+
+	// 取得影音檔案
+	file, handler, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, `{"error": "Missing File"}`, http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	// 分類照片或者影片
+	contentType := handler.Header.Get("Content-Type")
+	var fileURL, objectName string
+	var mediaType string
+
+	if strings.HasPrefix(contentType, "video/") {
+		mediaType = "video"
+		fileURL, objectName, err = h.storageRepo.UploadItemVideo(file, handler.Size, handler.Filename, contentType)
+	} else if strings.HasPrefix(contentType, "image/") {
+		mediaType = "image"
+		fileURL, objectName, err = h.storageRepo.UploadItemImage(file, handler.Size, handler.Filename, contentType)
+	} else {
+		http.Error(w, `{"error": "Unsupported file type"}`, http.StatusBadRequest)
+		return
+	}
+
+	if err != nil {
+		log.Printf("Upload file: %v", err)
+		http.Error(w, `{"error": "Upload Failed"}`, http.StatusBadRequest)
+		RecycleMinioResource(h.storageRepo, objectName)
+		return
+	}
+
+	newMedia := model.CreateMediaRequest{
+		OrderID:     orderID,
+		ObjectID:    objectID,
+		Type:        mediaType,
+		URL:         fileURL,
+		Description: description,
+	}
+
+	// 將 Media 的 metadata 寫進資料庫當中
+	result, err := h.mediaRepo.CreateMedia(newMedia)
+	if err != nil {
+		RecycleMinioResource(h.storageRepo, objectName)
+
+		if strings.Contains(err.Error(), "不存在") {
+			http.Error(w, `{"error": "Item not found"}`, http.StatusNotFound)
+			return
+		}
+
+		log.Printf("DB update failed: %v", err)
+		http.Error(w, `{"error": "Failed to save image URL to database"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(result)
+}
+
+func RecycleMinioResource(storageRepo *storage.StorageRepository, objectName string) {
+	if err := storageRepo.DeleteObject(objectName); err != nil {
+		log.Printf("WARNING: Failed to clean up MinIO object '%s' after DB transaction failure: %v", objectName, err)
+	} else {
+		log.Printf("INFO:  Successfully cleaned up MinIO object '%s' after DB failure.", objectName)
+	}
 }

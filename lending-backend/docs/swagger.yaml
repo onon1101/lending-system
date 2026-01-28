@@ -61,6 +61,23 @@ definitions:
       object_name:
         type: string
     type: object
+  model.Media:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      media_id:
+        type: integer
+      object_id:
+        type: integer
+      order_id:
+        type: integer
+      type:
+        type: string
+      url:
+        type: string
+    type: object
   model.UpdateItemRequest:
     properties:
       current_status:
@@ -291,6 +308,40 @@ paths:
       summary: 上傳物品圖片
       tags:
       - Items
+  /api/items/media:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 上傳檔案並在資料庫建立媒體記錄，關聯到特定訂單與物品。
+      parameters:
+      - description: 媒體檔案
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: 訂單 ID
+        in: formData
+        name: order_id
+        type: integer
+      - description: 物品 ID
+        in: formData
+        name: object_id
+        required: true
+        type: integer
+      - description: 媒體描述
+        in: formData
+        name: description
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 成功建立的媒體記錄
+          schema:
+            $ref: '#/definitions/model.Media'
+      summary: 上傳物品的媒體 (影片或圖片)
+      tags:
+      - Items
   /api/loans:
     post:
       consumes:
@@ -414,7 +465,7 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: 查詢特定使用者
+      summary: 使用者 ID 查詢特定使用者
       tags:
       - Users
   /api/users/{user_id}/loans:
@@ -484,7 +535,7 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: 查詢特定使用者
+      summary: 使用者名稱查詢特定使用者
       tags:
       - Users
 swagger: "2.0"

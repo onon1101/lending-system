@@ -18,7 +18,7 @@ type StorageClient interface {
 	BucketExists(ctx context.Context, bucketName string) (bool, error)
 	MakeBucket(ctx context.Context, bucketName string, opts minio.MakeBucketOptions) error
 	SetBucketPolicy(ctx context.Context, bucketName, policy string) error
-RemoveObject(ctx context.Context, bucketName, objectName string, opts minio.RemoveObjectOptions) error 
+	RemoveObject(ctx context.Context, bucketName, objectName string, opts minio.RemoveObjectOptions) error 
 }
 
 type StorageRepository struct {
@@ -111,7 +111,7 @@ func (r *StorageRepository) UploadItemImage(file io.Reader, fileSize int64, file
 	log.Printf("成功上傳檔案: %s (大小: %d bytes)", uploadInfo.Key, uploadInfo.Size)
 
 	// 組合公開 URL
-	imageURL, err := url.JoinPath(r.PublicEndpoint, r.BucketName, objectName)
+	imageURL, err := url.JoinPath("http://" + r.PublicEndpoint, r.BucketName, objectName)
 	if err != nil {
 		// MODIFIED: 失敗時返回空字串和空 objectName
 		return "", "", fmt.Errorf("組合圖片 URL 失敗: %w", err)
@@ -136,4 +136,55 @@ func (r *StorageRepository) DeleteObject(objectName string) error {
 
 	log.Printf("INFO: Successfully deleted MinIO object: %s", objectName)
 	return nil
+}
+
+// UploadItemVideo 負責將影片檔案上傳到物件儲存，並返回公開 URL 與物件名稱
+func (r *StorageRepository) UploadItemVideo(file io.Reader, fileSize int64, filename, contentType string) (string, string, error) {
+	ctx := context.Background()
+
+	// 1. 檢查是否為影片類型的 ContentType (簡單驗證)
+	if !strings.HasPrefix(contentType, "video/") {
+		return "", "", fmt.Errorf("檔案類型錯誤：期望影片格式，但收到 %s", contentType)
+	}
+
+	// ----------------------------------------------------
+	// 魯棒的檔名淨化邏輯 (延用您的邏輯)
+	
+	// 分開檔名和副檔名
+	lastDot := strings.LastIndex(filename, ".")
+	baseName := filename
+	ext := "" 
+	if lastDot != -1 {
+		baseName = filename[:lastDot]
+		ext = filename[lastDot:] 
+	}
+
+	// 替換潛在問題字元
+	sanitizedBaseName := strings.ReplaceAll(baseName, " ", "_")
+	sanitizedBaseName = strings.ReplaceAll(sanitizedBaseName, ":", "-")
+	sanitizedBaseName = strings.ReplaceAll(sanitizedBaseName, ".", "_")
+
+	safeFilename := sanitizedBaseName + ext
+	// ----------------------------------------------------
+
+	// 使用 video 前綴以區分圖片資源
+	objectName := fmt.Sprintf("video-%d-%s", time.Now().UnixNano(), safeFilename)
+
+	// 上傳至 MinIO
+	uploadInfo, err := r.Client.PutObject(ctx, r.BucketName, objectName, file, fileSize, minio.PutObjectOptions{
+		ContentType: contentType, // 重要：正確的 ContentType 讓瀏覽器能直接串流播放
+	})
+	if err != nil {
+		return "", "", fmt.Errorf("上傳影片到 MinIO 失敗: %w", err)
+	}
+
+	log.Printf("成功上傳影片: %s (大小: %d bytes)", uploadInfo.Key, uploadInfo.Size)
+
+	// 組合公開 URL
+	videoURL, err := url.JoinPath("http://" + r.PublicEndpoint, r.BucketName, objectName)
+	if err != nil {
+		return "", "", fmt.Errorf("組合影片 URL 失敗: %w", err)
+	}
+
+	return videoURL, objectName, nil
 }

@@ -117,6 +117,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/items/media": {
+            "post": {
+                "description": "上傳檔案並在資料庫建立媒體記錄，關聯到特定訂單與物品。",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Items"
+                ],
+                "summary": "上傳物品的媒體 (影片或圖片)",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "媒體檔案",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "訂單 ID",
+                        "name": "order_id",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "物品 ID",
+                        "name": "object_id",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "媒體描述",
+                        "name": "description",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "成功建立的媒體記錄",
+                        "schema": {
+                            "$ref": "#/definitions/model.Media"
+                        }
+                    }
+                }
+            }
+        },
         "/api/items/{object_id}": {
             "get": {
                 "description": "根據物品 ID 查詢其詳細資訊。",
@@ -441,7 +492,7 @@ const docTemplate = `{
                 "tags": [
                     "Users"
                 ],
-                "summary": "查詢特定使用者",
+                "summary": "使用者 ID 查詢特定使用者",
                 "parameters": [
                     {
                         "type": "integer",
@@ -547,7 +598,7 @@ const docTemplate = `{
                 "tags": [
                     "Users"
                 ],
-                "summary": "查詢特定使用者",
+                "summary": "使用者名稱查詢特定使用者",
                 "parameters": [
                     {
                         "type": "string",
@@ -686,6 +737,32 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "object_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Media": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "media_id": {
+                    "type": "integer"
+                },
+                "object_id": {
+                    "type": "integer"
+                },
+                "order_id": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "url": {
                     "type": "string"
                 }
             }

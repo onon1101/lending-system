@@ -33,12 +33,13 @@ func New() *Application {
 	userRepo := db.NewUserRepository(dbClient)
 	loanRepo := db.NewLoanRepository(dbClient)
 	itemRepo := db.NewItemRepository(dbClient)
+	mediaRepo := db.NewMediaRepository(dbClient)
 	storageRepo := storage.NewStorageRepository(minioClient, cfg.MinioBucketName, cfg.MinioEndpoint)
 
 	// Handlers
 	userHandler := api.NewUserHandler(userRepo)
 	loanHandler := api.NewLoanHandler(loanRepo)
-	itemHandler := api.NewItemHandler(itemRepo, storageRepo)
+	itemHandler := api.NewItemHandler(itemRepo, storageRepo, mediaRepo)
 	systemHandler := api.NewAPIHandler(dbClient)
 
 	router := NewRouter(systemHandler, userHandler, loanHandler, itemHandler)
