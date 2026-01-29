@@ -1,7 +1,7 @@
 // lending-frontend/src/stores/api.js
 export const API_BASE_URL = 
-// import.meta.env.VITE_APP_API_URL + "/api" || 
-"http://localhost:8000/api";
+import.meta.env.VITE_APP_API_URL + "/api" || 
+"http://192.168.2.110:8000/api";
 
 const MINIO_ENDPOINT = "https://lending-minio.onon1101.org"
 
