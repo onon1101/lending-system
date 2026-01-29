@@ -1,4 +1,5 @@
 <script>
+  import MediaGallery from "../components/MediaGallery.svelte";
   import { onMount, createEventDispatcher } from "svelte";
   import {
     GetItemByID,
@@ -136,5 +137,9 @@
         </p>
       {/if}
     </div>
+  </div>
+
+  <div class="detail-container">
+    <MediaGallery {itemId} />
   </div>
 {/if}

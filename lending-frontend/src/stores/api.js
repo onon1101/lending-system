@@ -53,3 +53,10 @@ export function getFullImageUrl(path) {
     // 否則拼接 MinIO Endpoint
     return `${MINIO_ENDPOINT}${path}`;
 }
+
+export async function getItemMedia(itemId) {
+    const response = await fetch(`${API_BASE_URL}/items/media/${itemId}`);
+    if (!response.ok) return [];
+    if (response.json() === null) return [];
+    return response.json();
+}

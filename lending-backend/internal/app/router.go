@@ -34,6 +34,7 @@ func NewRouter(
 	r.HandleFunc("/api/items/{object_id}", items.UpdateItem).Methods("PUT")
 	r.HandleFunc("/api/items/{object_id}/image", items.UploadItemImage).Methods("POST")
 	r.HandleFunc("/api/items/media", items.UploadItemMedia).Methods("POST")
+	r.HandleFunc("/api/items/media/{object_id}", items.GetItemMedia).Methods("GET")
 	// r.HandleFunc("/api/items/{object_id}/video")
 
 	// loan

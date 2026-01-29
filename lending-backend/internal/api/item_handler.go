@@ -32,7 +32,7 @@ func NewItemHandler(repo *db.ItemRepository, storageRepo *storage.StorageReposit
 }
 
 // ADDED: 圖片上傳函式
-// @Summary 上傳物品圖片
+// @Summary 上傳圖片封面
 // @Description 上傳圖片並將返回的 URL 更新到指定的物品 (object_id)。
 // @Tags Items
 // @Accept mpfd
@@ -247,6 +247,7 @@ func (h *ItemHandler) GetAllItems(w http.ResponseWriter, r *http.Request) {
 // @Param file formData file true "媒體檔案"
 // @Param order_id formData int false "訂單 ID"
 // @Param object_id formData int true "物品 ID"
+// @Param link formData string false "原始連結"
 // @Param description formData string false "媒體描述"
 // @Success 201 {object} model.Media "成功建立的媒體記錄"
 // @Router /api/items/media [post]
@@ -261,6 +262,7 @@ func (h *ItemHandler) UploadItemMedia(w http.ResponseWriter, r *http.Request) {
 	orderIDStr := r.FormValue("order_id")
 	objectIDStr := r.FormValue("object_id")
 	description := r.FormValue("description")
+	link := r.FormValue("link")
 
 	// objectIDStr 轉換型別從 string 到 int
 	objectID, err := strconv.Atoi(objectIDStr)
@@ -271,7 +273,7 @@ func (h *ItemHandler) UploadItemMedia(w http.ResponseWriter, r *http.Request) {
 
 	// orderID 轉換從 string 到 int
 	var orderID *int
-	if orderIDStr != "" && orderIDStr != "0"{
+	if orderIDStr != "" && orderIDStr != "0" {
 		val, err := strconv.Atoi(orderIDStr)
 		if err != nil {
 			http.Error(w, `{"error": "Invalid order_id"}`, http.StatusBadRequest)
@@ -317,6 +319,7 @@ func (h *ItemHandler) UploadItemMedia(w http.ResponseWriter, r *http.Request) {
 		ObjectID:    objectID,
 		Type:        mediaType,
 		URL:         fileURL,
+		Link:        link,
 		Description: description,
 	}
 
@@ -346,4 +349,34 @@ func RecycleMinioResource(storageRepo *storage.StorageRepository, objectName str
 	} else {
 		log.Printf("INFO:  Successfully cleaned up MinIO object '%s' after DB failure.", objectName)
 	}
+}
+
+// @Summary 取得物品的所有影音媒體
+// @Description 根據物品 ID (object_id) 獲取該物品相關的所有媒體檔案（如照片與影片），包含檔案的 URL、類型與描述。
+// @Tags Items
+// @Accept json
+// @Produce json
+// @Param object_id path int true "物品 ID"
+// @Success 200 {array} model.Media "媒體檔案列表"
+// @Failure 400 {object} map[string]string "無效的物品 ID 格式"
+// @Failure 500 {object} map[string]string "無法取得媒體項目或資料庫錯誤"
+// @Router /api/items/media/{object_id} [get]
+func (h *ItemHandler) GetItemMedia(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	idStr := vars["object_id"]
+	objectID, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, `{"error": "Invalid object ID format"}`, http.StatusBadRequest)
+		return
+	}
+
+	mediaItem, err := h.ItemRepo.GetItemMediaByItemID(objectID)
+	if err != nil {
+		http.Error(w, `{"error": "Failed to retrieve items"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(mediaItem)
 }

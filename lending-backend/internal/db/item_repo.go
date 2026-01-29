@@ -201,9 +201,9 @@ func (r *ItemRepository) GetAllItems() ([]model.GetAllItemsResponse, error) {
 			return nil, fmt.Errorf("掃描物品記錄時發生錯誤: %w", err)
 		}
 
-			if imageURL.Valid {
-		item.ImageURL = imageURL.String
-	}
+		if imageURL.Valid {
+			item.ImageURL = imageURL.String
+		}
 
 		items = append(items, item)
 	}
@@ -211,3 +211,48 @@ func (r *ItemRepository) GetAllItems() ([]model.GetAllItemsResponse, error) {
 	return items, nil
 }
 
+func (r *ItemRepository) GetItemMediaByItemID(itemID int) ([]model.GetItemMediaByItemID, error) {
+	query := `
+		SELECT 
+		    a.type,
+			c.name,
+			a.description,
+			a.link,
+			a.url,
+			a.created_at
+		FROM media a
+		LEFT JOIN orders b ON b.order_id = a.order_id
+		LEFT JOIN users c ON c.user_id = b.user_id
+		WHERE a.object_id = $1`
+
+	dbConn, ok := r.DB.(*model.RealDB)
+	if !ok || dbConn.DB == nil {
+		return []model.GetItemMediaByItemID{}, fmt.Errorf("資料庫連線錯誤: 無法取得底層 DB 實例")
+	}
+
+	rows, err := dbConn.DB.Query(query, itemID)
+	if err != nil {
+		return nil, fmt.Errorf("查詢所有媒體資料失敗: %w", err)
+	}
+	defer rows.Close()
+
+	var items []model.GetItemMediaByItemID
+	for rows.Next() {
+		var item model.GetItemMediaByItemID
+		
+		err := rows.Scan(
+			&item.Type,
+			&item.Creator,
+			&item.Description,
+			&item.OriginalLink,
+			&item.Media,
+			&item.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("掃描物品記錄時發生錯誤: %w", err)
+		}
+
+		items = append(items, item)
+	}
+	return items, nil
+}

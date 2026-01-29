@@ -29,3 +29,12 @@ type GetAllItemsResponse struct {
 	OwnerEmail    string `json:"owner_email"`
 	ImageURL      string `json:"image_url,omitempty"`
 }
+
+type GetItemMediaByItemID struct {
+	Type         string `json:"type"`
+	Creator      string `json:"name"`
+	Description  string `json:"description"`
+	OriginalLink string `json:"link"`
+	Media        string `json:"url"`
+	CreatedAt    string `json:"created_at"`
+}

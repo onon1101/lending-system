@@ -17,8 +17,8 @@ func NewMediaRepository(db model.DBClient) *MediaRepository {
 // ----------------------------------------------------
 func (r *MediaRepository) CreateMedia(req model.CreateMediaRequest) (model.Media, error) {
 	sqlStatement := `
-		INSERT INTO media (order_id, object_id, type, url, description)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO media (order_id, object_id, type, url, link, description)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING media_id, created_at`
 
 	dbConn, ok := r.DB.(*model.RealDB)
@@ -30,8 +30,9 @@ func (r *MediaRepository) CreateMedia(req model.CreateMediaRequest) (model.Media
 		OrderID:     req.OrderID,
 		ObjectID:    req.ObjectID,
 		Type:        req.Type,
-		Description: req.Description,
 		URL:         req.URL,
+		Description: req.Description,
+		Link: req.Link,
 	}
 
 	err := dbConn.DB.QueryRow(sqlStatement,
@@ -39,6 +40,7 @@ func (r *MediaRepository) CreateMedia(req model.CreateMediaRequest) (model.Media
 		req.ObjectID,
 		req.Type,
 		req.URL,
+		req.Link,
 		req.Description).Scan(&newMedia.MediaID, &newMedia.CreatedAt)
 
 	if err != nil {

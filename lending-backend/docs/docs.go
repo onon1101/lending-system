@@ -153,6 +153,12 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "description": "原始連結",
+                        "name": "link",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
                         "description": "媒體描述",
                         "name": "description",
                         "in": "formData"
@@ -163,6 +169,59 @@ const docTemplate = `{
                         "description": "成功建立的媒體記錄",
                         "schema": {
                             "$ref": "#/definitions/model.Media"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/items/media/{object_id}": {
+            "get": {
+                "description": "根據物品 ID (object_id) 獲取該物品相關的所有媒體檔案（如照片與影片），包含檔案的 URL、類型與描述。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Items"
+                ],
+                "summary": "取得物品的所有影音媒體",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "物品 ID",
+                        "name": "object_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "媒體檔案列表",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Media"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "無效的物品 ID 格式",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "無法取得媒體項目或資料庫錯誤",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -293,7 +352,7 @@ const docTemplate = `{
                 "tags": [
                     "Items"
                 ],
-                "summary": "上傳物品圖片",
+                "summary": "上傳圖片封面",
                 "parameters": [
                     {
                         "type": "integer",
@@ -805,6 +864,9 @@ const docTemplate = `{
                 },
                 "start_time": {
                     "type": "string"
+                },
+                "status": {
+                    "type": "string"
                 }
             }
         },
@@ -815,6 +877,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "description": {
+                    "type": "string"
+                },
+                "link": {
                     "type": "string"
                 },
                 "media_id": {
