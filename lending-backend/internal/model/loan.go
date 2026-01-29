@@ -34,4 +34,5 @@ type LoanRecord struct {
 	StartTime  *time.Time `json:"start_time"`
 	EndTime    *time.Time `json:"end_time"`
 	ObjectName *string    `json:"name"`
+	Status     *string    `json:"status"`
 }

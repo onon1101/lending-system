@@ -38,9 +38,28 @@
       ? "bg-green-600"
       : "bg-yellow-600";
 
-  function getIcon(type) {
-    // 根據歷史紀錄類型顯示圖示
-    return `<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+  function getIcon(status) {
+    // 如果是借用中 (On Loan)
+    if (status === "On Loan") {
+      // 顯示時鐘圖示 (代表進行中)
+      return `<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+    }
+
+    // 如果是已歸還 (Returned / 完成狀態)
+    // 顯示打勾圖示
+    return `<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+  }
+
+  /** 格式化日期為 YYYY 年 MM 月 DD 日 */
+  function formatDate(isoString) {
+    if (!isoString || isoString === "0001-01-01T00:00:00Z") return "N/A";
+
+    const date = new Date(isoString);
+    return date.toLocaleDateString("zh-TW", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
   }
 </script>
 
@@ -79,16 +98,20 @@
         {#each history as record}
           <div class="relative pb-4">
             <div
-              class="absolute -left-[35px] top-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center border-4 border-neutral-800"
+              class="absolute -left-[35px] top-0 w-8 h-8 rounded-full flex items-center justify-center border-4 border-neutral-800 transition-colors duration-300
+              {record.status === 'On Loan' ? 'bg-yellow-500' : 'bg-blue-600'}"
             >
-              {@html getIcon()}
+              {@html getIcon(record.status)}
             </div>
             <div class="ml-4">
               <h3 class="font-bold text-white text-lg">
-                {record.user_name || "使用者"}
+                {record.name || "使用者"}
               </h3>
               <p class="text-sm text-neutral-500">
-                {new Date(record.start_time).toLocaleString()}
+                結束：{formatDate(record.end_time)}
+              </p>
+              <p class="text-sm text-neutral-500">
+                開始：{formatDate(record.start_time)}
               </p>
             </div>
           </div>

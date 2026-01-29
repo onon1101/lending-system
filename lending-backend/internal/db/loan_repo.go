@@ -179,7 +179,8 @@ func (r *LoanRepository) GetLoanHistoryByItemID(itemID int) ([]model.LoanRecord,
         SELECT
             c.start_time,
             c.end_time,
-            d.name
+            d.name,
+			c.status
         FROM items a
         LEFT JOIN order_details b ON b.object_id = a.object_id
         LEFT JOIN orders c ON c.order_id = b.order_id
@@ -206,6 +207,7 @@ func (r *LoanRepository) GetLoanHistoryByItemID(itemID int) ([]model.LoanRecord,
             &record.StartTime,
             &record.EndTime,
             &record.ObjectName,
+            &record.Status,
         )
         if err != nil {
             return nil, fmt.Errorf("解析借閱紀錄失敗: %w", err)
