@@ -46,7 +46,6 @@ export async function getActiveLoans(userId) {
 
 
 export function getFullImageUrl(path) {
-    console.log(path);
     if (!path) return "/default-placeholder.png";
     // 如果路徑已經是完整網址，直接回傳
     if (path.startsWith('http')) return path;
@@ -57,6 +56,5 @@ export function getFullImageUrl(path) {
 export async function getItemMedia(itemId) {
     const response = await fetch(`${API_BASE_URL}/items/media/${itemId}`);
     if (!response.ok) return [];
-    if (response.json() === null) return [];
     return response.json();
 }

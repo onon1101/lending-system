@@ -236,7 +236,8 @@ func (r *ItemRepository) GetItemMediaByItemID(itemID int) ([]model.GetItemMediaB
 	}
 	defer rows.Close()
 
-	var items []model.GetItemMediaByItemID
+	items := []model.GetItemMediaByItemID {}
+
 	for rows.Next() {
 		var item model.GetItemMediaByItemID
 		
@@ -254,5 +255,6 @@ func (r *ItemRepository) GetItemMediaByItemID(itemID int) ([]model.GetItemMediaB
 
 		items = append(items, item)
 	}
+
 	return items, nil
 }
