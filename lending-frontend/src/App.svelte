@@ -1,14 +1,56 @@
 <script>
-  import ItemList from "./pages/ItemPage.svelte";
+  import ItemOverview from "./components/ItemOverview.svelte";
   import ItemDetailPage from "./pages/ItemDetailPage.svelte";
-  const product = {
-    id: "CAM-001",
-    name: "Sony Alpha a7 III Kit",
-    status: "可借出",
-    description:
-      "包含 28-70mm 鏡頭的全片幅無反光鏡相機，適合活動攝影與錄影使用。附帶兩顆電池與充電器。",
+  // import UserCreation from "./routes/UserCreation.svelte";
+  // import UserLoans from "./routes/UserLoans.svelte";
+
+  const views = {
+    home: ItemOverview,
+    item_detail: ItemDetailPage,
+    // creation: UserCreation,
+    // loans: UserLoans,
   };
+
+  let currentView = "home";
+  let currentItemId = null;
+
+  function handleNavigate(event) {
+    const { view, id } = event.detail;
+    currentView = view;
+    currentItemId = id || null; // 點擊時保存 ID
+    window.scrollTo(0, 0);
+  }
 </script>
 
-<!-- <ItemList /> -->
-<ItemDetailPage productData={product} />
+<nav class="bg-black text-white p-4 flex items-center justify-between border-b border-neutral-800 sticky top-0 z-50">
+  <button 
+    type="button"
+    class="text-2xl font-black text-blue-500 tracking-tighter" 
+    on:click={() => handleNavigate({ detail: { view: 'home' } })}>
+    LENDING.SYS
+  </button>
+  
+  <div class="flex gap-4">
+    <button class="px-4 py-2 hover:bg-neutral-800 rounded-lg transition" on:click={() => currentView = "creation"}>👤 註冊</button>
+    <button class="px-4 py-2 hover:bg-neutral-800 rounded-lg transition" on:click={() => currentView = "loans"}>📖 查詢</button>
+  </div>
+</nav>
+
+<main class="content">
+  <svelte:component
+    this={views[currentView]}
+    itemId={currentItemId}
+    on:navigate={handleNavigate}
+  />
+</main>
+
+<style>
+  :global(body) {
+    margin: 0;
+    background-color: #0a0a0a;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  .content {
+    min-height: calc(100vh - 73px);
+  }
+</style>
