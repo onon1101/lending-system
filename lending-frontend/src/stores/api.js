@@ -1,8 +1,11 @@
 // lending-frontend/src/stores/api.js
-export const API_BASE_URL = import.meta.env.VITE_APP_API_URL + "/api" || "http://192.168.2.110:8000/api";
+export const API_BASE_URL = 
+// import.meta.env.VITE_APP_API_URL + "/api" || 
+"http://localhost:8000/api";
+
+const MINIO_ENDPOINT = "https://lending-minio.onon1101.org"
 
 async function handleResponse(response) {
-    console.log("hello");
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: '伺服器錯誤' }));
         throw new Error(errorData.error || response.statusText);
@@ -12,7 +15,6 @@ async function handleResponse(response) {
 
 /** 查詢所有物品 */
 export async function getAllItems() {
-    console.log(`${API_BASE_URL}/items`);
     return fetch(`${API_BASE_URL}/items`).then(handleResponse);
 }
 
@@ -40,4 +42,14 @@ export async function createUser(userData) {
 /** 查詢使用者目前借閱中的物品 */
 export async function getActiveLoans(userId) {
     return fetch(`${API_BASE_URL}/users/${userId}/loans`).then(handleResponse);
+}
+
+
+export function getFullImageUrl(path) {
+    console.log(path);
+    if (!path) return "/default-placeholder.png";
+    // 如果路徑已經是完整網址，直接回傳
+    if (path.startsWith('http')) return path;
+    // 否則拼接 MinIO Endpoint
+    return `${MINIO_ENDPOINT}${path}`;
 }

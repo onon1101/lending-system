@@ -1,6 +1,6 @@
 <script>
   import { onMount, createEventDispatcher } from "svelte";
-  import { getAllItems } from "../stores/api"; //
+  import { getAllItems, getFullImageUrl } from "../stores/api"; //
 
   const dispatch = createEventDispatcher();
   let items = [];
@@ -54,7 +54,7 @@
           <div class="relative h-48 bg-neutral-900">
             {#if item.image_url}
               <img
-                src={item.image_url}
+                src={getFullImageUrl(item.image_url)}
                 alt={item.object_name}
                 class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition"
               />
