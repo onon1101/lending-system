@@ -1,5 +1,5 @@
 // lending-frontend/src/stores/api.js
-export const API_BASE_URL = "http://localhost:8000/api";
+export const API_BASE_URL = import.meta.env.VITE_APP_API_URL + "/api" || "http://192.168.2.110:8000/api";
 
 async function handleResponse(response) {
     console.log("hello");
