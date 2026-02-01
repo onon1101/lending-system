@@ -20,6 +20,7 @@ func NewRouter(
 	// System
 	r.HandleFunc("/api/health", system.HealthCheck).Methods("GET")
 	r.HandleFunc("/api/status", system.GetSystemStatus).Methods("GET")
+	r.HandleFunc("/api/download", system.TestDownloadMedia).Methods("GET")
 
 	// Users
 	r.HandleFunc("/api/users", users.CreateUser).Methods("POST")

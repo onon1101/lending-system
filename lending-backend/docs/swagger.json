@@ -9,6 +9,56 @@
     "host": "localhost:8000",
     "basePath": "/",
     "paths": {
+        "/api/download": {
+            "get": {
+                "description": "透過 gRPC 連線至影片服務，根據提供的 URL 下載影片並以 HTTP Chunked 方式即時串流回傳給客戶端。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "測試下載並串流影音媒體",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "影片原始來源網址",
+                        "name": "url",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "影音檔案流 (MP4)",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "缺少 URL 參數",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "gRPC 連線失敗或串流錯誤",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/health": {
             "get": {
                 "description": "檢查服務是否正常運行",
