@@ -78,7 +78,7 @@ func (h *APIHandler) TestDownloadMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	conn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial("192.168.2.236:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		http.Error(w, "Failed to connect to video service", http.StatusInternalServerError)
 		return
@@ -92,7 +92,7 @@ func (h *APIHandler) TestDownloadMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Disposition", "attachment; filename=\"downloaded_video.mp4\"")
+	w.Header().Set("Content-Disposition", `"attachment; filename=\"downloaded_video.mp4\""`)
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Transfer-Encoding", "chunked")
 
@@ -120,8 +120,7 @@ func (h *APIHandler) TestDownloadMedia(w http.ResponseWriter, r *http.Request) {
 
 			// 2. 顯示進度 Log
 			// \r 會讓游標回到行首，這樣進度條就會在同一行更新，不會洗掉整個螢幕
-			fmt.Printf("\r📥 正在下載 [%s] 下載進度: %.2f%%", resp.Filename, progress)
-
+			fmt.Printf("\r📥 正在下載 [%s] 下載進度: %d%%          ", resp.Filename, progress)
 			// 如果進度達到 100%，換行以保持 Log 整齊
 			if progress >= 100 {
 				fmt.Println("\n✅ 下載完成，準備傳送檔案碎片...")
