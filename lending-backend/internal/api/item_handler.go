@@ -254,7 +254,7 @@ func (h *ItemHandler) GetAllItems(w http.ResponseWriter, r *http.Request) {
 // @Router /api/items/media [post]
 func (h *ItemHandler) UploadItemMedia(w http.ResponseWriter, r *http.Request) {
 	// 1. 設定最大上傳限制 (例如影片較大，設為 100MB)
-	const maxUploadSize = 100 << 20
+	const maxUploadSize = 500 << 20
 	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
 		http.Error(w, `{"error": "File too large"}`, http.StatusBadRequest)
 		return
