@@ -1,4 +1,6 @@
 <script>
+  import Navbar from "../components/Navbar.svelte";
+  import UploadMediaModal from "../components/UploadMediaModal.svelte";
   import MediaGallery from "../components/MediaGallery.svelte";
   import { onMount, createEventDispatcher } from "svelte";
   import {
@@ -62,6 +64,13 @@
       day: "numeric",
     });
   }
+  let isUploadModalOpen = false;
+  // const params = useParams();
+  // const itemId = $params.ID;
+
+  function openUploadModal() {
+    isUploadModalOpen = true;
+  }
 </script>
 
 {#if loading}
@@ -77,12 +86,22 @@
     <section
       class="col-span-1 bg-neutral-800 p-8 rounded-2xl shadow-xl border border-neutral-700"
     >
-      <button
-        class="text-blue-400 hover:text-blue-300 flex items-center mb-6 font-bold"
-        on:click={() => dispatch("navigate", { view: "home" })}
-      >
-        ← 返回列表
-      </button>
+      <div class="flex items-center justify-between">
+        <button
+          class="text-blue-400 hover:text-blue-300 flex items-center mb-6 font-bold"
+          on:click={() => dispatch("navigate", { view: "home" })}
+        >
+          ← 返回列表
+        </button>
+
+        <button
+          on:click={openUploadModal}
+          class="p-2 text-gray-500 hover:text-indigo-400 transition-colors flex items-center justify-center mb-6"
+          title="管理媒體資源"
+        >
+          <i class="fa-solid fa-gear text-2xl"></i>
+        </button>
+      </div>
 
       <h1 class="text-4xl font-black mb-4">{productData.object_name}</h1>
       <span
@@ -142,4 +161,12 @@
   <div class="detail-container">
     <MediaGallery {itemId} />
   </div>
+  {#if isUploadModalOpen}<UploadMediaModal
+      objectId={itemId}
+      on:close={() => (isUploadModalOpen = false)}
+      on:success={() => {
+        isUploadModalOpen = false;
+        window.location.reload();
+      }}
+    />{/if}
 {/if}

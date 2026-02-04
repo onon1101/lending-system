@@ -41,8 +41,9 @@ func New() *Application {
 	loanHandler := api.NewLoanHandler(loanRepo)
 	itemHandler := api.NewItemHandler(itemRepo, storageRepo, mediaRepo)
 	systemHandler := api.NewAPIHandler(dbClient)
+	mediaHandler := api.NewMediaHandler(mediaRepo, storageRepo)
 
-	router := NewRouter(systemHandler, userHandler, loanHandler, itemHandler)
+	router := NewRouter(systemHandler, userHandler, loanHandler, itemHandler, mediaHandler)
 
 	return &Application{
 		cfg:    cfg,

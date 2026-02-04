@@ -14,6 +14,7 @@ func NewRouter(
 	users *api.UserHandler,
 	loans *api.LoanHandler,
 	items *api.ItemHandler,
+	media *api.MediaHandler,
 ) http.Handler {
 	r := mux.NewRouter()
 
@@ -40,6 +41,9 @@ func NewRouter(
 
 	// loan
 	r.HandleFunc("/api/loans/items/history/{object_id}", loans.GetLoanHistoryByItemID).Methods("GET")
+
+	// Media
+	// r.HandleFunc("/test", media).Methods("GET")
 
 	// Swagger
 	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)

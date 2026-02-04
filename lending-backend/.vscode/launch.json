@@ -20,7 +20,7 @@
         "DB_PORT": "5432",
         "DB_USER": "lending_user",
         "DB_PASSWORD": "mypassword",
-        "DB_NAME": "lending_db",
+        "DB_NAME": "lending_db_dev",
 
         "MINIO_ENDPOINT": "192.168.2.110:9000",
         "MINIO_ACCESS_KEY": "minio_user",

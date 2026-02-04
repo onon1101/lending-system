@@ -32,7 +32,7 @@ type GetAllItemsResponse struct {
 
 type GetItemMediaByItemID struct {
 	Type         string `json:"type"`
-	Creator      string `json:"name"`
+	Creator      *string `json:"name"`
 	Description  string `json:"description"`
 	OriginalLink string `json:"link"`
 	Media        string `json:"url"`

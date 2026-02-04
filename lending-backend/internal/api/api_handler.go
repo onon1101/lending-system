@@ -72,6 +72,10 @@ func (h *APIHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} map[string]string "gRPC 連線失敗或串流錯誤"
 // @Router /api/download [get]
 func (h *APIHandler) TestDownloadMedia(w http.ResponseWriter, r *http.Request) {
+	/*
+		Todo: 這邊記得要做抽象。先把它整合進入/api/item/media api裡面，然後把檔案串入進去 minio server 當中，把 records 到 database 當中
+
+	*/
 	videoURL := r.URL.Query().Get("url")
 	if videoURL == "" {
 		http.Error(w, "URL is required", http.StatusBadRequest)

@@ -54,7 +54,65 @@ export function getFullImageUrl(path) {
 }
 
 export async function getItemMedia(itemId) {
-    const response = await fetch(`${API_BASE_URL}/items/media/${itemId}`);
-    if (!response.ok) return [];
-    return response.json();
+    try {
+        const response = await fetch(`${API_BASE_URL}/items/media/${itemId}`);
+        if (!response.ok) return [];
+        return response.json(); 
+    }
+    catch(e)
+    {
+        console.error(e);
+    }
+}
+
+// lending-frontend/src/stores/api.js
+
+// ... 保留原本的 API_BASE_URL 和其他函數
+
+/**
+ * 上傳物品媒體檔案 (支援進度追蹤)
+ * @param {File} file 檔案物件
+ * @param {string|number} objectId 物品 ID
+ * @param {string} description 描述
+ * @param {function} onProgress 進度回呼函數 (percent) => {}
+ * @returns {Promise}
+ */
+export function uploadItemMedia(file, objectId, description, onProgress) {
+    return new Promise((resolve, reject) => {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("object_id", String(objectId));
+        formData.append("description", description);
+
+        const xhr = new XMLHttpRequest();
+
+        // 監聽進度
+        if (onProgress && xhr.upload) {
+            xhr.upload.onprogress = (event) => {
+                if (event.lengthComputable) {
+                    const percent = Math.round((event.loaded / event.total) * 100);
+                    onProgress(percent);
+                }
+            };
+        }
+
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    resolve(response);
+                } catch (e) {
+                    resolve(xhr.responseText);
+                }
+            } else {
+                reject(new Error(xhr.responseText || "上傳失敗"));
+            }
+        };
+
+        xhr.onerror = () => reject(new Error("網路錯誤"));
+        
+        // 使用定義好的 API_BASE_URL
+        xhr.open("POST", `${API_BASE_URL}/items/media`);
+        xhr.send(formData);
+    });
 }

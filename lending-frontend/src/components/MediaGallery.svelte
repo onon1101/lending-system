@@ -10,7 +10,7 @@
 
   onMount(async () => {
     try {
-      mediaList = await getItemMedia(itemId);
+      mediaList = (await getItemMedia(itemId)) ?? [];
     } catch (e) {
       console.error("媒體加載失敗", e);
     } finally {
