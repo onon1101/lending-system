@@ -72,7 +72,7 @@
         >
         <textarea
           bind:value={description}
-          class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+          class="w-full border text-gray-700 border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
           rows="3"
         ></textarea>
       </div>
