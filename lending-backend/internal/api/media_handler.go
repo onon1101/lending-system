@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
 	"object-borrow-system/internal/db"
 	"object-borrow-system/internal/model"
 	"object-borrow-system/internal/storage"
@@ -88,11 +89,20 @@ func (h *MediaHandler) UploadMediaPrivate(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	newFileUrl, err := url.Parse(fileURL);
+	if err != nil {
+		http.Error(w, `{"error": "網址解析問題"}`, http.StatusBadRequest)
+		return
+	}
+
+	newFileUrl.Scheme = "https"
+	newFileUrl.Host = "lending-minio.onon1101.org"
+
 	newMedia := model.CreateMediaRequest{
 		OrderID:     orderID,
 		ObjectID:    objectID,
 		Type:        mediaType,
-		URL:         fileURL,
+		URL:         newFileUrl.String(),
 		Link:        link,
 		Description: description,
 	}
