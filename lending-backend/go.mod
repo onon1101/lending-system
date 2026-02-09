@@ -65,6 +65,7 @@ require (
 	github.com/go-openapi/swag/stringutils v0.25.4 // indirect
 	github.com/go-openapi/swag/typeutils v0.25.4 // indirect
 	github.com/go-openapi/swag/yamlutils v0.25.4 // indirect
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/minio/minio-go/v7 v7.0.97
 	github.com/rs/cors v1.11.1

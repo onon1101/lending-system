@@ -3,7 +3,7 @@ package app
 import (
 	_ "object-borrow-system/docs" // 確保 swagger 文件已生成並匯入
 	"object-borrow-system/internal/api"
-	"service-auth/internal/middleware" // 匯入 auth service 的中間件
+	"object-borrow-system/internal/middleware" // 匯入 auth service 的中間件
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
