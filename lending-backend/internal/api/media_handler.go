@@ -27,7 +27,7 @@ func NewMediaHandler(repo *db.MediaRepository, storageRepo *storage.StorageRepos
 }
 
 // 這是給 private video 用的，因為有些爬蟲抓不到。
-func (h *MediaHandler) UploadMediaPrivate(w http.ResponseWriter, r *http.Request) {
+func (h *MediaHandler) UploadMediaPrivate(c *gin.Context) {
 	// 1. 設定最大上傳限制 (例如影片較大，設為 100MB)
 	const maxUploadSize = 500 << 20
 	if err := r.ParseMultipartForm(maxUploadSize); err != nil {

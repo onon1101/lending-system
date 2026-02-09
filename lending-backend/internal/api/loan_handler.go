@@ -10,6 +10,7 @@ import (
 	"object-borrow-system/internal/model"
 	"strconv"
 
+	"github.com/gin-gonic/gin"
 	"github.com/gorilla/mux"
 )
 
@@ -34,9 +35,8 @@ func NewLoanHandler(repo *db.LoanRepository) *LoanHandler {
 // @Failure 400 {object} map[string]string "ID 格式錯誤"
 // @Failure 500 {object} map[string]string "內部伺服器或資料庫錯誤"
 // @Router /api/users/{user_id}/loans [get]
-func (h *LoanHandler) GetUserActiveLoans(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	idStr := vars["user_id"]
+func (h *LoanHandler) GetUserActiveLoans(c *gin.Context) {
+	idStr := c.Param("user_id");
     
     // 1. 解析路徑參數 ID
 	userID, err := strconv.Atoi(idStr)
@@ -71,7 +71,7 @@ func (h *LoanHandler) GetUserActiveLoans(w http.ResponseWriter, r *http.Request)
 // @Failure 400 {object} map[string]string "請求資料格式錯誤或物品不可用"
 // @Failure 500 {object} map[string]string "內部伺服器或資料庫錯誤"
 // @Router /api/loans [post]
-func (h *LoanHandler) CreateLoan(w http.ResponseWriter, r *http.Request) {
+func (h *LoanHandler) CreateLoan(c *gin.Context) {
     var req model.CreateLoanRequest
     
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -105,7 +105,7 @@ func (h *LoanHandler) CreateLoan(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} map[string]string "無效的物品 ID 格式"
 // @Failure 500 {object} map[string]string "伺服器內部錯誤"
 // @Router /api/loans/items/history/{object_id} [get]
-func (h *LoanHandler) GetLoanHistoryByItemID(w http.ResponseWriter, r *http.Request) {
+func (h *LoanHandler) GetLoanHistoryByItemID(c *gin.Context) {
 	vars := mux.Vars(r)
 	idStr := vars["object_id"]
 

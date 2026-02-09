@@ -33,7 +33,7 @@ func NewUserHandler (repo *db.UserRepository) *UserHandler {
 // @Failure 400 {object} map[string]string "請求資料格式錯誤"
 // @Failure 500 {object} map[string]string "內部伺服器或資料庫錯誤"
 // @Router /api/users [post]
-func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) CreateUser(c *gin.Context) {
 	var req model.CreateUserRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -63,7 +63,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 // @Failure 404 {object} map[string]string "找不到指定 ID 的使用者"
 // @Failure 500 {object} map[string]string "內部伺服器或資料庫錯誤"
 // @Router /api/users/{user_id} [get]
-func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) GetUserByID(c *gin.Context) {
 	vars := mux.Vars(r)
 	idStr := vars["user_id"]
 
@@ -103,7 +103,7 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 // @Failure 404 {object} map[string]string "找不到指定姓名的使用者"
 // @Failure 500 {object} map[string]string "內部伺服器或資料庫錯誤"
 // @Router /api/users/{username} [get]
-func (h *UserHandler) GetUserByName(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) GetUserByName(c *gin.Context) {
 	vars := mux.Vars(r)
 	rawUsername := vars["username"]
 
