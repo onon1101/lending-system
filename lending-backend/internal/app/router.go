@@ -1,12 +1,13 @@
 package app
 
 import (
-	"net/http"
+	_ "object-borrow-system/docs" // 確保 swagger 文件已生成並匯入
 	"object-borrow-system/internal/api"
+	"service-auth/internal/middleware" // 匯入 auth service 的中間件
 
-	"github.com/gorilla/mux"
-	"github.com/rs/cors"
-	httpSwagger "github.com/swaggo/http-swagger"
+	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func NewRouter(
@@ -15,38 +16,53 @@ func NewRouter(
 	loans *api.LoanHandler,
 	items *api.ItemHandler,
 	media *api.MediaHandler,
-) http.Handler {
-	r := mux.NewRouter()
+) *gin.Engine {
+	// 初始化 Gin 引擎
+	r := gin.Default()
 
-	// System
-	r.HandleFunc("/api/health", system.HealthCheck).Methods("GET")
-	r.HandleFunc("/api/status", system.GetSystemStatus).Methods("GET")
-	r.HandleFunc("/api/download", system.TestDownloadMedia).Methods("GET")
+	// Swagger 路由切換為 gin-swagger
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// Users
-	r.HandleFunc("/api/users", users.CreateUser).Methods("POST")
-	r.HandleFunc("/api/users/{user_id:[0-9]+}", users.GetUserByID).Methods("GET")
-	r.HandleFunc("/api/users/{username:[^/]+}", users.GetUserByName).Methods("GET")
-	r.HandleFunc("/api/users/{user_id}/loans", loans.GetUserActiveLoans).Methods("GET")
+	// --- 公開路由 (無需 Token) ---
+	r.GET("/api/health", system.HealthCheck)
+	r.GET("/api/status", system.GetSystemStatus)
+	// r.GET("/api/download", system.TestDownloadMedia)
 
-	// Items
-	r.HandleFunc("/api/items", items.GetAllItems).Methods("GET")
-	r.HandleFunc("/api/items", items.CreateItem).Methods("POST")
-	r.HandleFunc("/api/items/{object_id}", items.GetItemByID).Methods("GET")
-	r.HandleFunc("/api/items/{object_id}", items.UpdateItem).Methods("PUT")
-	r.HandleFunc("/api/items/{object_id}/image", items.UploadItemImage).Methods("POST")
-	r.HandleFunc("/api/items/media", items.UploadItemMedia).Methods("POST")
-	r.HandleFunc("/api/items/media/{object_id}", items.GetItemMedia).Methods("GET")
-	// r.HandleFunc("/api/items/{object_id}/video")
+	// --- 受保護路由 (需要 JWT Token) ---
+	apiV1 := r.Group("/api")
+	apiV1.Use(middleware.AuthMiddleware()) // 掛載身份驗證中間件
+	{
+		// Users 相關
+		usersGroup := apiV1.Group("/users")
+		{
+			// 只有管理員可以手動建立使用者 (範例權限控管)
+			usersGroup.POST("", middleware.RoleMiddleware("admin"), users.CreateUser)
+			usersGroup.GET("/:user_id", users.GetUserByID)
+			usersGroup.GET("/name/:username", users.GetUserByName) // 建議增加 prefix 區隔 ID 與 Name
+			usersGroup.GET("/:user_id/loans", loans.GetUserActiveLoans)
+		}
 
-	// loan
-	r.HandleFunc("/api/loans/items/history/{object_id}", loans.GetLoanHistoryByItemID).Methods("GET")
+		// Items 相關
+		itemsGroup := apiV1.Group("/items")
+		{
+			itemsGroup.GET("", items.GetAllItems)
+			// 只有管理員可以新增或更新物品
+			itemsGroup.POST("", middleware.RoleMiddleware("admin"), items.CreateItem)
+			itemsGroup.GET("/:object_id", items.GetItemByID)
+			itemsGroup.PUT("/:object_id", middleware.RoleMiddleware("admin"), items.UpdateItem)
+			
+			// 媒體上傳
+			itemsGroup.POST("/:object_id/image", items.UploadItemImage)
+			itemsGroup.POST("/media", items.UploadItemMedia)
+			itemsGroup.GET("/media/:object_id", items.GetItemMedia)
+		}
 
-	// Media
-	// r.HandleFunc("/test", media).Methods("GET")
+		// Loans 歷史紀錄
+		apiV1.GET("/loans/items/history/:object_id", loans.GetLoanHistoryByItemID)
 
-	// Swagger
-	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
+		// Media 專用路由 (Private)
+		apiV1.POST("/media/private", media.UploadMediaPrivate)
+	}
 
-	return cors.AllowAll().Handler(r)
+	return r
 }

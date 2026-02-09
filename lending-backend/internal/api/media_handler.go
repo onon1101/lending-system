@@ -3,7 +3,6 @@
 package api
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"net/url"
@@ -12,38 +11,34 @@ import (
 	"object-borrow-system/internal/storage"
 	"strconv"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 type MediaHandler struct {
-	MediaRepo *db.MediaRepository
+	MediaRepo   *db.MediaRepository
 	StorageRepo *storage.StorageRepository
 }
 
 func NewMediaHandler(repo *db.MediaRepository, storageRepo *storage.StorageRepository) *MediaHandler {
 	return &MediaHandler{
-		MediaRepo: repo,
-		StorageRepo: storageRepo, 
+		MediaRepo:   repo,
+		StorageRepo: storageRepo,
 	}
 }
 
-// 這是給 private video 用的，因為有些爬蟲抓不到。
+// UploadMediaPrivate 這是給 private video 用的，因為有些爬蟲抓不到。
 func (h *MediaHandler) UploadMediaPrivate(c *gin.Context) {
-	// 1. 設定最大上傳限制 (例如影片較大，設為 100MB)
-	const maxUploadSize = 500 << 20
-	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
-		http.Error(w, `{"error": "File too large"}`, http.StatusBadRequest)
-		return
-	}
-
-	orderIDStr := r.FormValue("order_id")
-	objectIDStr := r.FormValue("object_id")
-	description := r.FormValue("description")
-	link := r.FormValue("link")
+	// 1. 取得表單欄位 (Gin 使用 PostForm 或 PostFormValue)
+	orderIDStr := c.PostForm("order_id")
+	objectIDStr := c.PostForm("object_id")
+	description := c.PostForm("description")
+	link := c.PostForm("link")
 
 	// objectIDStr 轉換型別從 string 到 int
 	objectID, err := strconv.Atoi(objectIDStr)
 	if err != nil {
-		http.Error(w, `{"error": "Invalid object_id"}`, http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid object_id"})
 		return
 	}
 
@@ -52,21 +47,28 @@ func (h *MediaHandler) UploadMediaPrivate(c *gin.Context) {
 	if orderIDStr != "" && orderIDStr != "0" {
 		val, err := strconv.Atoi(orderIDStr)
 		if err != nil {
-			http.Error(w, `{"error": "Invalid order_id"}`, http.StatusBadRequest)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order_id"})
 			return
 		}
-
 		orderID = &val
 	}
 
-	file, handler, err := r.FormFile("file")
+	// 2. 取得影音檔案 (修正：c.FormFile 回傳 2 個值)
+	handler, err := c.FormFile("file")
 	if err != nil {
-		http.Error(w, `{"error": "Missing File"}`, http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing File"})
+		return
+	}
+
+	// 開啟檔案流
+	file, err := handler.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open file"})
 		return
 	}
 	defer file.Close()
 
-	// 分類照片或者影片
+	// 3. 分類照片或者影片
 	contentType := handler.Header.Get("Content-Type")
 	var fileURL, objectName string
 	var mediaType string
@@ -78,20 +80,21 @@ func (h *MediaHandler) UploadMediaPrivate(c *gin.Context) {
 		mediaType = "image"
 		fileURL, objectName, err = h.StorageRepo.UploadItemImage(file, handler.Size, handler.Filename, contentType)
 	} else {
-		http.Error(w, `{"error": "Unsupported file type"}`, http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported file type"})
 		return
 	}
 
 	if err != nil {
-		log.Printf("Upload file: %v", err)
-		http.Error(w, `{"error": "Upload Failed"}`, http.StatusBadRequest)
-		RecycleMinioResource(h.StorageRepo, objectName)
+		log.Printf("Upload file error: %v", err)
+		RecycleMinioResource(h.StorageRepo, objectName) // 調用外部定義的清理函式
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Upload Failed"})
 		return
 	}
 
-	newFileUrl, err := url.Parse(fileURL);
+	// 4. 網址解析與重組
+	newFileUrl, err := url.Parse(fileURL)
 	if err != nil {
-		http.Error(w, `{"error": "網址解析問題"}`, http.StatusBadRequest)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "網址解析問題"})
 		return
 	}
 
@@ -107,22 +110,29 @@ func (h *MediaHandler) UploadMediaPrivate(c *gin.Context) {
 		Description: description,
 	}
 
-	// 將 Media 的 metadata 寫進資料庫當中
+	// 5. 將 Media 的 metadata 寫進資料庫
 	result, err := h.MediaRepo.CreateMedia(newMedia)
 	if err != nil {
 		RecycleMinioResource(h.StorageRepo, objectName)
 
 		if strings.Contains(err.Error(), "不存在") {
-			http.Error(w, `{"error": "Item not found"}`, http.StatusNotFound)
+			c.JSON(http.StatusNotFound, gin.H{"error": "Item not found"})
 			return
 		}
 
 		log.Printf("DB update failed: %v", err)
-		http.Error(w, `{"error": "Failed to save image URL to database"}`, http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save media record to database"})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(result)
+	// 6. 回應成功
+	c.JSON(http.StatusCreated, result)
+}
+
+func RecycleMinioResource(storageRepo *storage.StorageRepository, objectName string) {
+	if err := storageRepo.DeleteObject(objectName); err != nil {
+		log.Printf("WARNING: Failed to clean up MinIO object '%s' after DB transaction failure: %v", objectName, err)
+	} else {
+		log.Printf("INFO:  Successfully cleaned up MinIO object '%s' after DB failure.", objectName)
+	}
 }

@@ -3,7 +3,6 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"object-borrow-system/internal/db"
@@ -11,7 +10,6 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/mux"
 )
 
 // LoanHandler 結構體
@@ -36,30 +34,26 @@ func NewLoanHandler(repo *db.LoanRepository) *LoanHandler {
 // @Failure 500 {object} map[string]string "內部伺服器或資料庫錯誤"
 // @Router /api/users/{user_id}/loans [get]
 func (h *LoanHandler) GetUserActiveLoans(c *gin.Context) {
-	idStr := c.Param("user_id");
-    
-    // 1. 解析路徑參數 ID
+	// 1. 使用 Gin 的 c.Param 取得路徑參數
+	idStr := c.Param("user_id")
+
 	userID, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, `{"error": "Invalid user ID format"}`, http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID format"})
 		return
 	}
 
 	// 2. 呼叫資料庫層邏輯
 	loans, err := h.LoanRepo.GetActiveLoansByUserID(userID)
 	if err != nil {
-		http.Error(w, `{"error": "Failed to retrieve loans due to server error"}`, http.StatusInternalServerError)
+		// 修正：伺服器錯誤應回傳 500
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve loans due to server error"})
 		return
 	}
-    
-	// 3. 回應成功
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	// 如果沒有記錄，會回傳空列表 []
-	json.NewEncoder(w).Encode(loans)
-}
 
-// internal/api/loan_handler.go (新增)
+	// 3. 回應成功
+	c.JSON(http.StatusOK, loans)
+}
 
 // @Summary 創建新的借閱訂單
 // @Description 建立一筆新的借閱交易，並將所有指定物品的狀態更新為 'On Loan'。
@@ -72,31 +66,31 @@ func (h *LoanHandler) GetUserActiveLoans(c *gin.Context) {
 // @Failure 500 {object} map[string]string "內部伺服器或資料庫錯誤"
 // @Router /api/loans [post]
 func (h *LoanHandler) CreateLoan(c *gin.Context) {
-    var req model.CreateLoanRequest
-    
-    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
-        return
-    }
-    // 簡易驗證
-    if req.UserID == 0 || len(req.ItemsID) == 0 || req.DurationHours == 0 {
-        http.Error(w, `{"error": "Missing required fields (user_id, items_id, duration_hours)"}`, http.StatusBadRequest)
-        return
-    }
+	var req model.CreateLoanRequest
 
-    loan, err := h.LoanRepo.CreateLoan(req)
-    if err != nil {
-        http.Error(w, fmt.Sprintf(`{"error": "Failed to create loan: %s"}`, err.Error()), http.StatusBadRequest)
-        return
-    }
+	// 使用 Gin 的 ShouldBindJSON 取代 json.NewDecoder(r.Body).Decode
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
 
-    w.Header().Set("Content-Type", "application/json")
-    w.WriteHeader(http.StatusCreated)
-    json.NewEncoder(w).Encode(loan)
+	// 簡易驗證
+	if req.UserID == 0 || len(req.ItemsID) == 0 || req.DurationHours == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing required fields (user_id, items_id, duration_hours)"})
+		return
+	}
+
+	loan, err := h.LoanRepo.CreateLoan(req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Failed to create loan: %s", err.Error())})
+		return
+	}
+
+	c.JSON(http.StatusCreated, loan)
 }
 
 // @Summary 查詢物品借閱歷史紀錄
-// @Description 根據物品 ID (object_id) 獲取該物品過去所有的借閱紀錄，包含借閱者名稱、開始時間與預計歸還時間。
+// @Description 根據物品 ID (object_id) 獲取該物品過去所有的借閱紀錄。
 // @Tags Loans
 // @Accept json
 // @Produce json
@@ -106,21 +100,20 @@ func (h *LoanHandler) CreateLoan(c *gin.Context) {
 // @Failure 500 {object} map[string]string "伺服器內部錯誤"
 // @Router /api/loans/items/history/{object_id} [get]
 func (h *LoanHandler) GetLoanHistoryByItemID(c *gin.Context) {
-	vars := mux.Vars(r)
-	idStr := vars["object_id"]
+	// 修正：從 mux.Vars(r) 改為 c.Param
+	idStr := c.Param("object_id")
 
 	objectID, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, `{"error": "Invalid object ID format"}`, http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid object ID format"})
 		return
 	}
 
 	records, err := h.LoanRepo.GetLoanHistoryByItemID(objectID)
 	if err != nil {
-		http.Error(w, `{"error": "系統處理錯誤"}`, http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "系統處理錯誤"})
+		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(records)
+	c.JSON(http.StatusOK, records)
 }

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"net/url"
@@ -10,14 +9,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 )
 
 type UserHandler struct {
 	UserRepo *db.UserRepository
 }
 
-func NewUserHandler (repo *db.UserRepository) *UserHandler {
+func NewUserHandler(repo *db.UserRepository) *UserHandler {
 	return &UserHandler{
 		UserRepo: repo,
 	}
@@ -36,21 +35,21 @@ func NewUserHandler (repo *db.UserRepository) *UserHandler {
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var req model.CreateUserRequest
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
+	// 使用 Gin 的 ShouldBindJSON 取代 json.NewDecoder(r.Body).Decode
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
 	newUser, err := h.UserRepo.CreateUser(req)
 	if err != nil {
 		log.Printf("DB Error creating user: %v", err)
-		http.Error(w, `{"error": "Failed to create user due to server error"}`, http.StatusInternalServerError)
-		return 
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user due to server error"})
+		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(newUser)
+	// 使用 c.JSON 簡化回傳邏輯
+	c.JSON(http.StatusCreated, newUser)
 }
 
 // @Summary 使用者 ID 查詢特定使用者
@@ -64,33 +63,31 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 // @Failure 500 {object} map[string]string "內部伺服器或資料庫錯誤"
 // @Router /api/users/{user_id} [get]
 func (h *UserHandler) GetUserByID(c *gin.Context) {
-	vars := mux.Vars(r)
-	idStr := vars["user_id"]
+	// 從 mux.Vars 改為使用 c.Param 取得路徑參數
+	idStr := c.Param("user_id")
 
 	// 將使用者 ID String 轉換成 Int 
 	userID, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, `{"error": "Invalid user ID format"}`, http.StatusBadRequest)
-		return 
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID format"})
+		return
 	}
 
 	user, err := h.UserRepo.GetUserByID(userID)
 	if err != nil {
-        // 處理找不到使用者 (404) 的情況
+		// 處理找不到使用者 (404) 的情況
 		if strings.Contains(err.Error(), "不存在") {
-			http.Error(w, `{"error": "User not found"}`, http.StatusNotFound)
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 			return
 		}
-        
+
 		// 處理其他資料庫錯誤
-        log.Printf("DB Error fetching user: %v", err)
-		http.Error(w, `{"error": "Failed to retrieve user due to server error"}`, http.StatusInternalServerError)
+		log.Printf("DB Error fetching user: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user due to server error"})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(user)
+	c.JSON(http.StatusOK, user)
 }
 
 // @Summary 使用者名稱查詢特定使用者
@@ -104,33 +101,30 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 // @Failure 500 {object} map[string]string "內部伺服器或資料庫錯誤"
 // @Router /api/users/{username} [get]
 func (h *UserHandler) GetUserByName(c *gin.Context) {
-	vars := mux.Vars(r)
-	rawUsername := vars["username"]
+	// 從 mux.Vars 改為使用 c.Param 取得路徑參數
+	rawUsername := c.Param("username")
 
 	// 如果 encoding 失敗的話
 	username, err := url.QueryUnescape(rawUsername)
 	if err != nil {
-		http.Error(w, `{"error": "Invalid encoding in username."}`, http.StatusBadRequest)
-		return 
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid encoding in username."})
+		return
 	}
 
 	// 使用模糊查詢使用者
 	user, err := h.UserRepo.SearchUserByName(username)
 	if err != nil {
-		
-		// 如何使用者不存在的情況
+		// 處理使用者不存在的情況
 		if strings.Contains(err.Error(), "不存在") {
-			http.Error(w, `{"error": "User not found"}`, http.StatusNotFound)
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 			return
 		}
 
 		// 其他資料庫錯誤的情況
 		log.Printf("DB Error fetching user: %v", err)
-		http.Error(w, `{"error": "Failed to retrieve user due to server error"}`, http.StatusInternalServerError)
-		return 
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user due to server error"})
+		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(user)
+	c.JSON(http.StatusOK, user)
 }
