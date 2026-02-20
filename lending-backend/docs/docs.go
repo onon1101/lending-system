@@ -15,56 +15,6 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/download": {
-            "get": {
-                "description": "透過 gRPC 連線至影片服務，根據提供的 URL 下載影片並以 HTTP Chunked 方式即時串流回傳給客戶端。",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/octet-stream"
-                ],
-                "tags": [
-                    "System"
-                ],
-                "summary": "測試下載並串流影音媒體",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "影片原始來源網址",
-                        "name": "url",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "影音檔案流 (MP4)",
-                        "schema": {
-                            "type": "file"
-                        }
-                    },
-                    "400": {
-                        "description": "缺少 URL 參數",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "gRPC 連線失敗或串流錯誤",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/api/health": {
             "get": {
                 "description": "檢查服務是否正常運行",
@@ -104,15 +54,6 @@ const docTemplate = `{
                                 "$ref": "#/definitions/model.GetAllItemsResponse"
                             }
                         }
-                    },
-                    "500": {
-                        "description": "內部伺服器或資料庫錯誤",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
                     }
                 }
             },
@@ -145,24 +86,6 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/model.Item"
                         }
-                    },
-                    "400": {
-                        "description": "請求資料格式錯誤",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "內部伺服器或資料庫錯誤",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
                     }
                 }
             }
@@ -180,40 +103,6 @@ const docTemplate = `{
                     "Items"
                 ],
                 "summary": "上傳物品的媒體 (影片或圖片)",
-                "parameters": [
-                    {
-                        "type": "file",
-                        "description": "媒體檔案",
-                        "name": "file",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "訂單 ID",
-                        "name": "order_id",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "物品 ID",
-                        "name": "object_id",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "原始連結",
-                        "name": "link",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "媒體描述",
-                        "name": "description",
-                        "in": "formData"
-                    }
-                ],
                 "responses": {
                     "201": {
                         "description": "成功建立的媒體記錄",
@@ -226,10 +115,7 @@ const docTemplate = `{
         },
         "/api/items/media/{object_id}": {
             "get": {
-                "description": "根據物品 ID (object_id) 獲取該物品相關的所有媒體檔案（如照片與影片），包含檔案的 URL、類型與描述。",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "根據物品 ID (object_id) 獲取該物品相關的所有媒體檔案。",
                 "produces": [
                     "application/json"
                 ],
@@ -253,24 +139,6 @@ const docTemplate = `{
                             "type": "array",
                             "items": {
                                 "$ref": "#/definitions/model.Media"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "無效的物品 ID 格式",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "無法取得媒體項目或資料庫錯誤",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
                             }
                         }
                     }
@@ -301,24 +169,6 @@ const docTemplate = `{
                         "description": "成功找到並回傳物品資訊",
                         "schema": {
                             "$ref": "#/definitions/model.Item"
-                        }
-                    },
-                    "404": {
-                        "description": "找不到指定 ID 的物品",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "內部伺服器或資料庫錯誤",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
                         }
                     }
                 }
@@ -359,33 +209,6 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/model.Item"
                         }
-                    },
-                    "400": {
-                        "description": "請求資料格式錯誤",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "找不到指定 ID 的物品",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "內部伺服器或資料庫錯誤",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
                     }
                 }
             }
@@ -424,33 +247,6 @@ const docTemplate = `{
                         "description": "成功更新圖片 URL 的物品記錄",
                         "schema": {
                             "$ref": "#/definitions/model.Item"
-                        }
-                    },
-                    "400": {
-                        "description": "請求錯誤或檔案類型錯誤",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "找不到指定 ID 的物品",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "圖片上傳或資料庫更新失敗",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
                         }
                     }
                 }
@@ -510,7 +306,7 @@ const docTemplate = `{
         },
         "/api/loans/items/history/{object_id}": {
             "get": {
-                "description": "根據物品 ID (object_id) 獲取該物品過去所有的借閱紀錄，包含借閱者名稱、開始時間與預計歸還時間。",
+                "description": "根據物品 ID (object_id) 獲取該物品過去所有的借閱紀錄。",
                 "consumes": [
                     "application/json"
                 ],

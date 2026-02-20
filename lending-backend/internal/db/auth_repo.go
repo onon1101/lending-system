@@ -7,15 +7,54 @@ import (
 	"object-borrow-system/internal/model"
 )
 
-type UserRepository struct {
+type AuthRepository struct {
 	DB model.DBClient
 }
 
-func NewUserRepository(db model.DBClient) *UserRepository {
-	return &UserRepository{DB: db}
+func NewUserRepository(db model.DBClient) *AuthRepository {
+	return &AuthRepository{DB: db}
 }
 
-func (r *UserRepository) CreateUser(req model.CreateUserRequest) (model.UserResponse, error) {
+func (r *AuthRepository) FindUserByEmail(email string) (model.User, error) {
+	sql := `
+		SELECT 
+			user_id, 
+			password_hash,
+			name,
+			role,
+			created_at,
+			updated_at
+		FROM
+			users
+		WHERE
+			email = $1;
+	`
+
+	dbConn, ok := r.DB.(*model.RealDB)
+	if !ok || dbConn.DB == nil {
+		return model.User{}, fmt.Errorf("資料庫連線錯誤：無法取得底層 DB 實例")
+	}
+
+	user := model.User {
+		Email: email,
+	}
+
+	err := dbConn.DB.QueryRow(sql, email).Scan(
+		&user.ID,
+		&user.PasswordHash,
+		&user.Nickname,
+		&user.Role,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+	if err != nil {
+		return model.User{}, fmt.Errorf("查詢使用者失敗: %w", err)
+	}
+
+	return user, nil
+}
+
+func (r *AuthRepository) CreateUser(req model.CreateUserRequest) (model.UserResponse, error) {
 	sql := `
 		INSERT INTO users (name, email, password_hash)
 		VALUES ($1, $2, $3)
@@ -44,7 +83,7 @@ func (r *UserRepository) CreateUser(req model.CreateUserRequest) (model.UserResp
 	return newUser, nil
 }
 
-func (r *UserRepository) GetUserByID (userID int) (model.UserResponse, error) {
+func (r *AuthRepository) GetUserByID (userID int) (model.UserResponse, error) {
 	sqlStatement := `
 			SELECT user_id, name, email
 			FROM users
@@ -74,7 +113,7 @@ func (r *UserRepository) GetUserByID (userID int) (model.UserResponse, error) {
 	return user, nil
 }
 
-func (r *UserRepository) SearchUserByName(username string) (model.UserResponse, error) {
+func (r *AuthRepository) SearchUserByName(username string) (model.UserResponse, error) {
 	sqlStatement := `
 			SELECT user_id, name, email
 			FROM users

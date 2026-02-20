@@ -12,7 +12,7 @@ import (
 
 func NewRouter(
 	system *api.APIHandler,
-	users *api.UserHandler,
+	users *api.AuthHandler,
 	loans *api.LoanHandler,
 	items *api.ItemHandler,
 	media *api.MediaHandler,
@@ -26,17 +26,17 @@ func NewRouter(
 	// --- 公開路由 (無需 Token) ---
 	r.GET("/api/health", system.HealthCheck)
 	r.GET("/api/status", system.GetSystemStatus)
-	// r.GET("/api/download", system.TestDownloadMedia)
+	r.GET("/api/items", items.GetAllItems)
 
 	// --- 受保護路由 (需要 JWT Token) ---
 	apiV1 := r.Group("/api")
-	apiV1.Use(middleware.AuthMiddleware()) // 掛載身份驗證中間件
+	// apiV1.Use(middleware.AuthMiddleware()) // 掛載身份驗證中間件
 	{
 		// Users 相關
 		usersGroup := apiV1.Group("/users")
 		{
 			// 只有管理員可以手動建立使用者 (範例權限控管)
-			usersGroup.POST("", middleware.RoleMiddleware("admin"), users.CreateUser)
+			usersGroup.POST("", middleware.RoleMiddleware("admin"), users.Register)
 			usersGroup.GET("/:user_id", users.GetUserByID)
 			usersGroup.GET("/name/:username", users.GetUserByName) // 建議增加 prefix 區隔 ID 與 Name
 			usersGroup.GET("/:user_id/loans", loans.GetUserActiveLoans)
@@ -45,7 +45,7 @@ func NewRouter(
 		// Items 相關
 		itemsGroup := apiV1.Group("/items")
 		{
-			itemsGroup.GET("", items.GetAllItems)
+			// itemsGroup.GET("", items.GetAllItems)
 			// 只有管理員可以新增或更新物品
 			itemsGroup.POST("", middleware.RoleMiddleware("admin"), items.CreateItem)
 			itemsGroup.GET("/:object_id", items.GetItemByID)

@@ -6,6 +6,7 @@ import (
 	"object-borrow-system/internal/api"
 	"object-borrow-system/internal/config"
 	"object-borrow-system/internal/db"
+	"object-borrow-system/internal/middleware"
 	"object-borrow-system/internal/storage"
 )
 
@@ -37,21 +38,27 @@ func New() *Application {
 	storageRepo := storage.NewStorageRepository(minioClient, cfg.MinioBucketName, cfg.MinioEndpoint)
 
 	// Handlers
-	userHandler := api.NewUserHandler(userRepo)
+	AuthHandler := api.NewAuthHandler(userRepo)
 	loanHandler := api.NewLoanHandler(loanRepo)
 	itemHandler := api.NewItemHandler(itemRepo, storageRepo, mediaRepo)
 	systemHandler := api.NewAPIHandler(dbClient)
 	mediaHandler := api.NewMediaHandler(mediaRepo, storageRepo)
 
-	router := NewRouter(systemHandler, userHandler, loanHandler, itemHandler, mediaHandler)
+	router := NewRouter(systemHandler, AuthHandler, loanHandler, itemHandler, mediaHandler)
+
+	handlerWithCORS := middleware.EnableCORS(router)
 
 	return &Application{
 		cfg:    cfg,
-		router: router,
+		router: handlerWithCORS,
 	}
 }
 
 func (a *Application) Run() error {
 	log.Printf("Server is listening on port %s...\n", a.cfg.AppPort)
 	return http.ListenAndServe(":"+a.cfg.AppPort, a.router)
+}
+
+func (a *Application) GetRouter() http.Handler {
+	return a.router
 }

@@ -135,39 +135,6 @@ info:
   title: 物品借閱系統 API
   version: "1.0"
 paths:
-  /api/download:
-    get:
-      consumes:
-      - application/json
-      description: 透過 gRPC 連線至影片服務，根據提供的 URL 下載影片並以 HTTP Chunked 方式即時串流回傳給客戶端。
-      parameters:
-      - description: 影片原始來源網址
-        in: query
-        name: url
-        required: true
-        type: string
-      produces:
-      - application/octet-stream
-      responses:
-        "200":
-          description: 影音檔案流 (MP4)
-          schema:
-            type: file
-        "400":
-          description: 缺少 URL 參數
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: gRPC 連線失敗或串流錯誤
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: 測試下載並串流影音媒體
-      tags:
-      - System
   /api/health:
     get:
       description: 檢查服務是否正常運行
@@ -193,12 +160,6 @@ paths:
             items:
               $ref: '#/definitions/model.GetAllItemsResponse'
             type: array
-        "500":
-          description: 內部伺服器或資料庫錯誤
-          schema:
-            additionalProperties:
-              type: string
-            type: object
       summary: 查詢所有物品列表
       tags:
       - Items
@@ -220,18 +181,6 @@ paths:
           description: 成功創建的物品記錄
           schema:
             $ref: '#/definitions/model.Item'
-        "400":
-          description: 請求資料格式錯誤
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: 內部伺服器或資料庫錯誤
-          schema:
-            additionalProperties:
-              type: string
-            type: object
       summary: 創建新物品
       tags:
       - Items
@@ -251,18 +200,6 @@ paths:
           description: 成功找到並回傳物品資訊
           schema:
             $ref: '#/definitions/model.Item'
-        "404":
-          description: 找不到指定 ID 的物品
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: 內部伺服器或資料庫錯誤
-          schema:
-            additionalProperties:
-              type: string
-            type: object
       summary: 查詢特定物品
       tags:
       - Items
@@ -289,24 +226,6 @@ paths:
           description: 成功更新的物品記錄
           schema:
             $ref: '#/definitions/model.Item'
-        "400":
-          description: 請求資料格式錯誤
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: 找不到指定 ID 的物品
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: 內部伺服器或資料庫錯誤
-          schema:
-            additionalProperties:
-              type: string
-            type: object
       summary: 更新物品資訊
       tags:
       - Items
@@ -333,24 +252,6 @@ paths:
           description: 成功更新圖片 URL 的物品記錄
           schema:
             $ref: '#/definitions/model.Item'
-        "400":
-          description: 請求錯誤或檔案類型錯誤
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: 找不到指定 ID 的物品
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: 圖片上傳或資料庫更新失敗
-          schema:
-            additionalProperties:
-              type: string
-            type: object
       summary: 上傳圖片封面
       tags:
       - Items
@@ -359,29 +260,6 @@ paths:
       consumes:
       - multipart/form-data
       description: 上傳檔案並在資料庫建立媒體記錄，關聯到特定訂單與物品。
-      parameters:
-      - description: 媒體檔案
-        in: formData
-        name: file
-        required: true
-        type: file
-      - description: 訂單 ID
-        in: formData
-        name: order_id
-        type: integer
-      - description: 物品 ID
-        in: formData
-        name: object_id
-        required: true
-        type: integer
-      - description: 原始連結
-        in: formData
-        name: link
-        type: string
-      - description: 媒體描述
-        in: formData
-        name: description
-        type: string
       produces:
       - application/json
       responses:
@@ -394,9 +272,7 @@ paths:
       - Items
   /api/items/media/{object_id}:
     get:
-      consumes:
-      - application/json
-      description: 根據物品 ID (object_id) 獲取該物品相關的所有媒體檔案（如照片與影片），包含檔案的 URL、類型與描述。
+      description: 根據物品 ID (object_id) 獲取該物品相關的所有媒體檔案。
       parameters:
       - description: 物品 ID
         in: path
@@ -412,18 +288,6 @@ paths:
             items:
               $ref: '#/definitions/model.Media'
             type: array
-        "400":
-          description: 無效的物品 ID 格式
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: 無法取得媒體項目或資料庫錯誤
-          schema:
-            additionalProperties:
-              type: string
-            type: object
       summary: 取得物品的所有影音媒體
       tags:
       - Items
@@ -465,7 +329,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 根據物品 ID (object_id) 獲取該物品過去所有的借閱紀錄，包含借閱者名稱、開始時間與預計歸還時間。
+      description: 根據物品 ID (object_id) 獲取該物品過去所有的借閱紀錄。
       parameters:
       - description: 物品 ID
         in: path

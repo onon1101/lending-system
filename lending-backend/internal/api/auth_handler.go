@@ -6,19 +6,61 @@ import (
 	"net/url"
 	"object-borrow-system/internal/db"
 	"object-borrow-system/internal/model"
+	"object-borrow-system/internal/utils"
 	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
-type UserHandler struct {
-	UserRepo *db.UserRepository
+type AuthHandler struct {
+	UserRepo *db.AuthRepository
 }
 
-func NewUserHandler(repo *db.UserRepository) *UserHandler {
-	return &UserHandler{
+func NewAuthHandler(repo *db.AuthRepository) *AuthHandler{
+	return & AuthHandler{
 		UserRepo: repo,
+	}
+}
+
+
+// LoginHandler 登入並取得 Token
+// @Summary      使用者登入
+// @Description  透過 Email 與密碼進行驗證，成功後回傳 Access Token 與 Refresh Token
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      LoginRequest  true  "登入資訊"
+// @Success      200      {object}  map[string]string "成功回傳 token"
+// @Failure      401      {object}  map[string]string "帳號密碼錯誤"
+// @Router       /auth/login [post]
+func (d *AuthHandler) LoginHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req model.LoginRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "格式錯誤"})
+			return
+		}
+
+		user, err := d.UserRepo.FindUserByEmail(req.Email)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "帳號或密碼錯誤"})
+			return
+		}
+
+		if !utils.CheckPasswordHash(req.Password, user.PasswordHash) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "帳號或密碼錯誤"})
+		}
+
+		access, refresh, err := utils.GenerateToken(user)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "系統錯誤"})
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"access_token":  access,
+			"refresh_token": refresh,
+		})
 	}
 }
 
@@ -32,8 +74,8 @@ func NewUserHandler(repo *db.UserRepository) *UserHandler {
 // @Failure 400 {object} map[string]string "請求資料格式錯誤"
 // @Failure 500 {object} map[string]string "內部伺服器或資料庫錯誤"
 // @Router /api/users [post]
-func (h *UserHandler) CreateUser(c *gin.Context) {
-	var req model.CreateUserRequest
+func(h *AuthHandler) Register(c *gin.Context) {
+		var req model.CreateUserRequest
 
 	// 使用 Gin 的 ShouldBindJSON 取代 json.NewDecoder(r.Body).Decode
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -62,7 +104,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 // @Failure 404 {object} map[string]string "找不到指定 ID 的使用者"
 // @Failure 500 {object} map[string]string "內部伺服器或資料庫錯誤"
 // @Router /api/users/{user_id} [get]
-func (h *UserHandler) GetUserByID(c *gin.Context) {
+func (h *AuthHandler) GetUserByID(c *gin.Context) {
 	// 從 mux.Vars 改為使用 c.Param 取得路徑參數
 	idStr := c.Param("user_id")
 
@@ -90,6 +132,31 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
+func (h *AuthHandler) GetUserByEmail(c *gin.Context) {
+	// TODO: 實作 Email 
+	email := c.Param("email")
+
+	user, err := h.UserRepo.FindUserByEmail(email)
+	if err != nil {
+		// 處理找不到使用者 (404) 的情況
+		if strings.Contains(err.Error(), "不存在") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+
+		// 處理其他資料庫錯誤
+		log.Printf("DB Error fetching user: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user due to server error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+func (h *AuthHandler) DeleteUser(c *gin.Context) {
+
+}
+
 // @Summary 使用者名稱查詢特定使用者
 // @Description 根據使用者 Name 查詢其詳細資訊。
 // @Tags Users
@@ -100,8 +167,8 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 // @Failure 404 {object} map[string]string "找不到指定姓名的使用者"
 // @Failure 500 {object} map[string]string "內部伺服器或資料庫錯誤"
 // @Router /api/users/{username} [get]
-func (h *UserHandler) GetUserByName(c *gin.Context) {
-	// 從 mux.Vars 改為使用 c.Param 取得路徑參數
+func (h *AuthHandler) GetUserByName(c *gin.Context) {
+		// 從 mux.Vars 改為使用 c.Param 取得路徑參數
 	rawUsername := c.Param("username")
 
 	// 如果 encoding 失敗的話
