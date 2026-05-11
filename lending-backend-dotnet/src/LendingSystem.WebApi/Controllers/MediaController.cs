@@ -7,6 +7,7 @@ namespace LendingSystem.WebApi.Controllers;
 public sealed class MediaController(MediaService media) : ControllerBase
 {
     [HttpPost("/api/media/private")]
+    [HttpPost("/api/v1/media/private")]
     public async Task<ActionResult<MediaResponse>> UploadPrivate(CancellationToken cancellationToken)
     {
         var file = Request.Form.Files["file"];

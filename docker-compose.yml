@@ -3,7 +3,7 @@ version: '3.8'
 services:
   api:
     build: 
-      context: ./lending-backend 
+      context: ./lending-backend-dotnet
       dockerfile: Dockerfile
     container_name: lending_api
     ports:
@@ -27,7 +27,7 @@ services:
 
   frontend:
     build:
-      context: ./lending-frontend 
+      context: ./lending-backend-dotnet/frontend
       dockerfile: Dockerfile
       args:
         VITE_APP_API_URL: ${BACKEND_ENDPOINT}

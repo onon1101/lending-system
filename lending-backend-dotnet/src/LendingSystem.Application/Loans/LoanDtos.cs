@@ -7,6 +7,9 @@ public sealed record CreateLoanRequest(
     [property: JsonPropertyName("items_id")] int[] ItemsId,
     [property: JsonPropertyName("duration_hours")] int DurationHours);
 
+public sealed record ReturnLoanItemRequest(
+    [property: JsonPropertyName("object_id")] int ObjectId);
+
 public sealed record LoanItemDetailResponse(
     [property: JsonPropertyName("object_detail_id")] int ObjectDetailId,
     [property: JsonPropertyName("object_id")] int ObjectId,

@@ -22,6 +22,16 @@ public sealed class LoanService(ILoanRepository loans)
         return Map(await loans.CreateAsync(request.UserId, request.ItemsId, request.DurationHours, cancellationToken));
     }
 
+    public async Task<UserLoanResponse> ReturnItemAsync(int orderId, int objectId, CancellationToken cancellationToken)
+    {
+        if (orderId <= 0 || objectId <= 0)
+        {
+            throw new DomainException("Missing required fields (order_id, object_id)");
+        }
+
+        return Map(await loans.ReturnItemAsync(orderId, objectId, cancellationToken));
+    }
+
     public async Task<IReadOnlyCollection<LoanRecordResponse>> GetHistoryByItemIdAsync(int itemId, CancellationToken cancellationToken)
     {
         var result = await loans.GetHistoryByItemIdAsync(itemId, cancellationToken);

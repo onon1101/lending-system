@@ -4,9 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "VITE_APP_API_URL=http://192.168.2.110:8000 vite --host 0.0.0.0 --port 5173",
-    "dev-d": "VITE_APP_API_URL=http://localhost:8000 vite --host 0.0.0.0 --port 5173",
-    "dev-api": "vite",
+    "dev": "VITE_APP_API_URL=http://localhost:8000 vite --host 0.0.0.0 --port 5173",
+    "dev:remote": "VITE_APP_API_URL=http://192.168.2.110:8000 vite --host 0.0.0.0 --port 5173",
     "build": "vite build",
     "preview": "vite preview"
   },

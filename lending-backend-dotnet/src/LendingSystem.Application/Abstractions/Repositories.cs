@@ -26,6 +26,7 @@ public interface ILoanRepository
 {
     Task<IReadOnlyCollection<UserLoan>> GetActiveLoansByUserIdAsync(int userId, CancellationToken cancellationToken);
     Task<UserLoan> CreateAsync(int userId, IReadOnlyCollection<int> itemIds, int durationHours, CancellationToken cancellationToken);
+    Task<UserLoan> ReturnItemAsync(int orderId, int objectId, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<LoanRecord>> GetHistoryByItemIdAsync(int itemId, CancellationToken cancellationToken);
 }
 

@@ -1,5 +1,11 @@
 namespace LendingSystem.Domain.Loans;
 
+public static class LoanStatuses
+{
+    public const string OnLoan = "On Loan";
+    public const string Returned = "Returned";
+}
+
 public sealed record LoanItemDetail(
     int ObjectDetailId,
     int ObjectId,

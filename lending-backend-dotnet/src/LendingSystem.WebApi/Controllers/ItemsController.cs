@@ -9,28 +9,33 @@ namespace LendingSystem.WebApi.Controllers;
 public sealed class ItemsController(ItemService items) : ControllerBase
 {
     [HttpGet("/api/items")]
+    [HttpGet("/api/v1/catalog/items")]
     [AllowAnonymous]
     public async Task<ActionResult<IReadOnlyCollection<ItemSummaryResponse>>> GetAll(CancellationToken cancellationToken) =>
         Ok(await items.GetAllAsync(cancellationToken));
 
     [HttpPost("/api/items")]
+    [HttpPost("/api/v1/catalog/items")]
     [Authorize(Roles = "admin")]
     public async Task<ActionResult<ItemResponse>> Create([FromBody] CreateItemRequest request, CancellationToken cancellationToken)
     {
         var created = await items.CreateAsync(request, cancellationToken);
-        return Created($"/api/items/{created.ObjectId}", created);
+        return Created($"/api/v1/catalog/items/{created.ObjectId}", created);
     }
 
     [HttpGet("/api/items/{objectId:int}")]
+    [HttpGet("/api/v1/catalog/items/{objectId:int}")]
     public async Task<ActionResult<ItemResponse>> GetById([FromRoute] int objectId, CancellationToken cancellationToken) =>
         Ok(await items.GetByIdAsync(objectId, cancellationToken));
 
     [HttpPut("/api/items/{objectId:int}")]
+    [HttpPut("/api/v1/catalog/items/{objectId:int}")]
     [Authorize(Roles = "admin")]
     public async Task<ActionResult<ItemResponse>> Update([FromRoute] int objectId, [FromBody] UpdateItemRequest request, CancellationToken cancellationToken) =>
         Ok(await items.UpdateAsync(objectId, request, cancellationToken));
 
     [HttpPost("/api/items/{objectId:int}/image")]
+    [HttpPost("/api/v1/catalog/items/{objectId:int}/image")]
     public async Task<ActionResult<ItemResponse>> UploadImage([FromRoute] int objectId, IFormFile file, CancellationToken cancellationToken)
     {
         await using var stream = file.OpenReadStream();
@@ -38,6 +43,7 @@ public sealed class ItemsController(ItemService items) : ControllerBase
     }
 
     [HttpPost("/api/items/media")]
+    [HttpPost("/api/v1/catalog/items/media")]
     public async Task<ActionResult<MediaResponse>> UploadMedia(CancellationToken cancellationToken)
     {
         var file = Request.Form.Files["file"];
@@ -62,10 +68,11 @@ public sealed class ItemsController(ItemService items) : ControllerBase
             file.ContentType,
             cancellationToken);
 
-        return Created($"/api/items/media/{objectId}", result);
+        return Created($"/api/v1/catalog/items/{objectId}/media", result);
     }
 
     [HttpGet("/api/items/media/{objectId:int}")]
+    [HttpGet("/api/v1/catalog/items/{objectId:int}/media")]
     public async Task<ActionResult<IReadOnlyCollection<ItemMediaResponse>>> GetMedia([FromRoute] int objectId, CancellationToken cancellationToken) =>
         Ok(await items.GetMediaAsync(objectId, cancellationToken));
 }
