@@ -1,5 +1,4 @@
 using LendingSystem.Application.Abstractions;
-using LendingSystem.Domain.Common;
 using Microsoft.Extensions.Configuration;
 using Minio;
 using Minio.DataModel.Args;
@@ -13,21 +12,11 @@ public sealed class MinioObjectStorage(IMinioClient client, IConfiguration confi
 
     public async Task<StoredObject> UploadItemImageAsync(Stream stream, long size, string fileName, string contentType, CancellationToken cancellationToken)
     {
-        if (!contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new DomainException("File must be an image type");
-        }
-
         return await UploadAsync("item", stream, size, fileName, contentType, cancellationToken);
     }
 
     public async Task<StoredObject> UploadItemVideoAsync(Stream stream, long size, string fileName, string contentType, CancellationToken cancellationToken)
     {
-        if (!contentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new DomainException($"檔案類型錯誤：期望影片格式，但收到 {contentType}");
-        }
-
         return await UploadAsync("video", stream, size, fileName, contentType, cancellationToken);
     }
 

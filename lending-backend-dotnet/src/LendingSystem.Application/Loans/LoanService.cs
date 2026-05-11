@@ -1,41 +1,47 @@
 using LendingSystem.Application.Abstractions;
-using LendingSystem.Domain.Common;
+using LendingSystem.Application.Common;
 using LendingSystem.Domain.Loans;
 
 namespace LendingSystem.Application.Loans;
 
 public sealed class LoanService(ILoanRepository loans)
 {
-    public async Task<IReadOnlyCollection<UserLoanResponse>> GetUserActiveLoansAsync(int userId, CancellationToken cancellationToken)
+    public async Task<Result<IReadOnlyCollection<UserLoanResponse>>> GetUserActiveLoansAsync(int userId, CancellationToken cancellationToken)
     {
         var result = await loans.GetActiveLoansByUserIdAsync(userId, cancellationToken);
-        return result.Select(Map).ToArray();
+        return Result<IReadOnlyCollection<UserLoanResponse>>.Success(result.Select(Map).ToArray());
     }
 
-    public async Task<UserLoanResponse> CreateAsync(CreateLoanRequest request, CancellationToken cancellationToken)
+    public async Task<Result<UserLoanResponse>> CreateAsync(CreateLoanRequest request, CancellationToken cancellationToken)
     {
         if (request.UserId <= 0 || request.ItemsId.Length == 0 || request.DurationHours <= 0)
         {
-            throw new DomainException("Missing required fields (user_id, items_id, duration_hours)");
+            return Result<UserLoanResponse>.Failure(ErrorCodes.Validation, "Missing required fields (user_id, items_id, duration_hours)");
         }
 
-        return Map(await loans.CreateAsync(request.UserId, request.ItemsId, request.DurationHours, cancellationToken));
+        var loan = await loans.CreateAsync(request.UserId, request.ItemsId, request.DurationHours, cancellationToken);
+        return loan.IsSuccess
+            ? Result<UserLoanResponse>.Success(Map(loan.Data!))
+            : Result<UserLoanResponse>.Failure(loan.Error.Code, loan.Error.Message);
     }
 
-    public async Task<UserLoanResponse> ReturnItemAsync(int orderId, int objectId, CancellationToken cancellationToken)
+    public async Task<Result<UserLoanResponse>> ReturnItemAsync(int orderId, int objectId, CancellationToken cancellationToken)
     {
         if (orderId <= 0 || objectId <= 0)
         {
-            throw new DomainException("Missing required fields (order_id, object_id)");
+            return Result<UserLoanResponse>.Failure(ErrorCodes.Validation, "Missing required fields (order_id, object_id)");
         }
 
-        return Map(await loans.ReturnItemAsync(orderId, objectId, cancellationToken));
+        var loan = await loans.ReturnItemAsync(orderId, objectId, cancellationToken);
+        return loan.IsSuccess
+            ? Result<UserLoanResponse>.Success(Map(loan.Data!))
+            : Result<UserLoanResponse>.Failure(loan.Error.Code, loan.Error.Message);
     }
 
-    public async Task<IReadOnlyCollection<LoanRecordResponse>> GetHistoryByItemIdAsync(int itemId, CancellationToken cancellationToken)
+    public async Task<Result<IReadOnlyCollection<LoanRecordResponse>>> GetHistoryByItemIdAsync(int itemId, CancellationToken cancellationToken)
     {
         var result = await loans.GetHistoryByItemIdAsync(itemId, cancellationToken);
-        return result.Select(x => new LoanRecordResponse(x.StartTime, x.EndTime, x.Name, x.Status)).ToArray();
+        return Result<IReadOnlyCollection<LoanRecordResponse>>.Success(result.Select(x => new LoanRecordResponse(x.StartTime, x.EndTime, x.Name, x.Status)).ToArray());
     }
 
     private static UserLoanResponse Map(UserLoan loan) => new(

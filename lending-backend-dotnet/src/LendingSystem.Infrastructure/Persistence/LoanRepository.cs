@@ -1,4 +1,5 @@
 using LendingSystem.Application.Abstractions;
+using LendingSystem.Application.Common;
 using LendingSystem.Domain.Items;
 using LendingSystem.Domain.Loans;
 using Npgsql;
@@ -49,7 +50,7 @@ public sealed class LoanRepository(NpgsqlDataSource dataSource) : ILoanRepositor
         return grouped.Values.Select(x => x.Build()).ToArray();
     }
 
-    public async Task<UserLoan> CreateAsync(int userId, IReadOnlyCollection<int> itemIds, int durationHours, CancellationToken cancellationToken)
+    public async Task<Result<UserLoan>> CreateAsync(int userId, IReadOnlyCollection<int> itemIds, int durationHours, CancellationToken cancellationToken)
     {
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
         await using var tx = await connection.BeginTransactionAsync(cancellationToken);
@@ -91,16 +92,16 @@ public sealed class LoanRepository(NpgsqlDataSource dataSource) : ILoanRepositor
             if (rows == 0)
             {
                 await tx.RollbackAsync(cancellationToken);
-                throw new InvalidOperationException($"物品 ID {objectId} 不可用或不存在，交易取消");
+                return Result<UserLoan>.Failure(ErrorCodes.Conflict, $"物品 ID {objectId} 不可用或不存在，交易取消");
             }
         }
 
         await tx.CommitAsync(cancellationToken);
 
-        return new UserLoan(orderId, userId, now, endTime, LoanStatuses.OnLoan, []);
+        return Result<UserLoan>.Success(new UserLoan(orderId, userId, now, endTime, LoanStatuses.OnLoan, []));
     }
 
-    public async Task<UserLoan> ReturnItemAsync(int orderId, int objectId, CancellationToken cancellationToken)
+    public async Task<Result<UserLoan>> ReturnItemAsync(int orderId, int objectId, CancellationToken cancellationToken)
     {
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
         await using var tx = await connection.BeginTransactionAsync(cancellationToken);
@@ -125,7 +126,7 @@ public sealed class LoanRepository(NpgsqlDataSource dataSource) : ILoanRepositor
             if (rows == 0)
             {
                 await tx.RollbackAsync(cancellationToken);
-                throw new InvalidOperationException($"借閱單 {orderId} 中的物品 ID {objectId} 不存在或已歸還");
+                return Result<UserLoan>.Failure(ErrorCodes.Conflict, $"借閱單 {orderId} 中的物品 ID {objectId} 不存在或已歸還");
             }
         }
 
@@ -159,8 +160,10 @@ public sealed class LoanRepository(NpgsqlDataSource dataSource) : ILoanRepositor
 
         await tx.CommitAsync(cancellationToken);
 
-        return await GetByOrderIdAsync(orderId, cancellationToken)
-            ?? throw new KeyNotFoundException("Loan not found");
+        var loan = await GetByOrderIdAsync(orderId, cancellationToken);
+        return loan is null
+            ? Result<UserLoan>.Failure(ErrorCodes.NotFound, "Loan not found")
+            : Result<UserLoan>.Success(loan);
     }
 
     public async Task<IReadOnlyCollection<LoanRecord>> GetHistoryByItemIdAsync(int itemId, CancellationToken cancellationToken)

@@ -1,4 +1,6 @@
 using LendingSystem.Application.Media;
+using LendingSystem.Application.Common;
+using LendingSystem.WebApi.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LendingSystem.WebApi.Controllers;
@@ -8,17 +10,31 @@ public sealed class MediaController(MediaService media) : ControllerBase
 {
     [HttpPost("/api/media/private")]
     [HttpPost("/api/v1/media/private")]
-    public async Task<ActionResult<MediaResponse>> UploadPrivate(CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<MediaResponse>>> UploadPrivate(CancellationToken cancellationToken)
     {
         var file = Request.Form.Files["file"];
         if (file is null)
         {
-            return BadRequest(new { error = "Missing File" });
+            return this.ApiFailure<MediaResponse>(ErrorCodes.Validation, "Missing File");
         }
 
-        var objectId = int.Parse(Request.Form["object_id"].ToString());
+        if (!int.TryParse(Request.Form["object_id"].ToString(), out var objectId))
+        {
+            return this.ApiFailure<MediaResponse>(ErrorCodes.Validation, "object_id is required");
+        }
+
         var orderIdValue = Request.Form["order_id"].ToString();
-        int? orderId = string.IsNullOrWhiteSpace(orderIdValue) || orderIdValue == "0" ? null : int.Parse(orderIdValue);
+        int? orderId = null;
+        if (!string.IsNullOrWhiteSpace(orderIdValue) && orderIdValue != "0")
+        {
+            if (!int.TryParse(orderIdValue, out var parsedOrderId))
+            {
+                return this.ApiFailure<MediaResponse>(ErrorCodes.Validation, "order_id must be a number");
+            }
+
+            orderId = parsedOrderId;
+        }
+
         await using var stream = file.OpenReadStream();
 
         var result = await media.UploadPrivateAsync(
@@ -32,6 +48,6 @@ public sealed class MediaController(MediaService media) : ControllerBase
             file.ContentType,
             cancellationToken);
 
-        return Created("/api/media/private", result);
+        return this.ToCreatedActionResult("/api/media/private", result);
     }
 }

@@ -1,4 +1,5 @@
-using LendingSystem.Domain.Common;
+using LendingSystem.Application.Common;
+using LendingSystem.WebApi.Models;
 
 namespace LendingSystem.WebApi.Middleware;
 
@@ -10,26 +11,11 @@ public sealed class ApiExceptionMiddleware(RequestDelegate next, ILogger<ApiExce
         {
             await next(context);
         }
-        catch (DomainException ex)
-        {
-            context.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await context.Response.WriteAsJsonAsync(new { error = ex.Message });
-        }
-        catch (KeyNotFoundException ex)
-        {
-            context.Response.StatusCode = StatusCodes.Status404NotFound;
-            await context.Response.WriteAsJsonAsync(new { error = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            context.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await context.Response.WriteAsJsonAsync(new { error = ex.Message });
-        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Unhandled API exception");
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            await context.Response.WriteAsJsonAsync(new { error = "Failed to process request due to server error" });
+            await context.Response.WriteAsJsonAsync(ApiResponse<object>.Failure(ErrorCodes.ServerError, "Failed to process request due to server error"));
         }
     }
 }

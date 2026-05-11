@@ -2,6 +2,7 @@ using LendingSystem.Domain.Items;
 using LendingSystem.Domain.Loans;
 using LendingSystem.Domain.Media;
 using LendingSystem.Domain.Users;
+using LendingSystem.Application.Common;
 
 namespace LendingSystem.Application.Abstractions;
 
@@ -25,8 +26,8 @@ public interface IItemRepository
 public interface ILoanRepository
 {
     Task<IReadOnlyCollection<UserLoan>> GetActiveLoansByUserIdAsync(int userId, CancellationToken cancellationToken);
-    Task<UserLoan> CreateAsync(int userId, IReadOnlyCollection<int> itemIds, int durationHours, CancellationToken cancellationToken);
-    Task<UserLoan> ReturnItemAsync(int orderId, int objectId, CancellationToken cancellationToken);
+    Task<Result<UserLoan>> CreateAsync(int userId, IReadOnlyCollection<int> itemIds, int durationHours, CancellationToken cancellationToken);
+    Task<Result<UserLoan>> ReturnItemAsync(int orderId, int objectId, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<LoanRecord>> GetHistoryByItemIdAsync(int itemId, CancellationToken cancellationToken);
 }
 

@@ -1,8 +1,12 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using LendingSystem.Application.Common;
 using LendingSystem.Infrastructure;
 using LendingSystem.WebApi.Middleware;
+using LendingSystem.WebApi.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,8 +18,22 @@ builder.Services
     .AddControllers()
     .AddJsonOptions(options =>
     {
-        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.Never;
     });
+
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var message = string.Join("; ", context.ModelState.Values
+            .SelectMany(x => x.Errors)
+            .Select(x => string.IsNullOrWhiteSpace(x.ErrorMessage) ? "Invalid request body" : x.ErrorMessage));
+
+        return new BadRequestObjectResult(ApiResponse<object>.Failure(
+            ErrorCodes.Validation,
+            string.IsNullOrWhiteSpace(message) ? "Invalid request body" : message));
+    };
+});
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddCors();
@@ -42,6 +60,20 @@ builder.Services
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
             RoleClaimType = System.Security.Claims.ClaimTypes.Role,
             NameClaimType = System.Security.Claims.ClaimTypes.NameIdentifier
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnChallenge = async context =>
+            {
+                context.HandleResponse();
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await context.Response.WriteAsJsonAsync(ApiResponse<object>.Failure(ErrorCodes.Unauthorized, "Unauthorized"));
+            },
+            OnForbidden = async context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                await context.Response.WriteAsJsonAsync(ApiResponse<object>.Failure(ErrorCodes.Unauthorized, "Forbidden"));
+            }
         };
     });
 

@@ -1,39 +1,36 @@
 using LendingSystem.Application.Abstractions;
-using LendingSystem.Domain.Common;
+using LendingSystem.Application.Common;
 using LendingSystem.Domain.Media;
 
 namespace LendingSystem.Application.Media;
 
 public sealed class MediaService(IMediaRepository media, IObjectStorage storage)
 {
-    public async Task<MediaResponse> UploadPrivateAsync(int? orderId, int objectId, string description, string link, Stream stream, long size, string fileName, string contentType, CancellationToken cancellationToken)
+    public async Task<Result<MediaResponse>> UploadPrivateAsync(int? orderId, int objectId, string description, string link, Stream stream, long size, string fileName, string contentType, CancellationToken cancellationToken)
     {
-        var (type, stored) = await UploadAsync(stream, size, fileName, contentType, cancellationToken);
-        try
+        var upload = await UploadAsync(stream, size, fileName, contentType, cancellationToken);
+        if (!upload.IsSuccess)
         {
-            var asset = await media.CreateAsync(orderId, objectId, type, RewritePublicMediaHost(stored.Url), link, description, cancellationToken);
-            return MediaResponse.From(asset);
+            return Result<MediaResponse>.Failure(upload.Error.Code, upload.Error.Message);
         }
-        catch
-        {
-            await storage.DeleteObjectAsync(stored.ObjectName, cancellationToken);
-            throw;
-        }
+
+        var asset = await media.CreateAsync(orderId, objectId, upload.Data!.Type, RewritePublicMediaHost(upload.Data.Stored.Url), link, description, cancellationToken);
+        return Result<MediaResponse>.Success(MediaResponse.From(asset));
     }
 
-    private async Task<(string Type, StoredObject Stored)> UploadAsync(Stream stream, long size, string fileName, string contentType, CancellationToken cancellationToken)
+    private async Task<Result<UploadedMediaFile>> UploadAsync(Stream stream, long size, string fileName, string contentType, CancellationToken cancellationToken)
     {
         if (contentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase))
         {
-            return (MediaTypes.Video, await storage.UploadItemVideoAsync(stream, size, fileName, contentType, cancellationToken));
+            return Result<UploadedMediaFile>.Success(new UploadedMediaFile(MediaTypes.Video, await storage.UploadItemVideoAsync(stream, size, fileName, contentType, cancellationToken)));
         }
 
         if (contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
         {
-            return (MediaTypes.Image, await storage.UploadItemImageAsync(stream, size, fileName, contentType, cancellationToken));
+            return Result<UploadedMediaFile>.Success(new UploadedMediaFile(MediaTypes.Image, await storage.UploadItemImageAsync(stream, size, fileName, contentType, cancellationToken)));
         }
 
-        throw new DomainException("Unsupported file type");
+        return Result<UploadedMediaFile>.Failure(ErrorCodes.UnsupportedFileType, "Unsupported file type");
     }
 
     private static string RewritePublicMediaHost(string url)
@@ -46,4 +43,6 @@ public sealed class MediaService(IMediaRepository media, IObjectStorage storage)
         };
         return builder.Uri.ToString();
     }
+
+    private sealed record UploadedMediaFile(string Type, StoredObject Stored);
 }

@@ -1,5 +1,7 @@
 using LendingSystem.Application.Abstractions;
+using LendingSystem.Application.Common;
 using LendingSystem.Application.System;
+using LendingSystem.WebApi.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LendingSystem.WebApi.Controllers;
@@ -8,13 +10,15 @@ namespace LendingSystem.WebApi.Controllers;
 public sealed class SystemController(SystemStatusService system, IVideoDownloadClient videos) : ControllerBase
 {
     [HttpGet("/api/health")]
-    public ActionResult<ServiceHealthResponse> Health() => Ok(system.GetHealth());
+    public ActionResult<ApiResponse<ServiceHealthResponse>> Health() => Ok(ApiResponse<ServiceHealthResponse>.Success(system.GetHealth()));
 
     [HttpGet("/api/status")]
-    public async Task<ActionResult<SystemStatusResponse>> Status(CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<SystemStatusResponse>>> Status(CancellationToken cancellationToken)
     {
         var response = await system.GetStatusAsync(cancellationToken);
-        return response.Status == "ok" ? Ok(response) : StatusCode(StatusCodes.Status503ServiceUnavailable, response);
+        return response.Status == "ok"
+            ? Ok(ApiResponse<SystemStatusResponse>.Success(response))
+            : StatusCode(StatusCodes.Status503ServiceUnavailable, ApiResponse<SystemStatusResponse>.Failure(ErrorCodes.ServerError, "Service is unavailable"));
     }
 
     [HttpGet("/api/download")]
@@ -22,7 +26,7 @@ public sealed class SystemController(SystemStatusService system, IVideoDownloadC
     {
         if (string.IsNullOrWhiteSpace(url) || !Uri.TryCreate(url, UriKind.Absolute, out var sourceUrl))
         {
-            return BadRequest(new { error = "url query parameter must be a valid absolute URL" });
+            return BadRequest(ApiResponse<object>.Failure(ErrorCodes.Validation, "url query parameter must be a valid absolute URL"));
         }
 
         Response.ContentType = "application/octet-stream";
@@ -40,7 +44,7 @@ public sealed class SystemController(SystemStatusService system, IVideoDownloadC
             {
                 if (!wroteChunk)
                 {
-                    return StatusCode(StatusCodes.Status502BadGateway, new { error = chunk.ErrorMessage });
+                    return StatusCode(StatusCodes.Status502BadGateway, ApiResponse<object>.Failure(ErrorCodes.BadGateway, chunk.ErrorMessage));
                 }
 
                 break;
