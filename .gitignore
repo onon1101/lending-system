@@ -1,4 +1,76 @@
-
+# Environment files
 .env
-lending-backend/.env
-lending-frontend/.env
+.env.*
+!.example.env
+!.env.example
+!*.example.env
+!*.env.example
+
+# Project-local environment files
+**/.env
+**/.env.*
+!**/.example.env
+!**/.env.example
+!**/*.example.env
+!**/*.env.example
+
+# Node / Svelte / Vite
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+build/
+**/build/
+.svelte-kit/
+**/.svelte-kit/
+.vite/
+**/.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# .NET
+bin/
+obj/
+**/bin/
+**/obj/
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+TestResults/
+**/TestResults/
+coverage/
+**/coverage/
+*.nupkg
+*.snupkg
+appsettings.*.local.json
+
+# Go
+*.exe
+*.test
+*.out
+vendor/
+.gocache/
+**/.gocache/
+coverage.out
+
+# IDE / editor
+.idea/
+.vscode/
+**/.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local logs and temp files
+logs/
+*.log
+tmp/
+temp/
