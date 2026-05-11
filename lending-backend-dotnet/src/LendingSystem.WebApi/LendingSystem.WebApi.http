@@ -1,0 +1,6 @@
+@LendingSystem.WebApi_HostAddress = http://localhost:0
+
+GET {{LendingSystem.WebApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LendingSystem.Application/LendingSystem.Application.csproj" />
+    <Project Path="src/LendingSystem.Domain/LendingSystem.Domain.csproj" />
+    <Project Path="src/LendingSystem.Infrastructure/LendingSystem.Infrastructure.csproj" />
+    <Project Path="src/LendingSystem.WebApi/LendingSystem.WebApi.csproj" />
+  </Folder>
+</Solution>

@@ -26,6 +26,7 @@ func NewRouter(
 	// --- 公開路由 (無需 Token) ---
 	r.GET("/api/health", system.HealthCheck)
 	r.GET("/api/status", system.GetSystemStatus)
+	r.GET("/api/download", system.TestDownloadMedia)
 	r.GET("/api/items", items.GetAllItems)
 
 	// --- 受保護路由 (需要 JWT Token) ---
@@ -50,7 +51,7 @@ func NewRouter(
 			itemsGroup.POST("", middleware.RoleMiddleware("admin"), items.CreateItem)
 			itemsGroup.GET("/:object_id", items.GetItemByID)
 			itemsGroup.PUT("/:object_id", middleware.RoleMiddleware("admin"), items.UpdateItem)
-			
+
 			// 媒體上傳
 			itemsGroup.POST("/:object_id/image", items.UploadItemImage)
 			itemsGroup.POST("/media", items.UploadItemMedia)
