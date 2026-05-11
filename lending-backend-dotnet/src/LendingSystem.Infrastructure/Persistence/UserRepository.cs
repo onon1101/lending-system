@@ -1,87 +1,72 @@
+using System.Security.Cryptography.X509Certificates;
 using LendingSystem.Application.Abstractions;
 using LendingSystem.Domain.Users;
-using Npgsql;
+using Microsoft.EntityFrameworkCore;
 
 namespace LendingSystem.Infrastructure.Persistence;
 
-public sealed class UserRepository(NpgsqlDataSource dataSource) : IUserRepository
+public sealed class UserRepository(LendingDbContext db) : IUserRepository
 {
     public async Task<User?> FindByEmailAsync(string email, CancellationToken cancellationToken)
     {
-        const string sql = """
-            SELECT user_id, password_hash, name, role, created_at, updated_at
-            FROM users
-            WHERE email = @email;
-            """;
-
-        await using var command = dataSource.CreateCommand(sql);
-        command.Parameters.AddWithValue("email", email);
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-
-        if (!await reader.ReadAsync(cancellationToken))
-        {
-            return null;
-        }
-
-        return new User(
-            reader.GetInt32(0),
-            email,
-            reader.GetString(1),
-            reader.GetString(2),
-            reader.GetString(3),
-            reader.GetFieldValue<DateTimeOffset>(4),
-            reader.GetFieldValue<DateTimeOffset>(5));
+        return await db.Users
+            .AsNoTracking()
+            .Where(x => x.Email == email && !x.IsDeleted)
+            .Select(x => new User(
+                x.UserId,
+                x.Email ?? "",
+                x.PasswordHash ?? "",
+                x.Name,
+                x.Role ?? "",
+                x.CreatedAt ?? default,
+                x.UpdatedAt ?? default))
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task<UserProfile> CreateAsync(string name, string email, string passwordHash, CancellationToken cancellationToken)
     {
-        const string sql = """
-            INSERT INTO users (name, email, password_hash)
-            VALUES (@name, @email, @password_hash)
-            RETURNING user_id;
-            """;
+        var entity = new UserEntity
+        {
+            Name = name,
+            Email = email,
+            PasswordHash = passwordHash
+        };
 
-        await using var command = dataSource.CreateCommand(sql);
-        command.Parameters.AddWithValue("name", name);
-        command.Parameters.AddWithValue("email", email);
-        command.Parameters.AddWithValue("password_hash", passwordHash);
+        db.Users.Add(entity);
+        await db.SaveChangesAsync(cancellationToken);
 
-        var id = (int)(await command.ExecuteScalarAsync(cancellationToken) ?? 0);
-        return new UserProfile(id, name, email);
+        return new UserProfile(entity.UserId, entity.Name, entity.Email ?? "");
     }
 
     public async Task<UserProfile?> GetByIdAsync(int userId, CancellationToken cancellationToken)
     {
-        const string sql = """
-            SELECT user_id, name, email
-            FROM users
-            WHERE user_id = @user_id;
-            """;
-
-        await using var command = dataSource.CreateCommand(sql);
-        command.Parameters.AddWithValue("user_id", userId);
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-
-        return await reader.ReadAsync(cancellationToken)
-            ? new UserProfile(reader.GetInt32(0), reader.GetString(1), reader.GetString(2))
-            : null;
+        return await db.Users
+            .AsNoTracking()
+            .Where(x => x.UserId == userId && !x.IsDeleted)
+            .Select(x => new UserProfile(x.UserId, x.Name, x.Email ?? ""))
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task<UserProfile?> SearchByNameAsync(string username, CancellationToken cancellationToken)
     {
-        const string sql = """
-            SELECT user_id, name, email
-            FROM users
-            WHERE name like '%' || @username || '%'
-            LIMIT 1;
-            """;
+        return await db.Users
+            .AsNoTracking()
+            .Where(x => EF.Functions.Like(x.Name, $"%{username}%") && !x.IsDeleted)
+            .Select(x => new UserProfile(x.UserId, x.Name, x.Email ?? ""))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
 
-        await using var command = dataSource.CreateCommand(sql);
-        command.Parameters.AddWithValue("username", username);
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+    public async Task<bool> DeleteAsync(int userId, CancellationToken cancellationToken)
+    {
+        var entity = await db.Users
+            .FirstOrDefaultAsync(x => x.UserId == userId, cancellationToken);
 
-        return await reader.ReadAsync(cancellationToken)
-            ? new UserProfile(reader.GetInt32(0), reader.GetString(1), reader.GetString(2))
-            : null;
+        if (entity is null)
+            return false;
+
+        entity.IsDeleted = true;
+        await db.SaveChangesAsync(cancellationToken);
+
+        return true;
     }
 }

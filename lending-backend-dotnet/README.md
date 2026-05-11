@@ -15,8 +15,6 @@
 - `/api/v1/users`: 使用者查詢與建立。
 - `/api/v1/auth/session`: 登入取得 JWT。
 
-舊版 `/api/...` 與 `/auth/login` 路由仍保留相容。
-
 ## Run
 
 ```bash

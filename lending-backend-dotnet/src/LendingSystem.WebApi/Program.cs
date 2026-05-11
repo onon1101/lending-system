@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using LendingSystem.Application.Common;
 using LendingSystem.Infrastructure;
+using LendingSystem.Infrastructure.Persistence;
 using LendingSystem.WebApi.Middleware;
 using LendingSystem.WebApi.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -80,6 +81,8 @@ builder.Services
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+
+await app.Services.MigrateDatabaseAsync();
 
 app.UseMiddleware<ApiExceptionMiddleware>();
 

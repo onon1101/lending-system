@@ -24,7 +24,7 @@
 
     try {
       // 呼叫封裝後的 API，並傳入進度處理回呼
-      await uploadItemMedia(file, objectId, description, (percent) => {
+      await uploadItemMedia(file, objectId, description, "", (percent) => {
         uploadProgress = percent;
         statusMessage = `上傳中: ${percent}%`;
       });
@@ -56,9 +56,11 @@
     <div class="space-y-4">
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1"
+          for="media-file"
           >選擇檔案 (圖片或影片)</label
         >
         <input
+          id="media-file"
           type="file"
           bind:this={fileInput}
           accept="image/*,video/*"
@@ -68,9 +70,11 @@
 
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1"
+          for="media-description"
           >描述 (選填)</label
         >
         <textarea
+          id="media-description"
           bind:value={description}
           class="w-full border text-gray-700 border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
           rows="3"

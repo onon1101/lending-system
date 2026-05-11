@@ -12,6 +12,7 @@ public interface IUserRepository
     Task<UserProfile> CreateAsync(string name, string email, string passwordHash, CancellationToken cancellationToken);
     Task<UserProfile?> GetByIdAsync(int userId, CancellationToken cancellationToken);
     Task<UserProfile?> SearchByNameAsync(string username, CancellationToken cancellationToken);
+    Task<bool> DeleteAsync(int userId, CancellationToken cancellationToken);
 }
 
 public interface IItemRepository

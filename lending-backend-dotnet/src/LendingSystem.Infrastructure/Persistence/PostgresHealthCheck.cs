@@ -1,17 +1,15 @@
 using LendingSystem.Application.System;
-using Npgsql;
+using Microsoft.EntityFrameworkCore;
 
 namespace LendingSystem.Infrastructure.Persistence;
 
-public sealed class PostgresHealthCheck(NpgsqlDataSource dataSource) : IDatabaseHealthCheck
+public sealed class PostgresHealthCheck(LendingDbContext db) : IDatabaseHealthCheck
 {
     public async Task<string?> GetErrorAsync(CancellationToken cancellationToken)
     {
         try
         {
-            await using var command = dataSource.CreateCommand("select 1");
-            await command.ExecuteScalarAsync(cancellationToken);
-            return null;
+            return await db.Database.CanConnectAsync(cancellationToken) ? null : "Database connection failed";
         }
         catch (Exception ex)
         {

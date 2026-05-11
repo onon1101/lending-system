@@ -1,124 +1,107 @@
 using LendingSystem.Application.Abstractions;
 using LendingSystem.Domain.Items;
-using Npgsql;
+using Microsoft.EntityFrameworkCore;
 
 namespace LendingSystem.Infrastructure.Persistence;
 
-public sealed class ItemRepository(NpgsqlDataSource dataSource) : IItemRepository
+public sealed class ItemRepository(LendingDbContext db) : IItemRepository
 {
     public async Task<Item> CreateAsync(string objectName, string description, CancellationToken cancellationToken)
     {
-        const string sql = """
-            INSERT INTO items (object_name, description, current_status)
-            VALUES (@object_name, @description, 'Available')
-            RETURNING object_id, current_status;
-            """;
+        var entity = new ItemEntity
+        {
+            ObjectName = objectName,
+            Description = description,
+            CurrentStatus = ItemStatuses.Available
+        };
 
-        await using var command = dataSource.CreateCommand(sql);
-        command.Parameters.AddWithValue("object_name", objectName);
-        command.Parameters.AddWithValue("description", description);
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        await reader.ReadAsync(cancellationToken);
-        return new Item(reader.GetInt32(0), objectName, description, reader.GetString(1), null);
+        db.Items.Add(entity);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Map(entity);
     }
 
     public async Task<Item?> GetByIdAsync(int objectId, CancellationToken cancellationToken)
     {
-        const string sql = """
-            SELECT object_id, object_name, description, current_status, image_url
-            FROM items
-            WHERE object_id = @object_id;
-            """;
+        var entity = await db.Items
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.ObjectId == objectId, cancellationToken);
 
-        await using var command = dataSource.CreateCommand(sql);
-        command.Parameters.AddWithValue("object_id", objectId);
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        return await reader.ReadAsync(cancellationToken) ? ReadItem(reader) : null;
+        return entity is null ? null : Map(entity);
     }
 
     public async Task<IReadOnlyCollection<ItemSummary>> GetAllAsync(CancellationToken cancellationToken)
     {
-        const string sql = """
-            SELECT a.object_id, a.object_name, a.description, a.current_status,
-                   b.name AS owner_name, b.email AS owner_email, a.image_url
-            FROM items a
-            LEFT JOIN users b ON b.user_id = a.owner_id
-            ORDER BY a.object_id;
-            """;
-
-        await using var command = dataSource.CreateCommand(sql);
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        var result = new List<ItemSummary>();
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            result.Add(new ItemSummary(
-                reader.GetInt32(0),
-                reader.GetString(1),
-                reader.GetString(2),
-                reader.GetString(3),
-                reader.IsDBNull(4) ? null : reader.GetString(4),
-                reader.IsDBNull(5) ? null : reader.GetString(5),
-                reader.IsDBNull(6) ? null : reader.GetString(6)));
-        }
-
-        return result;
+        return await (
+            from item in db.Items.AsNoTracking()
+            join owner in db.Users.AsNoTracking() on item.OwnerId equals owner.UserId into owners
+            from owner in owners.DefaultIfEmpty()
+            orderby item.ObjectId
+            select new ItemSummary(
+                item.ObjectId,
+                item.ObjectName,
+                item.Description ?? "",
+                item.CurrentStatus ?? "",
+                owner == null ? null : owner.Name,
+                owner == null ? null : owner.Email,
+                item.ImageUrl))
+            .ToArrayAsync(cancellationToken);
     }
 
     public async Task<Item?> UpdateAsync(int objectId, string? objectName, string? description, string? currentStatus, string? imageUrl, CancellationToken cancellationToken)
     {
-        const string sql = """
-            UPDATE items SET
-                object_name = COALESCE(NULLIF(@object_name, ''), object_name),
-                description = COALESCE(NULLIF(@description, ''), description),
-                current_status = COALESCE(NULLIF(@current_status, ''), current_status),
-                image_url = COALESCE(@image_url, image_url)
-            WHERE object_id = @object_id
-            RETURNING object_id, object_name, description, current_status, image_url;
-            """;
+        var entity = await db.Items.FirstOrDefaultAsync(x => x.ObjectId == objectId, cancellationToken);
+        if (entity is null)
+        {
+            return null;
+        }
 
-        await using var command = dataSource.CreateCommand(sql);
-        command.Parameters.AddWithValue("object_id", objectId);
-        command.Parameters.AddWithValue("object_name", (object?)objectName ?? DBNull.Value);
-        command.Parameters.AddWithValue("description", (object?)description ?? DBNull.Value);
-        command.Parameters.AddWithValue("current_status", (object?)currentStatus ?? DBNull.Value);
-        command.Parameters.AddWithValue("image_url", (object?)imageUrl ?? DBNull.Value);
+        if (!string.IsNullOrEmpty(objectName))
+        {
+            entity.ObjectName = objectName;
+        }
 
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        return await reader.ReadAsync(cancellationToken) ? ReadItem(reader) : null;
+        if (!string.IsNullOrEmpty(description))
+        {
+            entity.Description = description;
+        }
+
+        if (!string.IsNullOrEmpty(currentStatus))
+        {
+            entity.CurrentStatus = currentStatus;
+        }
+
+        if (imageUrl is not null)
+        {
+            entity.ImageUrl = imageUrl;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        return Map(entity);
     }
 
     public async Task<IReadOnlyCollection<ItemMediaSummary>> GetMediaByItemIdAsync(int itemId, CancellationToken cancellationToken)
     {
-        const string sql = """
-            SELECT a.type, c.name, a.description, a.link, a.url, a.created_at
-            FROM media a
-            LEFT JOIN orders b ON b.order_id = a.order_id
-            LEFT JOIN users c ON c.user_id = b.user_id
-            WHERE a.object_id = @object_id;
-            """;
-
-        await using var command = dataSource.CreateCommand(sql);
-        command.Parameters.AddWithValue("object_id", itemId);
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        var result = new List<ItemMediaSummary>();
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            result.Add(new ItemMediaSummary(
-                reader.GetString(0),
-                reader.IsDBNull(1) ? null : reader.GetString(1),
-                reader.GetString(2),
-                reader.IsDBNull(3) ? "" : reader.GetString(3),
-                reader.GetString(4),
-                reader.GetFieldValue<DateTimeOffset>(5)));
-        }
-
-        return result;
+        return await db.Media
+            .AsNoTracking()
+            .Where(x => x.ObjectId == itemId)
+            .Select(x => new ItemMediaSummary(
+                x.Type,
+                x.Order == null || x.Order.User == null ? null : x.Order.User.Name,
+                x.Description ?? "",
+                x.Link ?? "",
+                x.Url,
+                ToDateTimeOffset(x.CreatedAt)))
+            .ToArrayAsync(cancellationToken);
     }
 
-    private static Item ReadItem(NpgsqlDataReader reader) => new(
-        reader.GetInt32(0),
-        reader.GetString(1),
-        reader.GetString(2),
-        reader.GetString(3),
-        reader.IsDBNull(4) ? null : reader.GetString(4));
+    private static Item Map(ItemEntity entity) => new(
+        entity.ObjectId,
+        entity.ObjectName,
+        entity.Description ?? "",
+        entity.CurrentStatus ?? "",
+        entity.ImageUrl);
+
+    private static DateTimeOffset ToDateTimeOffset(DateTime? value) =>
+        value is null ? default : new DateTimeOffset(DateTime.SpecifyKind(value.Value, DateTimeKind.Utc));
 }

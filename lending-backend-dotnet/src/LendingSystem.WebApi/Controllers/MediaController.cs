@@ -8,7 +8,6 @@ namespace LendingSystem.WebApi.Controllers;
 [ApiController]
 public sealed class MediaController(MediaService media) : ControllerBase
 {
-    [HttpPost("/api/media/private")]
     [HttpPost("/api/v1/media/private")]
     public async Task<ActionResult<ApiResponse<MediaResponse>>> UploadPrivate(CancellationToken cancellationToken)
     {
@@ -48,6 +47,6 @@ public sealed class MediaController(MediaService media) : ControllerBase
             file.ContentType,
             cancellationToken);
 
-        return this.ToCreatedActionResult("/api/media/private", result);
+        return this.ToCreatedActionResult("/api/v1/media/private", result);
     }
 }

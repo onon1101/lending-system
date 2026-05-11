@@ -7,12 +7,10 @@ namespace LendingSystem.WebApi.Controllers;
 [ApiController]
 public sealed class LoansController(LoanService loans) : ControllerBase
 {
-    [HttpGet("/api/users/{userId:int}/loans")]
     [HttpGet("/api/v1/users/{userId:int}/borrowings")]
     public async Task<ActionResult<ApiResponse<IReadOnlyCollection<UserLoanResponse>>>> GetUserActiveLoans([FromRoute] int userId, CancellationToken cancellationToken) =>
         this.ToActionResult(await loans.GetUserActiveLoansAsync(userId, cancellationToken));
 
-    [HttpPost("/api/loans")]
     [HttpPost("/api/v1/borrowings")]
     public async Task<ActionResult<ApiResponse<UserLoanResponse>>> Create([FromBody] CreateLoanRequest request, CancellationToken cancellationToken)
     {
@@ -24,7 +22,6 @@ public sealed class LoansController(LoanService loans) : ControllerBase
     public async Task<ActionResult<ApiResponse<UserLoanResponse>>> ReturnItem([FromRoute] int orderId, [FromRoute] int objectId, CancellationToken cancellationToken) =>
         this.ToActionResult(await loans.ReturnItemAsync(orderId, objectId, cancellationToken));
 
-    [HttpGet("/api/loans/items/history/{objectId:int}")]
     [HttpGet("/api/v1/catalog/items/{objectId:int}/borrowings/history")]
     public async Task<ActionResult<ApiResponse<IReadOnlyCollection<LoanRecordResponse>>>> GetItemHistory([FromRoute] int objectId, CancellationToken cancellationToken) =>
         this.ToActionResult(await loans.GetHistoryByItemIdAsync(objectId, cancellationToken));

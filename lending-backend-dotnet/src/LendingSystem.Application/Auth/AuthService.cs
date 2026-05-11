@@ -1,3 +1,4 @@
+using System.IO.Pipelines;
 using LendingSystem.Application.Abstractions;
 using LendingSystem.Application.Common;
 
@@ -46,5 +47,14 @@ public sealed class AuthService(IUserRepository users, IPasswordHasher passwords
         return user is null
             ? Result<UserResponse>.Failure(ErrorCodes.NotFound, "User not found")
             : Result<UserResponse>.Success(new UserResponse(user.UserId, user.Name, user.Email));
+    }
+
+    public async Task<Result<DeleteResponse>> DeleteByIdAsync(int userId, CancellationToken cancellationToken)
+    {
+        var IsSuccess = await users.DeleteAsync(userId, cancellationToken);
+
+        return IsSuccess
+            ? Result<DeleteResponse>.Success(new DeleteResponse(true, string.Empty))
+            : Result<DeleteResponse>.Failure(ErrorCodes.ServerError, "Delete user is not successful.");
     }
 }

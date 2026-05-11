@@ -51,6 +51,7 @@
 
     <div class="max-w-5xl w-full flex flex-col items-center">
       {#if media.type === "video"}
+        <!-- svelte-ignore a11y_media_has_caption -->
         <video
           controls
           autoplay

@@ -9,6 +9,7 @@ using LendingSystem.Infrastructure.Persistence;
 using LendingSystem.Infrastructure.Storage;
 using LendingSystem.Infrastructure.Time;
 using LendingSystem.Infrastructure.Video;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Minio;
@@ -31,7 +32,7 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = BuildPostgresConnectionString(configuration);
-        services.AddSingleton(NpgsqlDataSource.Create(connectionString));
+        services.AddDbContext<LendingDbContext>(options => options.UseNpgsql(connectionString));
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IItemRepository, ItemRepository>();
         services.AddScoped<ILoanRepository, LoanRepository>();
