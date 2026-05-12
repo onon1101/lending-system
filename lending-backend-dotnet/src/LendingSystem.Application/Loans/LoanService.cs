@@ -14,12 +14,18 @@ public sealed class LoanService(ILoanRepository loans)
 
     public async Task<Result<UserLoanResponse>> CreateAsync(CreateLoanRequest request, CancellationToken cancellationToken)
     {
-        if (request.UserId <= 0 || request.ItemsId.Length == 0 || request.DurationHours <= 0)
+        var borrowerId = request.BorrowerId ?? request.UserId;
+        if (borrowerId <= 0)
         {
-            return Result<UserLoanResponse>.Failure(ErrorCodes.Validation, "Missing required fields (user_id, items_id, duration_hours)");
+            borrowerId = null;
         }
 
-        var loan = await loans.CreateAsync(request.UserId, request.ItemsId, request.DurationHours, cancellationToken);
+        if ((borrowerId is null && string.IsNullOrWhiteSpace(request.BorrowerName)) || request.ItemsId.Length == 0 || request.DurationHours <= 0)
+        {
+            return Result<UserLoanResponse>.Failure(ErrorCodes.Validation, "Missing required fields (borrower_id or borrower_name, items_id, duration_hours)");
+        }
+
+        var loan = await loans.CreateAsync(borrowerId, request.BorrowerName, request.ItemsId, request.DurationHours, cancellationToken);
         return loan.IsSuccess
             ? Result<UserLoanResponse>.Success(Map(loan.Data!))
             : Result<UserLoanResponse>.Failure(loan.Error.Code, loan.Error.Message);

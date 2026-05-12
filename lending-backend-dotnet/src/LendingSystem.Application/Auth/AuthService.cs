@@ -54,7 +54,7 @@ public sealed class AuthService(IUserRepository users, IPasswordHasher passwords
         var IsSuccess = await users.DeleteAsync(userId, cancellationToken);
 
         return IsSuccess
-            ? Result<DeleteResponse>.Success(new DeleteResponse(true, string.Empty))
+            ? Result<DeleteResponse>.Success(new DeleteResponse(true, $"Delete user from userid {userId} is successful."))
             : Result<DeleteResponse>.Failure(ErrorCodes.ServerError, "Delete user is not successful.");
     }
 }

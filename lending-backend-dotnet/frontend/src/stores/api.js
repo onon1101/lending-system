@@ -44,7 +44,7 @@ async function handleResponse(response) {
     );
   }
 
-  return unwrapApiResponse(payload);
+  return normalizeApiPayload(unwrapApiResponse(payload));
 }
 
 function unwrapApiResponse(payload) {
@@ -64,6 +64,25 @@ function unwrapApiResponse(payload) {
   }
 
   return payload.Data ?? payload.data ?? null;
+}
+
+function normalizeApiPayload(value) {
+  if (Array.isArray(value)) return value.map(normalizeApiPayload);
+  if (!value || typeof value !== "object") return value;
+
+  const normalized = Object.fromEntries(
+    Object.entries(value).map(([key, entry]) => [key, normalizeApiPayload(entry)]),
+  );
+
+  if (hasOwn(normalized, "item_id") && !hasOwn(normalized, "object_id")) {
+    normalized.object_id = normalized.item_id;
+  }
+
+  if (hasOwn(normalized, "object_id") && !hasOwn(normalized, "item_id")) {
+    normalized.item_id = normalized.object_id;
+  }
+
+  return normalized;
 }
 
 export function getFullImageUrl(path) {

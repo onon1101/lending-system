@@ -72,14 +72,15 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
             entity.ToTable("orders");
             entity.HasKey(x => x.OrderId).HasName("orders_pkey");
             entity.Property(x => x.OrderId).HasColumnName("order_id").ValueGeneratedOnAdd();
-            entity.Property(x => x.UserId).HasColumnName("user_id").IsRequired();
+            entity.Property(x => x.BorrowerId).HasColumnName("borrower_id");
+            entity.Property(x => x.BorrowerName).HasColumnName("borrower_name").HasMaxLength(100).IsRequired();
             entity.Property(x => x.StartTime).HasColumnName("start_time").IsRequired();
             entity.Property(x => x.EndTime).HasColumnName("end_time").IsRequired();
             entity.Property(x => x.Status).HasColumnName("status").HasMaxLength(50).IsRequired();
             entity.HasOne(x => x.User)
                 .WithMany(x => x.Orders)
-                .HasForeignKey(x => x.UserId)
-                .HasConstraintName("orders_user_id_fkey")
+                .HasForeignKey(x => x.BorrowerId)
+                .HasConstraintName("orders_borrower_id_fkey")
                 .OnDelete(DeleteBehavior.NoAction);
         });
 

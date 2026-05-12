@@ -2,10 +2,23 @@ using System.Text.Json.Serialization;
 
 namespace LendingSystem.Application.Loans;
 
-public sealed record CreateLoanRequest(
-    [property: JsonPropertyName("user_id")] int UserId,
-    [property: JsonPropertyName("items_id")] int[] ItemsId,
-    [property: JsonPropertyName("duration_hours")] int DurationHours);
+public sealed class CreateLoanRequest
+{
+    [JsonPropertyName("user_id")]
+    public int? UserId { get; init; }
+
+    [JsonPropertyName("borrower_id")]
+    public int? BorrowerId { get; init; }
+
+    [JsonPropertyName("borrower_name")]
+    public string? BorrowerName { get; init; }
+
+    [JsonPropertyName("items_id")]
+    public int[] ItemsId { get; init; } = [];
+
+    [JsonPropertyName("duration_hours")]
+    public int DurationHours { get; init; }
+}
 
 public sealed record ReturnLoanItemRequest(
     [property: JsonPropertyName("object_id")] int ObjectId);

@@ -64,7 +64,19 @@ public sealed class ItemEntity
 public sealed class OrderEntity
 {
     public int OrderId { get; set; }
-    public int UserId { get; set; }
+    /// <summary>
+    /// 借閱者的Id
+    /// </summary>
+    /// <remarks>
+    /// 如果借閱者為系統已註冊的使用者，則此帶入 UserId，否則為空。
+    /// </remarks>
+    // public int UserId { get; set; }
+    public int? BorrowerId { get; init; }
+
+    /// <summary>
+    /// 借閱者姓名
+    /// </summary>
+    public string BorrowerName { get; init; } = string.Empty;
     public DateTimeOffset StartTime { get; set; }
     public DateTimeOffset EndTime { get; set; }
     public string Status { get; set; } = "";

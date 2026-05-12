@@ -14,14 +14,14 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
             .AsNoTracking()
             .Include(x => x.Details)
             .ThenInclude(x => x.Item)
-            .Where(x => x.UserId == userId && x.Status == LoanStatuses.OnLoan)
+            .Where(x => x.BorrowerId == userId && x.Status == LoanStatuses.OnLoan)
             .OrderBy(x => x.OrderId)
             .ToArrayAsync(cancellationToken);
 
         return orders.Select(Map).ToArray();
     }
 
-    public async Task<Result<UserLoan>> CreateAsync(int userId, IReadOnlyCollection<int> itemIds, int durationHours, CancellationToken cancellationToken)
+    public async Task<Result<UserLoan>> CreateAsync(int? borrowerId, string? borrowerName, IReadOnlyCollection<int> itemIds, int durationHours, CancellationToken cancellationToken)
     {
         if (itemIds.Count != itemIds.Distinct().Count())
         {
@@ -32,6 +32,21 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
 
         var now = DateTimeOffset.UtcNow;
         var endTime = now.AddHours(durationHours);
+
+        UserEntity? borrower = null;
+        if (borrowerId is not null)
+        {
+            borrower = await db.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.UserId == borrowerId && !x.IsDeleted, cancellationToken);
+            if (borrower is null)
+            {
+                await tx.RollbackAsync(cancellationToken);
+                return Result<UserLoan>.Failure(ErrorCodes.NotFound, $"使用者 ID {borrowerId} 不存在，交易取消");
+            }
+        }
+
+        var displayName = borrower?.DisplayName ?? borrowerName?.Trim() ?? "";
 
         var items = await db.Items
             .Where(x => itemIds.Contains(x.ItemId))
@@ -49,7 +64,8 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
 
         var order = new OrderEntity
         {
-            UserId = userId,
+            BorrowerId = borrowerId,
+            BorrowerName = displayName,
             StartTime = now,
             EndTime = endTime,
             Status = LoanStatuses.OnLoan
@@ -70,7 +86,7 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
         await db.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
 
-        return Result<UserLoan>.Success(new UserLoan(order.OrderId, userId, now, endTime, LoanStatuses.OnLoan, []));
+        return Result<UserLoan>.Success(new UserLoan(order.OrderId, borrowerId ?? 0, now, endTime, LoanStatuses.OnLoan, []));
     }
 
     public async Task<Result<UserLoan>> ReturnItemAsync(int orderId, int objectId, CancellationToken cancellationToken)
@@ -134,7 +150,7 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
             .Select(x => new LoanRecord(
                 x.Order!.StartTime,
                 x.Order.EndTime,
-                x.Order.User == null ? null : x.Order.User.DisplayName,
+                x.Order.User == null ? x.Order.BorrowerName : x.Order.User.DisplayName,
                 x.Order.Status))
             .ToArrayAsync(cancellationToken);
 
@@ -155,7 +171,7 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
 
     private static UserLoan Map(OrderEntity order) => new(
         order.OrderId,
-        order.UserId,
+        order.BorrowerId ?? 0,
         order.StartTime,
         order.EndTime,
         order.Status,
