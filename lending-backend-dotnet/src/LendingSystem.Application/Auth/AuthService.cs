@@ -15,7 +15,7 @@ public sealed class AuthService(IUserRepository users, IPasswordHasher passwords
         }
 
         var tokenPair = tokens.Generate(user);
-        return Result<AuthResponse>.Success(new AuthResponse(tokenPair.AccessToken, tokenPair.RefreshToken));
+        return Result<AuthResponse>.Success(new AuthResponse(tokenPair.AccessToken, tokenPair.RefreshToken, user.Role));
     }
 
     public async Task<Result<UserResponse>> RegisterAsync(CreateUserRequest request, CancellationToken cancellationToken)

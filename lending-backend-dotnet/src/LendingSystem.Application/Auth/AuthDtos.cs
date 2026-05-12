@@ -17,8 +17,12 @@ public sealed record UserResponse(
     [property: JsonPropertyName("email")] string Email);
 
 public sealed record AuthResponse(
-    [property: JsonPropertyName("access_token")] string AccessToken,
-    [property: JsonPropertyName("refresh_token")] string RefreshToken);
+    [property: JsonPropertyName("access_token")]
+    string AccessToken,
+    [property: JsonPropertyName("refresh_token")]
+    string RefreshToken,
+    [property: JsonPropertyName("role")] 
+    string Role);
 
 public sealed record DeleteResponse(
     [property: JsonPropertyName("deleted")] bool Deleted,
