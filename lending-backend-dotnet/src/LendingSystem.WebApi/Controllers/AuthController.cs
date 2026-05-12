@@ -8,11 +8,23 @@ namespace LendingSystem.WebApi.Controllers;
 [ApiController]
 public sealed class AuthController(AuthService auth) : ControllerBase
 {
+    /// <summary>
+    /// 登入端點
+    /// </summary>
+    /// <param name="request">登入請求</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>AccessToken and RefreshToken</returns>
     [HttpPost("/api/v1/auth/session")]
     [AllowAnonymous]
     public async Task<ActionResult<ApiResponse<AuthResponse>>> Login([FromBody] LoginRequest request, CancellationToken cancellationToken) =>
         this.ToActionResult(await auth.LoginAsync(request, cancellationToken));
 
+    /// <summary>
+    /// 新使用者註冊端點
+    /// </summary>
+    /// <param name="request">註冊請求</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>UserId,Username,email</returns>
     [HttpPost("/api/v1/users")]
     public async Task<ActionResult<ApiResponse<UserResponse>>> Register([FromBody] CreateUserRequest request, CancellationToken cancellationToken)
     {

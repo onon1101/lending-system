@@ -29,7 +29,7 @@ public sealed class ItemsController(ItemService items) : ControllerBase
 
     //todo: 路徑改成 api/v1/catalog/items/
     [HttpPost("/api/v1/catalog/items")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "user")]
     public async Task<ActionResult<ApiResponse<ItemResponse>>> Create([FromBody] CreateItemRequest request, CancellationToken cancellationToken)
     {
         var created = await items.CreateAsync(request, cancellationToken);

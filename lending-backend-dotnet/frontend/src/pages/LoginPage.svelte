@@ -8,18 +8,25 @@
     getAccessToken,
     getActiveBorrowings,
     getAllItems,
+    getCurrentUserFromToken,
+    getFullImageUrl,
+    getItemsByUserId,
     login,
     returnBorrowedItem,
     searchUserByName,
   } from "../stores/api";
 
   let items = [];
+  let ownedItems = [];
   let activeBorrowings = [];
   let selectedItemIds = [];
-  let loading = true;
+  let loading = false;
+  let ownedLoading = false;
   let message = "";
   let error = "";
   let token = getAccessToken();
+  let currentUser = token ? getCurrentUserFromToken(token) : null;
+  let activeTab = "owned";
   let userQuery = "";
   let selectedUser = null;
   let durationHours = 24;
@@ -28,21 +35,58 @@
   let userForm = { name: "", email: "", password: "" };
   let itemForm = { objectName: "", description: "" };
 
-  $: availableItems = items.filter((item) => item.current_status === "Available");
+  $: role = String(currentUser?.role || "").toLowerCase();
+  $: isAdmin = isAdminRole(role);
+  $: canUseWorkspace = role === "admin" || role === "user";
+  $: availableItems = items.filter((item) => getStatusGroup(item.current_status) === "available");
+  $: sidebarItems = [
+    { key: "owned", label: "我的抱枕", visible: canUseWorkspace },
+    { key: "users", label: "使用者", visible: isAdmin },
+    { key: "borrow", label: "建立借閱", visible: isAdmin },
+    { key: "items", label: "新增物品", visible: isAdmin },
+    { key: "active", label: "目前借閱", visible: isAdmin },
+  ].filter((item) => item.visible);
 
-  onMount(loadItems);
+  onMount(async () => {
+    if (!token) return;
+    await initializeWorkspace();
+  });
 
   async function run(action, successText = "") {
     error = "";
     message = "";
     try {
       const result = await action();
-      message = successText;
+      if (successText) message = successText;
       return result;
     } catch (err) {
       error = err.message || "操作失敗";
       throw err;
     }
+  }
+
+  async function initializeWorkspace() {
+    currentUser = getCurrentUserFromToken(token);
+    if (!currentUser?.user_id) {
+      error = "無法從登入資訊取得使用者 ID，請重新登入。";
+      return;
+    }
+
+    await loadOwnedItems();
+    if (isAdminRole(currentUser.role)) await loadItems();
+  }
+
+  function isAdminRole(value) {
+    return String(value || "").toLowerCase() === "admin";
+  }
+
+  async function loadOwnedItems() {
+    if (!currentUser?.user_id) return;
+    ownedLoading = true;
+    await run(async () => {
+      ownedItems = await getItemsByUserId(currentUser.user_id);
+    }).catch(() => {});
+    ownedLoading = false;
   }
 
   async function loadItems() {
@@ -57,8 +101,11 @@
     await run(async () => {
       const result = await login(loginForm.email, loginForm.password);
       token = result.access_token;
+      currentUser = getCurrentUserFromToken(token);
       loginForm = { email: "", password: "" };
-    }, "已登入，可執行管理操作。");
+      activeTab = "owned";
+      await initializeWorkspace();
+    }, "已登入。");
   }
 
   async function handleRegister() {
@@ -73,8 +120,13 @@
   function logout() {
     clearAccessToken();
     token = "";
+    currentUser = null;
     selectedUser = null;
+    ownedItems = [];
+    items = [];
     activeBorrowings = [];
+    selectedItemIds = [];
+    activeTab = "owned";
     message = "已登出。";
   }
 
@@ -83,6 +135,7 @@
     await run(async () => {
       selectedUser = await searchUserByName(userQuery.trim());
       activeBorrowings = await getActiveBorrowings(selectedUser.user_id);
+      activeTab = "active";
     }, "已載入使用者借閱資料。");
   }
 
@@ -98,7 +151,7 @@
   async function handleCreateItem() {
     const created = await run(() => createItem(itemForm), "物品已新增。");
     itemForm = { objectName: "", description: "" };
-    await loadItems();
+    await Promise.all([loadItems(), loadOwnedItems()]);
     window.location.href = `/item.html?id=${created.object_id}`;
   }
 
@@ -111,6 +164,7 @@
   async function handleCreateBorrowing() {
     if (!selectedUser) {
       error = "請先查詢並選取使用者。";
+      activeTab = "users";
       return;
     }
 
@@ -123,7 +177,8 @@
       await createBorrowing(selectedUser.user_id, selectedItemIds, durationHours);
       selectedItemIds = [];
       activeBorrowings = await getActiveBorrowings(selectedUser.user_id);
-      await loadItems();
+      await Promise.all([loadItems(), loadOwnedItems()]);
+      activeTab = "active";
     }, "借閱已建立。");
   }
 
@@ -131,8 +186,22 @@
     await run(async () => {
       await returnBorrowedItem(orderId, objectId);
       activeBorrowings = selectedUser ? await getActiveBorrowings(selectedUser.user_id) : [];
-      await loadItems();
+      await Promise.all([loadItems(), loadOwnedItems()]);
     }, "物品已歸還。");
+  }
+
+  function getStatusGroup(status) {
+    const normalized = String(status ?? "").trim().toLowerCase();
+    if (["available", "可借閱", "可借出"].includes(normalized)) return "available";
+    if (["on loan", "borrowed", "borrowing", "借閱中", "借出中"].includes(normalized)) return "borrowed";
+    return "unavailable";
+  }
+
+  function getStatusLabel(status) {
+    const group = getStatusGroup(status);
+    if (group === "available") return "可借閱";
+    if (group === "borrowed") return "借閱中";
+    return "不可借閱";
   }
 
   function formatDate(value) {
@@ -146,247 +215,397 @@
   }
 </script>
 
-<main class="mx-auto w-[min(1180px,calc(100vw-2rem))] px-0 py-4 pb-12 text-slate-900">
-  <header class="flex min-h-[72px] items-center justify-between gap-4">
-    <a class="inline-flex items-center gap-3 text-[1.05rem] font-black text-inherit no-underline" href="/">
-      <span class="grid h-[42px] w-[42px] place-items-center rounded-lg bg-slate-900 font-black text-white">LS</span>
-      <span>物品借閱系統</span>
-    </a>
-    <a
-      class="min-h-[42px] rounded-lg border-2 border-slate-900 bg-white px-4 py-2.5 font-black text-slate-900 no-underline hover:bg-slate-100 focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
-      href="/"
-    >
-      返回首頁
-    </a>
-  </header>
-
-  <section class="grid items-end gap-5 border-b-[3px] border-slate-900 py-[clamp(2rem,5vw,4rem)] pb-6 md:grid-cols-[minmax(0,1fr)_auto]">
-    <div>
-      <p class="mb-1.5 text-xs font-black uppercase text-slate-700">Admin Console</p>
-      <h1 class="mb-4 text-[clamp(2.4rem,6vw,5.25rem)] font-black leading-[0.95] text-slate-900">管理登入</h1>
-      <p class="mb-0 max-w-[680px] text-lg leading-7 text-slate-700">
-        登入後可建立使用者、登錄借閱、歸還物品與新增物品。
-      </p>
-    </div>
-    {#if token}
-      <button
-        class="min-h-[42px] whitespace-nowrap rounded-lg border-2 border-slate-900 bg-white px-4 py-2.5 font-black text-slate-900 hover:bg-slate-100 focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
-        type="button"
-        on:click={logout}
-      >
-        登出
-      </button>
-    {/if}
-  </section>
-
+<main class:workspace={token} class="login-shell">
   {#if !token}
-    <section
-      class="mx-auto mt-5 grid w-[min(520px,100%)] gap-4 rounded-lg border-2 border-slate-900 bg-white p-5 shadow-[8px_8px_0_#111827]"
-    >
+    <header class="topbar">
+      <a class="brand" href="/">
+        <span class="brand-mark">LS</span>
+        <span>物品借閱系統</span>
+      </a>
+      <a class="subtle-link" href="/">返回首頁</a>
+    </header>
+
+    <section class="login-hero">
+      <p class="eyebrow">Account</p>
+      <h1>登入</h1>
+      <p>登入後可查看目前自己持有的抱枕；管理者可從側欄執行使用者、借閱與物品管理。</p>
+    </section>
+
+    <section class="login-card">
       {#if isRegistering}
-        <label class="grid gap-2 font-black text-slate-900">
+        <label>
           <span>姓名</span>
-          <input
-            class="w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15"
-            bind:value={userForm.name}
-            placeholder="王小明"
-            autocomplete="name"
-          />
+          <input bind:value={userForm.name} placeholder="王小明" autocomplete="name" />
         </label>
-        <label class="grid gap-2 font-black text-slate-900">
+        <label>
           <span>Email</span>
-          <input
-            class="w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15"
-            bind:value={userForm.email}
-            placeholder="user@example.com"
-            autocomplete="email"
-          />
+          <input bind:value={userForm.email} placeholder="user@example.com" autocomplete="email" />
         </label>
-        <label class="grid gap-2 font-black text-slate-900">
+        <label>
           <span>Password</span>
-          <input
-            class="w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15"
-            bind:value={userForm.password}
-            placeholder="Password"
-            type="password"
-            autocomplete="new-password"
-          />
+          <input bind:value={userForm.password} placeholder="Password" type="password" autocomplete="new-password" />
         </label>
-        <button
-          class="min-h-[42px] whitespace-nowrap rounded-lg border-2 border-slate-900 bg-slate-900 px-4 py-2.5 font-black text-white hover:bg-black focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
-          type="button"
-          on:click={handleRegister}
-        >
-          建立帳號
-        </button>
-        <button
-          class="min-h-[42px] whitespace-nowrap rounded-lg border-2 border-slate-900 bg-white px-4 py-2.5 font-black text-slate-900 hover:bg-slate-100 focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
-          type="button"
-          on:click={() => (isRegistering = false)}
-        >
-          返回登入
-        </button>
+        <button class="primary-button" type="button" on:click={handleRegister}>建立帳號</button>
+        <button class="secondary-button" type="button" on:click={() => (isRegistering = false)}>返回登入</button>
       {:else}
-        <label class="grid gap-2 font-black text-slate-900">
+        <label>
           <span>Email</span>
-          <input
-            class="w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15"
-            bind:value={loginForm.email}
-            placeholder="admin@example.com"
-            autocomplete="username"
-          />
+          <input bind:value={loginForm.email} placeholder="admin@example.com" autocomplete="username" />
         </label>
-        <label class="grid gap-2 font-black text-slate-900">
+        <label>
           <span>Password</span>
-          <input
-            class="w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15"
-            bind:value={loginForm.password}
-            placeholder="Password"
-            type="password"
-            autocomplete="current-password"
-          />
+          <input bind:value={loginForm.password} placeholder="Password" type="password" autocomplete="current-password" />
         </label>
-        <button
-          class="min-h-[42px] whitespace-nowrap rounded-lg border-2 border-slate-900 bg-slate-900 px-4 py-2.5 font-black text-white hover:bg-black focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
-          type="button"
-          on:click={handleLogin}
-        >
-          登入管理後台
-        </button>
-        <button
-          class="min-h-[42px] whitespace-nowrap rounded-lg border-2 border-slate-900 bg-white px-4 py-2.5 font-black text-slate-900 hover:bg-slate-100 focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
-          type="button"
-          on:click={() => (isRegistering = true)}
-        >
-          註冊
-        </button>
+        <button class="primary-button" type="button" on:click={handleLogin}>登入</button>
+        <button class="secondary-button" type="button" on:click={() => (isRegistering = true)}>註冊</button>
       {/if}
     </section>
   {:else}
-    <section class="mt-5 grid gap-4 md:grid-cols-2">
-      <section class="grid gap-3 rounded-lg border-2 border-slate-900 bg-white p-4 shadow-[8px_8px_0_#111827]">
-        <div class="flex items-center justify-between gap-3">
-          <h2 class="mb-0 text-xl font-black text-slate-900">使用者</h2>
-        </div>
-        <div class="flex items-center gap-3">
-          <input
-            class="w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15"
-            bind:value={userQuery}
-            placeholder="姓名搜尋"
-            on:keydown={(event) => event.key === "Enter" && handleUserSearch()}
-          />
+    <aside class="leftbar">
+      <a class="leftbar-brand" href="/" aria-label="物品借閱系統">
+        <span>LS</span>
+      </a>
+      <nav aria-label="登入後功能">
+        {#each sidebarItems as item}
           <button
+            class:active={activeTab === item.key}
             type="button"
-            class="min-h-[42px] whitespace-nowrap rounded-lg border-2 border-slate-900 bg-slate-900 px-4 py-2.5 font-black text-white hover:bg-black focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
-            aria-label="搜尋使用者"
-            on:click={handleUserSearch}
+            on:click={() => (activeTab = item.key)}
           >
-            ⌕
+            {item.label}
           </button>
-        </div>
-        {#if selectedUser}
-          <div class="grid gap-0.5 rounded-lg border-2 border-slate-900 bg-slate-100 p-3">
-            <strong>{selectedUser.name}</strong>
-            <span class="text-sm font-bold text-slate-600">{selectedUser.email}</span>
-          </div>
-        {/if}
-        <details class="grid gap-3">
-          <summary class="mt-1 mb-3 cursor-pointer font-black text-slate-900">新增使用者</summary>
-          <input class="mb-3 w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15" bind:value={userForm.name} placeholder="姓名" />
-          <input class="mb-3 w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15" bind:value={userForm.email} placeholder="Email" />
-          <input class="mb-3 w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15" bind:value={userForm.password} placeholder="初始密碼" type="password" />
-          <button
-            type="button"
-            class="min-h-[42px] whitespace-nowrap rounded-lg border-2 border-slate-900 bg-white px-4 py-2.5 font-black text-slate-900 hover:bg-slate-100 focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
-            on:click={handleCreateUser}
-          >
-            建立
-          </button>
-        </details>
-      </section>
-
-      <section class="grid gap-3 rounded-lg border-2 border-slate-900 bg-white p-4 shadow-[8px_8px_0_#111827]">
-        <div class="flex items-center justify-between gap-3">
-          <h2 class="mb-0 text-xl font-black text-slate-900">建立借閱</h2>
-          <span class="mb-0 text-sm font-extrabold text-slate-600">{selectedItemIds.length} 件</span>
-        </div>
-        {#if loading}
-          <p class="font-bold text-slate-600">載入物品中</p>
-        {:else}
-          <div class="grid max-h-[220px] grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-2 overflow-auto">
-            {#each availableItems as item (item.object_id)}
-              <label class="flex min-w-0 items-center gap-2 rounded-lg border-2 border-slate-300 p-2.5 font-extrabold text-slate-900">
-                <input
-                  class="w-auto"
-                  type="checkbox"
-                  checked={selectedItemIds.includes(item.object_id)}
-                  on:change={() => toggleBorrowItem(item.object_id)}
-                />
-                <span>{item.object_name}</span>
-              </label>
-            {/each}
-          </div>
-        {/if}
-        <div class="flex items-center gap-3">
-          <input class="w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15" bind:value={durationHours} type="number" min="1" max="720" />
-          <button
-            type="button"
-            class="min-h-[42px] whitespace-nowrap rounded-lg border-2 border-slate-900 bg-slate-900 px-4 py-2.5 font-black text-white hover:bg-black focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
-            on:click={handleCreateBorrowing}
-          >
-            送出借閱
-          </button>
-        </div>
-      </section>
-
-      <section class="grid gap-3 rounded-lg border-2 border-slate-900 bg-white p-4 shadow-[8px_8px_0_#111827]">
-        <div class="flex items-center justify-between gap-3">
-          <h2 class="mb-0 text-xl font-black text-slate-900">新增物品</h2>
-        </div>
-        <input class="w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15" bind:value={itemForm.objectName} placeholder="物品名稱" />
-        <textarea class="min-h-24 w-full resize-y rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15" bind:value={itemForm.description} placeholder="描述"></textarea>
-        <button
-          type="button"
-          class="min-h-[42px] whitespace-nowrap rounded-lg border-2 border-slate-900 bg-white px-4 py-2.5 font-black text-slate-900 hover:bg-slate-100 focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
-          on:click={handleCreateItem}
-        >
-          建立物品
-        </button>
-      </section>
-
-      <section class="grid gap-3 rounded-lg border-2 border-slate-900 bg-white p-4 shadow-[8px_8px_0_#111827]">
-        <div class="flex items-center justify-between gap-3">
-          <h2 class="mb-0 text-xl font-black text-slate-900">目前借閱</h2>
-          <span class="mb-0 text-sm font-extrabold text-slate-600">{activeBorrowings.length}</span>
-        </div>
-        {#each activeBorrowings as loan}
-          <div class="grid gap-3 border-l-4 border-slate-900 pl-3">
-            <strong class="block text-sm text-slate-600">#{loan.order_id} · {formatDate(loan.end_time)}</strong>
-            {#each loan.items as item}
-              <div class="flex items-center justify-between gap-3">
-                <span>{item.object_name}</span>
-                <button
-                  type="button"
-                  class="min-h-[42px] whitespace-nowrap rounded-lg border-2 border-slate-900 bg-white px-4 py-2.5 font-black text-slate-900 hover:bg-slate-100 focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
-                  on:click={() => handleReturn(loan.order_id, item.object_id)}
-                >
-                  歸還
-                </button>
-              </div>
-            {/each}
-          </div>
-        {:else}
-          <p class="font-bold text-slate-600">尚未載入或沒有進行中的借閱。</p>
         {/each}
-      </section>
+      </nav>
+    </aside>
+
+    <section class="workspace-main">
+      <header class="workspace-header">
+        <div>
+          <p class="eyebrow">{isAdmin ? "Admin Console" : "User Console"}</p>
+          <h1>{activeTab === "owned" ? "我的抱枕" : "管理操作"}</h1>
+          <p>目前登入身分：{role || "未知"}</p>
+        </div>
+        <button class="secondary-button" type="button" on:click={logout}>登出</button>
+      </header>
+
+      {#if activeTab === "owned"}
+        <section class="panel owned-panel">
+          <div class="section-title">
+            <div>
+              <h2>目前持有</h2>
+              <span>{ownedItems.length} 件抱枕</span>
+            </div>
+            <button class="secondary-button" type="button" on:click={loadOwnedItems}>重新整理</button>
+          </div>
+
+          {#if ownedLoading}
+            <div class="empty-state">載入抱枕中</div>
+          {:else if ownedItems.length === 0}
+            <div class="empty-state">目前沒有持有中的抱枕。</div>
+          {:else}
+            <div class="owned-grid">
+              {#each ownedItems as item (item.object_id)}
+                <a class="owned-card" href={`/item.html?id=${item.object_id}`}>
+                  <div class="owned-image">
+                    {#if item.image_url}
+                      <img src={getFullImageUrl(item.image_url)} alt={item.object_name} />
+                    {:else}
+                      <span>{item.object_name.slice(0, 2).toUpperCase()}</span>
+                    {/if}
+                  </div>
+                  <div class="owned-copy">
+                    <span class:available={getStatusGroup(item.current_status) === "available"} class:borrowed={getStatusGroup(item.current_status) === "borrowed"} class="status-pill">
+                      {getStatusLabel(item.current_status)}
+                    </span>
+                    <h3>{item.object_name}</h3>
+                    <p>{item.description || "尚無抱枕描述。"}</p>
+                  </div>
+                </a>
+              {/each}
+            </div>
+          {/if}
+        </section>
+      {:else if activeTab === "users"}
+        <section class="panel tool-panel">
+          <div class="section-title">
+            <h2>使用者</h2>
+          </div>
+          <div class="inline-form">
+            <input
+              bind:value={userQuery}
+              placeholder="姓名搜尋"
+              on:keydown={(event) => event.key === "Enter" && handleUserSearch()}
+            />
+            <button class="icon-button" type="button" aria-label="搜尋使用者" on:click={handleUserSearch}>⌕</button>
+          </div>
+          {#if selectedUser}
+            <div class="selected-user">
+              <strong>{selectedUser.name}</strong>
+              <span>{selectedUser.email}</span>
+            </div>
+          {/if}
+          <details>
+            <summary>新增使用者</summary>
+            <input bind:value={userForm.name} placeholder="姓名" />
+            <input bind:value={userForm.email} placeholder="Email" />
+            <input bind:value={userForm.password} placeholder="初始密碼" type="password" />
+            <button class="secondary-button" type="button" on:click={handleCreateUser}>建立</button>
+          </details>
+        </section>
+      {:else if activeTab === "borrow"}
+        <section class="panel tool-panel">
+          <div class="section-title">
+            <h2>建立借閱</h2>
+            <span>{selectedItemIds.length} 件</span>
+          </div>
+          {#if loading}
+            <p class="muted">載入物品中</p>
+          {:else}
+            <div class="borrow-list">
+              {#each availableItems as item (item.object_id)}
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={selectedItemIds.includes(item.object_id)}
+                    on:change={() => toggleBorrowItem(item.object_id)}
+                  />
+                  <span>{item.object_name}</span>
+                </label>
+              {:else}
+                <div class="empty-state">目前沒有可借物品。</div>
+              {/each}
+            </div>
+          {/if}
+          <div class="inline-form">
+            <input bind:value={durationHours} type="number" min="1" max="720" />
+            <button class="primary-button" type="button" on:click={handleCreateBorrowing}>送出借閱</button>
+          </div>
+        </section>
+      {:else if activeTab === "items"}
+        <section class="panel tool-panel">
+          <div class="section-title">
+            <h2>新增物品</h2>
+          </div>
+          <input bind:value={itemForm.objectName} placeholder="物品名稱" />
+          <textarea bind:value={itemForm.description} placeholder="描述"></textarea>
+          <button class="secondary-button" type="button" on:click={handleCreateItem}>建立物品</button>
+        </section>
+      {:else if activeTab === "active"}
+        <section class="panel tool-panel">
+          <div class="section-title">
+            <h2>目前借閱</h2>
+            <span>{activeBorrowings.length}</span>
+          </div>
+          {#each activeBorrowings as loan}
+            <div class="loan-card">
+              <strong>#{loan.order_id} · {formatDate(loan.end_time)}</strong>
+              {#each loan.items as item}
+                <div class="loan-row">
+                  <span>{item.object_name}</span>
+                  <button class="secondary-button" type="button" on:click={() => handleReturn(loan.order_id, item.object_id)}>
+                    歸還
+                  </button>
+                </div>
+              {/each}
+            </div>
+          {:else}
+            <div class="empty-state">尚未載入或沒有進行中的借閱。</div>
+          {/each}
+        </section>
+      {/if}
     </section>
   {/if}
 </main>
 
 {#if message || error}
-  <div
-    class={`fixed right-4 bottom-4 max-w-[min(420px,calc(100vw-2rem))] rounded-lg border-2 border-slate-900 px-4 py-3 font-extrabold text-white shadow-[8px_8px_0_rgba(0,0,0,0.18)] ${error ? "bg-red-800" : "bg-slate-900"}`}
-  >
+  <div class:error class="toast">
     {error || message}
   </div>
 {/if}
+
+<style>
+  .login-shell {
+    width: min(1180px, calc(100vw - 2rem));
+    margin: 0 auto;
+    padding: 1rem 0 3rem;
+  }
+
+  .login-shell.workspace {
+    width: 100%;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 116px minmax(0, 1fr);
+    gap: 0;
+    padding: 0;
+  }
+
+  .login-hero {
+    padding: clamp(2rem, 5vw, 4rem) 0 1.5rem;
+    border-bottom: 3px solid #111827;
+  }
+
+  .login-hero p:last-child,
+  .workspace-header p:last-child {
+    max-width: 680px;
+    color: #374151;
+    font-size: 1.08rem;
+    line-height: 1.7;
+    margin-bottom: 0;
+  }
+
+  .leftbar {
+    position: sticky;
+    top: 0;
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 1rem;
+    border-right: 3px solid #111827;
+    background: #f9fafb;
+    padding: 1rem 0.65rem;
+  }
+
+  .leftbar-brand {
+    width: 54px;
+    height: 54px;
+    display: grid;
+    place-items: center;
+    justify-self: center;
+    border: 2px solid #111827;
+    border-radius: 8px;
+    background: #111827;
+    color: #ffffff;
+    font-weight: 950;
+    text-decoration: none;
+  }
+
+  .leftbar nav {
+    display: grid;
+    align-content: start;
+    gap: 0.5rem;
+  }
+
+  .leftbar button {
+    min-height: 48px;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: #374151;
+    font-weight: 950;
+  }
+
+  .leftbar button:hover,
+  .leftbar button.active {
+    border-color: #111827;
+    background: #ffffff;
+    color: #111827;
+    box-shadow: 4px 4px 0 #111827;
+  }
+
+  .workspace-main {
+    min-width: 0;
+    padding: 1.1rem clamp(1rem, 4vw, 3.5rem) 3rem;
+  }
+
+  .workspace-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 1rem;
+    padding: clamp(2rem, 5vw, 4rem) 0 1.5rem;
+    border-bottom: 3px solid #111827;
+  }
+
+  .owned-panel,
+  .tool-panel {
+    margin-top: 1.25rem;
+    display: grid;
+    gap: 1rem;
+  }
+
+  .owned-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 1rem;
+  }
+
+  .owned-card {
+    min-width: 0;
+    display: grid;
+    grid-template-rows: 190px 1fr;
+    overflow: hidden;
+    border: 2px solid #111827;
+    border-radius: 8px;
+    background: #f9fafb;
+    color: inherit;
+    text-decoration: none;
+    transition: transform 160ms ease, box-shadow 160ms ease;
+  }
+
+  .owned-card:hover,
+  .owned-card:focus-visible {
+    transform: translate(-3px, -3px);
+    box-shadow: 7px 7px 0 #111827;
+  }
+
+  .owned-image {
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: #d1d5db;
+    color: #111827;
+    font-size: 2rem;
+    font-weight: 950;
+  }
+
+  .owned-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .owned-copy {
+    padding: 1rem;
+  }
+
+  .owned-copy p {
+    color: #374151;
+    line-height: 1.55;
+    margin-bottom: 0;
+  }
+
+  .tool-panel {
+    max-width: 860px;
+  }
+
+  @media (max-width: 760px) {
+    .login-shell.workspace {
+      grid-template-columns: 1fr;
+    }
+
+    .leftbar {
+      position: static;
+      min-height: 0;
+      border-right: 0;
+      border-bottom: 3px solid #111827;
+      grid-template-columns: auto 1fr;
+      grid-template-rows: 1fr;
+      align-items: center;
+    }
+
+    .leftbar nav {
+      display: flex;
+      overflow-x: auto;
+      padding-bottom: 0.25rem;
+    }
+
+    .leftbar button {
+      padding: 0 0.8rem;
+      white-space: nowrap;
+    }
+
+    .workspace-header {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

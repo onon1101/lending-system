@@ -22,6 +22,38 @@ export function clearAccessToken() {
   localStorage.removeItem(TOKEN_KEY);
 }
 
+function decodeJwtPayload(token) {
+  if (!token) return null;
+
+  const payload = token.split(".")[1];
+  if (!payload) return null;
+
+  try {
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+    const bytes = Uint8Array.from(window.atob(padded), (char) => char.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch {
+    return null;
+  }
+}
+
+export function getCurrentUserFromToken(token = getAccessToken()) {
+  const payload = decodeJwtPayload(token);
+  if (!payload) return null;
+
+  const roleClaim = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
+  const emailClaim = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress";
+  const idClaim = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier";
+  const userId = payload.id ?? payload.user_id ?? payload.sub ?? payload[idClaim];
+
+  return {
+    user_id: userId ? Number(userId) : null,
+    email: payload.email ?? payload[emailClaim] ?? "",
+    role: payload.role ?? payload[roleClaim] ?? "",
+  };
+}
+
 function headers(extra = {}) {
   const token = getAccessToken();
   return {
@@ -111,6 +143,14 @@ export async function login(email, password) {
 
 export async function getAllItems() {
   return fetch(`${API_BASE_URL}/catalog/items`)
+    .then(handleResponse)
+    .then((items) => (Array.isArray(items) ? items : []));
+}
+
+export async function getItemsByUserId(userId) {
+  return fetch(`${API_BASE_URL}/catalog/items/user/${userId}`, {
+    headers: headers(),
+  })
     .then(handleResponse)
     .then((items) => (Array.isArray(items) ? items : []));
 }
