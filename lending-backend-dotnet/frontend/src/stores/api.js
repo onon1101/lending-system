@@ -160,12 +160,29 @@ export async function getItem(itemId) {
 }
 
 export async function createItem(item) {
+  if (item.cover) {
+    const formData = new FormData();
+    formData.append("object_name", item.objectName);
+    formData.append("maker", item.maker || "");
+    formData.append("material", item.material || "");
+    formData.append("description", item.description || "");
+    formData.append("image", item.cover);
+
+    return fetch(`${API_BASE_URL}/catalog/items/form`, {
+      method: "POST",
+      headers: headers(),
+      body: formData,
+    }).then(handleResponse);
+  }
+
   return fetch(`${API_BASE_URL}/catalog/items`, {
     method: "POST",
     headers: headers({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       object_name: item.objectName,
-      description: item.description,
+      maker: item.maker || "",
+      material: item.material || "",
+      description: item.description || "",
     }),
   }).then(handleResponse);
 }

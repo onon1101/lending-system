@@ -31,9 +31,11 @@
   let selectedUser = null;
   let durationHours = 24;
   let isRegistering = false;
+  let isCreateItemModalOpen = false;
+  let creatingItem = false;
   let loginForm = { email: "", password: "" };
   let userForm = { name: "", email: "", password: "" };
-  let itemForm = { objectName: "", description: "" };
+  let itemForm = { objectName: "", maker: "", material: "", description: "", cover: null };
 
   $: role = String(currentUser?.role || "").toLowerCase();
   $: isAdmin = isAdminRole(role);
@@ -149,10 +151,49 @@
   }
 
   async function handleCreateItem() {
-    const created = await run(() => createItem(itemForm), "物品已新增。");
-    itemForm = { objectName: "", description: "" };
-    await Promise.all([loadItems(), loadOwnedItems()]);
-    window.location.href = `/item.html?id=${created.object_id}`;
+    const trimmedName = itemForm.objectName.trim();
+    const trimmedDescription = itemForm.description.trim();
+
+    if (!trimmedName || !trimmedDescription) {
+      error = "請填寫物品名稱與描述。";
+      message = "";
+      return;
+    }
+
+    creatingItem = true;
+    await run(async () => {
+      await createItem({
+        ...itemForm,
+        objectName: trimmedName,
+        maker: itemForm.maker.trim(),
+        material: itemForm.material.trim(),
+        description: trimmedDescription,
+      });
+      resetItemForm();
+      isCreateItemModalOpen = false;
+      await Promise.all([loadItems(), loadOwnedItems()]);
+    }, "物品已新增。").catch(() => {});
+    creatingItem = false;
+  }
+
+  function openCreateItemModal() {
+    error = "";
+    message = "";
+    isCreateItemModalOpen = true;
+  }
+
+  function closeCreateItemModal() {
+    if (creatingItem) return;
+    isCreateItemModalOpen = false;
+    resetItemForm();
+  }
+
+  function resetItemForm() {
+    itemForm = { objectName: "", maker: "", material: "", description: "", cover: null };
+  }
+
+  function handleCoverChange(event) {
+    itemForm = { ...itemForm, cover: event.currentTarget.files?.[0] || null };
   }
 
   function toggleBorrowItem(itemId) {
@@ -295,7 +336,7 @@
               <h2>目前持有</h2>
               <span>{ownedItems.length} 件抱枕</span>
             </div>
-            <button class="secondary-button" type="button" on:click={loadOwnedItems}>重新整理</button>
+            <button class="secondary-button" type="button" on:click={openCreateItemModal}>新增</button>
           </div>
 
           {#if ownedLoading}
@@ -386,9 +427,7 @@
           <div class="section-title">
             <h2>新增物品</h2>
           </div>
-          <input bind:value={itemForm.objectName} placeholder="物品名稱" />
-          <textarea bind:value={itemForm.description} placeholder="描述"></textarea>
-          <button class="secondary-button" type="button" on:click={handleCreateItem}>建立物品</button>
+          <button class="secondary-button" type="button" on:click={openCreateItemModal}>開啟新增物品浮窗</button>
         </section>
       {:else if activeTab === "active"}
         <section class="panel tool-panel">
@@ -420,6 +459,63 @@
 {#if message || error}
   <div class:error class="toast">
     {error || message}
+  </div>
+{/if}
+
+{#if isCreateItemModalOpen}
+  <div class="modal-backdrop" role="presentation" on:click={closeCreateItemModal}>
+    <div
+      class="item-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="create-item-title"
+      tabindex="-1"
+      on:click|stopPropagation
+      on:keydown|stopPropagation
+    >
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">Catalog</p>
+          <h2 id="create-item-title">新增物品</h2>
+        </div>
+        <button class="ghost-button" type="button" on:click={closeCreateItemModal} disabled={creatingItem}>關閉</button>
+      </div>
+
+      <form class="item-form" on:submit|preventDefault={handleCreateItem}>
+        <label>
+          <span>物品名稱</span>
+          <input bind:value={itemForm.objectName} placeholder="例：雪ちゃん" disabled={creatingItem} />
+        </label>
+
+        <div class="form-grid">
+          <label>
+            <span>作者</span>
+            <input bind:value={itemForm.maker} placeholder="可留空" disabled={creatingItem} />
+          </label>
+          <label>
+            <span>材質</span>
+            <input bind:value={itemForm.material} placeholder="可留空" disabled={creatingItem} />
+          </label>
+        </div>
+
+        <label>
+          <span>描述</span>
+          <textarea bind:value={itemForm.description} placeholder="輸入物品描述" disabled={creatingItem}></textarea>
+        </label>
+
+        <label>
+          <span>封面圖片</span>
+          <input type="file" accept="image/*" on:change={handleCoverChange} disabled={creatingItem} />
+        </label>
+
+        <div class="modal-actions">
+          <button class="ghost-button" type="button" on:click={closeCreateItemModal} disabled={creatingItem}>取消</button>
+          <button class="primary-button" type="submit" disabled={creatingItem}>
+            {creatingItem ? "建立中" : "建立物品"}
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 {/if}
 
@@ -578,6 +674,53 @@
     max-width: 860px;
   }
 
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: rgba(17, 24, 39, 0.55);
+  }
+
+  .item-modal {
+    width: min(640px, 100%);
+    max-height: min(760px, calc(100vh - 2rem));
+    display: grid;
+    gap: 1rem;
+    overflow: auto;
+    border: 2px solid #111827;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 8px 8px 0 #111827;
+    padding: 1rem;
+  }
+
+  .item-form,
+  .item-form label {
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .item-form label {
+    color: #111827;
+    font-weight: 900;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.8rem;
+    padding-top: 0.25rem;
+  }
+
   @media (max-width: 760px) {
     .login-shell.workspace {
       grid-template-columns: 1fr;
@@ -606,6 +749,15 @@
 
     .workspace-header {
       grid-template-columns: 1fr;
+    }
+
+    .form-grid,
+    .modal-actions {
+      grid-template-columns: 1fr;
+    }
+
+    .modal-actions {
+      display: grid;
     }
   }
 </style>

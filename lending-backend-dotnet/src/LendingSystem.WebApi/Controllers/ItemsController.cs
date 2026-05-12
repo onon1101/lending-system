@@ -5,7 +5,6 @@ using LendingSystem.WebApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using System.Text.Json;
 
 namespace LendingSystem.WebApi.Controllers;
 
@@ -30,73 +29,43 @@ public sealed class ItemsController(ItemService items) : ControllerBase
         
 
     [HttpPost("/api/v1/catalog/items")]
-    [Authorize(Roles = "user")]
-    public async Task<ActionResult<ApiResponse<ItemResponse>>> Create(CancellationToken cancellationToken)
+    [Authorize(Roles = "admin,user")]
+    public async Task<ActionResult<ApiResponse<ItemResponse>>> Create(
+        [FromBody] CreateItemRequest request,
+        CancellationToken cancellationToken) =>
+        await CreateForCurrentUserAsync(request, null, cancellationToken);
+
+    [HttpPost("/api/v1/catalog/items/form")]
+    [Authorize(Roles = "admin,user")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<ApiResponse<ItemResponse>>> CreateWithForm(
+        [FromForm(Name = "object_name")] string objectName,
+        [FromForm] string? maker,
+        [FromForm] string? material,
+        [FromForm] string description,
+        [FromForm(Name = "image")] IFormFile? image,
+        CancellationToken cancellationToken)
+    {
+        var request = new CreateItemRequest(objectName, maker, material, description);
+        return await CreateForCurrentUserAsync(request, image, cancellationToken);
+    }
+
+    private async Task<ActionResult<ApiResponse<ItemResponse>>> CreateForCurrentUserAsync(
+        CreateItemRequest request,
+        IFormFile? image,
+        CancellationToken cancellationToken)
     {
         if (!TryGetUserId(User, out var userId))
         {
             return this.ApiFailure<ItemResponse>(ErrorCodes.Unauthorized, "Invalid token");
         }
 
-        var input = await ReadCreateItemInputAsync(cancellationToken);
-        if (!input.IsSuccess)
-        {
-            return this.ApiFailure<ItemResponse>(input.Error.Code, input.Error.Message);
-        }
-
-        var (request, file) = input.Data!;
-        await using var stream = file?.OpenReadStream();
-        var fileFormat = file is null ? null : new FileFormat(stream!, file.Length, file.FileName, file.ContentType);
+        await using var stream = image?.OpenReadStream();
+        var fileFormat = image is null ? null : new FileFormat(stream!, image.Length, image.FileName, image.ContentType);
         var created = await items.CreateAsync(request, userId, fileFormat, cancellationToken);
 
         return this.ToCreatedActionResult(created.IsSuccess ? $"/api/v1/catalog/items/{created.Data!.ItemId}" : "", created);
     }
-
-    private async Task<Result<CreateItemInput>> ReadCreateItemInputAsync(CancellationToken cancellationToken)
-    {
-        if (Request.HasFormContentType)
-        {
-            var form = await Request.ReadFormAsync(cancellationToken);
-            return Result<CreateItemInput>.Success(new CreateItemInput(
-                new CreateItemRequest(
-                    GetFormValue(form, "object_name", "objectName"),
-                    GetFormValue(form, "maker"),
-                    GetFormValue(form, "material"),
-                    GetFormValue(form, "description")),
-                GetCoverFile(form.Files)));
-        }
-
-        try
-        {
-            var request = await JsonSerializer.DeserializeAsync<CreateItemRequest>(
-                Request.Body,
-                JsonOptions,
-                cancellationToken);
-
-            return request is null
-                ? Result<CreateItemInput>.Failure(ErrorCodes.Validation, "Invalid request body")
-                : Result<CreateItemInput>.Success(new CreateItemInput(request, null));
-        }
-        catch (JsonException)
-        {
-            return Result<CreateItemInput>.Failure(ErrorCodes.Validation, "Invalid request body");
-        }
-    }
-
-    private static string GetFormValue(IFormCollection form, string name, string? alternativeName = null)
-    {
-        var value = form[name].ToString();
-        return string.IsNullOrEmpty(value) && alternativeName is not null
-            ? form[alternativeName].ToString()
-            : value;
-    }
-
-    private static IFormFile? GetCoverFile(IFormFileCollection files) =>
-        files["file"] ?? files["cover"] ?? files["cover_photo"] ?? files["image"];
-
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
-    private sealed record CreateItemInput(CreateItemRequest Request, IFormFile? File);
 
     [HttpGet("/api/v1/catalog/items/{objectId:int}")]
     public async Task<ActionResult<ApiResponse<ItemResponse>>> GetById([FromRoute] int objectId, CancellationToken cancellationToken) =>

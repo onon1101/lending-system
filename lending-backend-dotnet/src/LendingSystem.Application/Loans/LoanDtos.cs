@@ -5,7 +5,7 @@ namespace LendingSystem.Application.Loans;
 public sealed class CreateLoanRequest
 {
     [JsonPropertyName("user_id")]
-    public int? UserId { get; init; }
+    public int UserId { get; init; }
 
     [JsonPropertyName("borrower_id")]
     public int? BorrowerId { get; init; }

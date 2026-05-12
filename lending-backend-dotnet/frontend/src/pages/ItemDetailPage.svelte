@@ -106,6 +106,7 @@
             <input
               type="file"
               accept="image/*"
+              class="bg-blue-500"
               on:change={(event) => (imageFile = event.currentTarget.files?.[0])}
             />
           </label>
