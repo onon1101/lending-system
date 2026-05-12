@@ -46,6 +46,22 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
             x.ImageUrl)).ToArray());
     }
 
+    public async Task<Result<IReadOnlyCollection<ItemSummaryResponse>>> GetItemsByUserId(int userId,
+        CancellationToken cancellationToken)
+    {
+        var result = await items.GetItemsByUserId(userId, cancellationToken);
+        return Result<IReadOnlyCollection<ItemSummaryResponse>>.Success(result.Select(x => new ItemSummaryResponse(
+            x.ItemId,
+            x.ObjectName,
+            x.Maker,
+            x.Material,
+            x.Description,
+            x.CurrentStatus,
+            x.OwnerName,
+            x.OwnerEmail,
+            x.ImageUrl)).ToArray());
+    }
+
     public async Task<Result<ItemResponse>> UpdateAsync(int itemId, UpdateItemRequest request, CancellationToken cancellationToken)
     {
         var item = await items.UpdateAsync(
