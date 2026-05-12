@@ -3,6 +3,7 @@ using System;
 using LendingSystem.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LendingSystem.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(LendingDbContext))]
-    partial class LendingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260512052728_remove_nullable_from_Role")]
+    partial class remove_nullable_from_Role
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -24,12 +27,12 @@ namespace LendingSystem.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("LendingSystem.Infrastructure.Persistence.ItemEntity", b =>
                 {
-                    b.Property<int>("ItemId")
+                    b.Property<int>("ObjectId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
-                        .HasColumnName("item_id");
+                        .HasColumnName("object_id");
 
-                    NpgsqlPropertyBuilderExtensions.UseSerialColumn(b.Property<int>("ItemId"));
+                    NpgsqlPropertyBuilderExtensions.UseSerialColumn(b.Property<int>("ObjectId"));
 
                     b.Property<string>("CurrentStatus")
                         .ValueGeneratedOnAdd()
@@ -47,18 +50,6 @@ namespace LendingSystem.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(300)")
                         .HasColumnName("image_url");
 
-                    b.Property<string>("Maker")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("maker");
-
-                    b.Property<string>("Material")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("material");
-
                     b.Property<string>("ObjectName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -69,10 +60,8 @@ namespace LendingSystem.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("owner_id");
 
-                    b.HasKey("ItemId")
+                    b.HasKey("ObjectId")
                         .HasName("items_pkey");
-
-                    b.HasIndex("OwnerId");
 
                     b.ToTable("items", (string)null);
                 });
@@ -151,7 +140,7 @@ namespace LendingSystem.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("ObjectId")
                         .HasColumnType("integer")
-                        .HasColumnName("item_id");
+                        .HasColumnName("object_id");
 
                     b.Property<int>("OrderId")
                         .HasColumnType("integer")
@@ -262,16 +251,6 @@ namespace LendingSystem.Infrastructure.Persistence.Migrations
                     b.ToTable("users", (string)null);
                 });
 
-            modelBuilder.Entity("LendingSystem.Infrastructure.Persistence.ItemEntity", b =>
-                {
-                    b.HasOne("LendingSystem.Infrastructure.Persistence.UserEntity", "Owner")
-                        .WithMany()
-                        .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Owner");
-                });
-
             modelBuilder.Entity("LendingSystem.Infrastructure.Persistence.MediaEntity", b =>
                 {
                     b.HasOne("LendingSystem.Infrastructure.Persistence.ItemEntity", "Item")
@@ -299,7 +278,7 @@ namespace LendingSystem.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ObjectId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
-                        .HasConstraintName("order_details_item_id_fkey");
+                        .HasConstraintName("order_details_object_id_fkey");
 
                     b.HasOne("LendingSystem.Infrastructure.Persistence.OrderEntity", "Order")
                         .WithMany("Details")

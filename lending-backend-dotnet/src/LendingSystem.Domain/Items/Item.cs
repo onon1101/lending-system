@@ -7,15 +7,19 @@ public static class ItemStatuses
 }
 
 public sealed record Item(
-    int ObjectId,
+    int ItemId,
     string ObjectName,
+    string Maker,
+    string Material,
     string Description,
     string CurrentStatus,
     string? ImageUrl);
 
 public sealed record ItemSummary(
-    int ObjectId,
+    int ItemId,
     string ObjectName,
+    string Maker,
+    string Material,
     string Description,
     string CurrentStatus,
     string? OwnerName,

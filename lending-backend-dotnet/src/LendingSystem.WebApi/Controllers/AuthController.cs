@@ -31,6 +31,7 @@ public sealed class AuthController(AuthService auth) : ControllerBase
         this.ToActionResult(await auth.SearchByNameAsync(Uri.UnescapeDataString(username), cancellationToken));
 
     [HttpDelete("/api/v1/users/{userId:int}")]
+    [Authorize(Roles = "admin")]
     public async Task<ActionResult<ApiResponse<DeleteResponse>>> DeleteByUserId([FromRoute] int userId, CancellationToken cancellationToken) =>
         this.ToActionResult(await auth.DeleteByIdAsync(userId, cancellationToken));
 }

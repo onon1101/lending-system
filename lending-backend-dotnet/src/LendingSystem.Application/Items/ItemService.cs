@@ -15,12 +15,17 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
             return Result<ItemResponse>.Failure(ErrorCodes.Validation, "ObjectName is required");
         }
 
-        return Result<ItemResponse>.Success(Map(await items.CreateAsync(request.ObjectName, request.Description, cancellationToken)));
+        return Result<ItemResponse>.Success(Map(await items.CreateAsync(
+            request.ObjectName.Trim(),
+            request.Maker?.Trim() ?? "",
+            request.Material?.Trim() ?? "",
+            request.Description,
+            cancellationToken)));
     }
 
-    public async Task<Result<ItemResponse>> GetByIdAsync(int objectId, CancellationToken cancellationToken)
+    public async Task<Result<ItemResponse>> GetByIdAsync(int itemId, CancellationToken cancellationToken)
     {
-        var item = await items.GetByIdAsync(objectId, cancellationToken);
+        var item = await items.GetByIdAsync(itemId, cancellationToken);
         return item is null
             ? Result<ItemResponse>.Failure(ErrorCodes.NotFound, "Item not found")
             : Result<ItemResponse>.Success(Map(item));
@@ -30,8 +35,10 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
     {
         var result = await items.GetAllAsync(cancellationToken);
         return Result<IReadOnlyCollection<ItemSummaryResponse>>.Success(result.Select(x => new ItemSummaryResponse(
-            x.ObjectId,
+            x.ItemId,
             x.ObjectName,
+            x.Maker,
+            x.Material,
             x.Description,
             x.CurrentStatus,
             x.OwnerName,
@@ -39,15 +46,23 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
             x.ImageUrl)).ToArray());
     }
 
-    public async Task<Result<ItemResponse>> UpdateAsync(int objectId, UpdateItemRequest request, CancellationToken cancellationToken)
+    public async Task<Result<ItemResponse>> UpdateAsync(int itemId, UpdateItemRequest request, CancellationToken cancellationToken)
     {
-        var item = await items.UpdateAsync(objectId, request.ObjectName, request.Description, request.CurrentStatus, request.ImageUrl, cancellationToken);
+        var item = await items.UpdateAsync(
+            itemId,
+            request.ObjectName?.Trim(),
+            request.Maker?.Trim(),
+            request.Material?.Trim(),
+            request.Description,
+            request.CurrentStatus,
+            request.ImageUrl,
+            cancellationToken);
         return item is null
             ? Result<ItemResponse>.Failure(ErrorCodes.NotFound, "Item not found")
             : Result<ItemResponse>.Success(Map(item));
     }
 
-    public async Task<Result<ItemResponse>> UploadImageAsync(int objectId, Stream stream, long size, string fileName, string contentType, CancellationToken cancellationToken)
+    public async Task<Result<ItemResponse>> UploadImageAsync(int itemId, Stream stream, long size, string fileName, string contentType, CancellationToken cancellationToken)
     {
         if (!contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
         {
@@ -55,7 +70,7 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
         }
 
         var stored = await storage.UploadItemImageAsync(stream, size, fileName, contentType, cancellationToken);
-        var item = await items.UpdateAsync(objectId, null, null, null, RewritePublicMediaHost(stored.Url), cancellationToken);
+        var item = await items.UpdateAsync(itemId, null, null, null, null, null, RewritePublicMediaHost(stored.Url), cancellationToken);
         if (item is null)
         {
             await storage.DeleteObjectAsync(stored.ObjectName, cancellationToken);
@@ -109,7 +124,7 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
         return builder.Uri.ToString();
     }
 
-    private static ItemResponse Map(Item item) => new(item.ObjectId, item.ObjectName, item.Description, item.CurrentStatus, item.ImageUrl);
+    private static ItemResponse Map(Item item) => new(item.ItemId, item.ObjectName, item.Maker, item.Material, item.Description, item.CurrentStatus, item.ImageUrl);
 
     private sealed record UploadedMediaFile(string Type, StoredObject Stored);
 }

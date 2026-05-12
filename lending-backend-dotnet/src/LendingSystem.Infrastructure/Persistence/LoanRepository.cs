@@ -34,12 +34,12 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
         var endTime = now.AddHours(durationHours);
 
         var items = await db.Items
-            .Where(x => itemIds.Contains(x.ObjectId))
+            .Where(x => itemIds.Contains(x.ItemId))
             .ToListAsync(cancellationToken);
 
         foreach (var objectId in itemIds)
         {
-            var item = items.FirstOrDefault(x => x.ObjectId == objectId);
+            var item = items.FirstOrDefault(x => x.ItemId == objectId);
             if (item is null || item.CurrentStatus != ItemStatuses.Available)
             {
                 await tx.RollbackAsync(cancellationToken);
@@ -59,7 +59,7 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
         {
             order.Details.Add(new OrderDetailEntity
             {
-                ObjectId = item.ObjectId,
+                ObjectId = item.ItemId,
                 DetailStatus = LoanStatuses.OnLoan
             });
 
@@ -94,7 +94,7 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
         detail.DetailStatus = LoanStatuses.Returned;
         detail.ActualReturnTime = now;
 
-        var item = await db.Items.FirstOrDefaultAsync(x => x.ObjectId == objectId, cancellationToken);
+        var item = await db.Items.FirstOrDefaultAsync(x => x.ItemId == objectId, cancellationToken);
         if (item is not null)
         {
             item.CurrentStatus = ItemStatuses.Available;
@@ -121,7 +121,7 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
     {
         var itemExists = await db.Items
             .AsNoTracking()
-            .AnyAsync(x => x.ObjectId == itemId, cancellationToken);
+            .AnyAsync(x => x.ItemId == itemId, cancellationToken);
         if (!itemExists)
         {
             return [];

@@ -6,11 +6,13 @@ namespace LendingSystem.Infrastructure.Persistence;
 
 public sealed class ItemRepository(LendingDbContext db) : IItemRepository
 {
-    public async Task<Item> CreateAsync(string objectName, string description, CancellationToken cancellationToken)
+    public async Task<Item> CreateAsync(string objectName, string maker, string material, string description, CancellationToken cancellationToken)
     {
         var entity = new ItemEntity
         {
             ObjectName = objectName,
+            Maker = maker,
+            Material = material,
             Description = description,
             CurrentStatus = ItemStatuses.Available
         };
@@ -21,11 +23,11 @@ public sealed class ItemRepository(LendingDbContext db) : IItemRepository
         return Map(entity);
     }
 
-    public async Task<Item?> GetByIdAsync(int objectId, CancellationToken cancellationToken)
+    public async Task<Item?> GetByIdAsync(int itemId, CancellationToken cancellationToken)
     {
         var entity = await db.Items
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.ObjectId == objectId, cancellationToken);
+            .FirstOrDefaultAsync(x => x.ItemId == itemId, cancellationToken);
 
         return entity is null ? null : Map(entity);
     }
@@ -36,10 +38,12 @@ public sealed class ItemRepository(LendingDbContext db) : IItemRepository
             from item in db.Items.AsNoTracking()
             join owner in db.Users.AsNoTracking() on item.OwnerId equals owner.UserId into owners
             from owner in owners.DefaultIfEmpty()
-            orderby item.ObjectId
+            orderby item.ItemId
             select new ItemSummary(
-                item.ObjectId,
+                item.ItemId,
                 item.ObjectName,
+                item.Maker,
+                item.Material,
                 item.Description ?? "",
                 item.CurrentStatus ?? "",
                 owner == null ? null : owner.Name,
@@ -48,9 +52,11 @@ public sealed class ItemRepository(LendingDbContext db) : IItemRepository
             .ToArrayAsync(cancellationToken);
     }
 
-    public async Task<Item?> UpdateAsync(int objectId, string? objectName, string? description, string? currentStatus, string? imageUrl, CancellationToken cancellationToken)
+    public async Task<Item?> UpdateAsync(int itemId, string? objectName, string? maker, string? material, string? description, string? currentStatus, string? imageUrl, CancellationToken cancellationToken)
     {
-        var entity = await db.Items.FirstOrDefaultAsync(x => x.ObjectId == objectId, cancellationToken);
+        var entity = await db.Items
+            .FirstOrDefaultAsync(x => x.ItemId == itemId, cancellationToken);
+
         if (entity is null)
         {
             return null;
@@ -59,6 +65,16 @@ public sealed class ItemRepository(LendingDbContext db) : IItemRepository
         if (!string.IsNullOrEmpty(objectName))
         {
             entity.ObjectName = objectName;
+        }
+
+        if (maker is not null)
+        {
+            entity.Maker = maker;
+        }
+
+        if (material is not null)
+        {
+            entity.Material = material;
         }
 
         if (!string.IsNullOrEmpty(description))
@@ -96,8 +112,10 @@ public sealed class ItemRepository(LendingDbContext db) : IItemRepository
     }
 
     private static Item Map(ItemEntity entity) => new(
-        entity.ObjectId,
+        entity.ItemId,
         entity.ObjectName,
+        entity.Maker,
+        entity.Material,
         entity.Description ?? "",
         entity.CurrentStatus ?? "",
         entity.ImageUrl);

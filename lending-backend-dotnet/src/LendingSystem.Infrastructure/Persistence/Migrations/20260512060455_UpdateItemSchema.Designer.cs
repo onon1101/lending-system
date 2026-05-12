@@ -3,6 +3,7 @@ using System;
 using LendingSystem.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LendingSystem.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(LendingDbContext))]
-    partial class LendingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260512060455_UpdateItemSchema")]
+    partial class UpdateItemSchema
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -47,23 +50,9 @@ namespace LendingSystem.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(300)")
                         .HasColumnName("image_url");
 
-                    b.Property<string>("Maker")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("maker");
-
-                    b.Property<string>("Material")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("material");
-
-                    b.Property<string>("ObjectName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("object_name");
+                    b.Property<int>("ObjectId")
+                        .HasColumnType("integer")
+                        .HasColumnName("object_id");
 
                     b.Property<int?>("OwnerId")
                         .HasColumnType("integer")
@@ -71,6 +60,8 @@ namespace LendingSystem.Infrastructure.Persistence.Migrations
 
                     b.HasKey("ItemId")
                         .HasName("items_pkey");
+
+                    b.HasIndex("ObjectId");
 
                     b.HasIndex("OwnerId");
 
@@ -128,6 +119,49 @@ namespace LendingSystem.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("idx_media_order_id");
 
                     b.ToTable("media", (string)null);
+                });
+
+            modelBuilder.Entity("LendingSystem.Infrastructure.Persistence.ObjectEntity", b =>
+                {
+                    b.Property<int>("ObjectId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("object_id");
+
+                    NpgsqlPropertyBuilderExtensions.UseSerialColumn(b.Property<int>("ObjectId"));
+
+                    b.Property<string>("Club")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("club");
+
+                    b.Property<string>("Maker")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("maker");
+
+                    b.Property<string>("Material")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("material");
+
+                    b.Property<string>("Object")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("object");
+
+                    b.Property<int>("Price")
+                        .HasColumnType("integer")
+                        .HasColumnName("price");
+
+                    b.HasKey("ObjectId")
+                        .HasName("objects_pkey");
+
+                    b.ToTable("objects", (string)null);
                 });
 
             modelBuilder.Entity("LendingSystem.Infrastructure.Persistence.OrderDetailEntity", b =>
@@ -264,10 +298,19 @@ namespace LendingSystem.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("LendingSystem.Infrastructure.Persistence.ItemEntity", b =>
                 {
+                    b.HasOne("LendingSystem.Infrastructure.Persistence.ObjectEntity", "Object")
+                        .WithMany()
+                        .HasForeignKey("ObjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("items_object_id_fkey");
+
                     b.HasOne("LendingSystem.Infrastructure.Persistence.UserEntity", "Owner")
                         .WithMany()
                         .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Object");
 
                     b.Navigation("Owner");
                 });

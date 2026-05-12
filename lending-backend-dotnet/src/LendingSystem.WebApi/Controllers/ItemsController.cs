@@ -15,12 +15,13 @@ public sealed class ItemsController(ItemService items) : ControllerBase
     public async Task<ActionResult<ApiResponse<IReadOnlyCollection<ItemSummaryResponse>>>> GetAll(CancellationToken cancellationToken) =>
         this.ToActionResult(await items.GetAllAsync(cancellationToken));
 
+    //todo: 路徑改成 api/v1/catalog/items/
     [HttpPost("/api/v1/catalog/items")]
     [Authorize(Roles = "admin")]
     public async Task<ActionResult<ApiResponse<ItemResponse>>> Create([FromBody] CreateItemRequest request, CancellationToken cancellationToken)
     {
         var created = await items.CreateAsync(request, cancellationToken);
-        return this.ToCreatedActionResult(created.IsSuccess ? $"/api/v1/catalog/items/{created.Data!.ObjectId}" : "", created);
+        return this.ToCreatedActionResult(created.IsSuccess ? $"/api/v1/catalog/items/{created.Data!.ItemId}" : "", created);
     }
 
     [HttpGet("/api/v1/catalog/items/{objectId:int}")]
