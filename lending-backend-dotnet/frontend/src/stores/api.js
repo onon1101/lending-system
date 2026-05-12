@@ -5,8 +5,10 @@ const defaultBase = window.location.hostname === "localhost"
 
 export const API_ROOT = (configuredBase || defaultBase).replace(/\/$/, "");
 export const API_BASE_URL = `${API_ROOT}/api/v1`;
+export const MEDIA_ROOT = (import.meta.env.VITE_APP_MEDIA_URL || "https://lending-minio.onon1101.org").replace(/\/$/, "");
 
 const TOKEN_KEY = "lending.accessToken";
+const hasOwn = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
 
 export function getAccessToken() {
   return localStorage.getItem(TOKEN_KEY) || "";
@@ -33,15 +35,47 @@ async function handleResponse(response) {
 
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(payload?.error || payload?.message || response.statusText || "伺服器錯誤");
+    throw new Error(
+      payload?.errorMessage ||
+        payload?.message ||
+        payload?.error ||
+        response.statusText ||
+        "伺服器錯誤",
+    );
   }
 
-  return payload;
+  return unwrapApiResponse(payload);
+}
+
+function unwrapApiResponse(payload) {
+  if (!payload || typeof payload !== "object") return payload;
+
+  const hasEnvelope =
+    hasOwn(payload, "Data") ||
+    hasOwn(payload, "data") ||
+    hasOwn(payload, "Issuccess") ||
+    hasOwn(payload, "isSuccess");
+
+  if (!hasEnvelope) return payload;
+
+  const isSuccess = payload.Issuccess ?? payload.isSuccess ?? true;
+  if (!isSuccess) {
+    throw new Error(payload.errorMessage || payload.message || payload.error || "伺服器錯誤");
+  }
+
+  return payload.Data ?? payload.data ?? null;
 }
 
 export function getFullImageUrl(path) {
   if (!path) return "";
   if (path.startsWith("http")) return path;
+  if (path.startsWith("/api/")) return `${API_ROOT}${path}`;
+
+  const normalizedPath = path.replace(/^\/+/, "");
+  if (normalizedPath.startsWith("lending-images-production/")) {
+    return `${MEDIA_ROOT}/${normalizedPath}`;
+  }
+
   return `${API_ROOT}${path}`;
 }
 
@@ -57,7 +91,9 @@ export async function login(email, password) {
 }
 
 export async function getAllItems() {
-  return fetch(`${API_BASE_URL}/catalog/items`).then(handleResponse);
+  return fetch(`${API_BASE_URL}/catalog/items`)
+    .then(handleResponse)
+    .then((items) => (Array.isArray(items) ? items : []));
 }
 
 export async function getItem(itemId) {
@@ -102,7 +138,8 @@ export async function uploadItemImage(itemId, file) {
 export async function getItemMedia(itemId) {
   const response = await fetch(`${API_BASE_URL}/catalog/items/${itemId}/media`);
   if (response.status === 404) return [];
-  return handleResponse(response);
+  const media = await handleResponse(response);
+  return Array.isArray(media) ? media : [];
 }
 
 export function uploadItemMedia(file, objectId, description, link = "", onProgress) {
@@ -128,15 +165,24 @@ export function uploadItemMedia(file, objectId, description, link = "", onProgre
 
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        resolve(JSON.parse(xhr.responseText));
+        resolve(unwrapApiResponse(parseJson(xhr.responseText)));
         return;
       }
 
-      reject(new Error(xhr.responseText || "上傳失敗"));
+      const payload = parseJson(xhr.responseText);
+      reject(new Error(payload?.errorMessage || payload?.message || payload?.error || "上傳失敗"));
     };
     xhr.onerror = () => reject(new Error("網路錯誤"));
     xhr.send(formData);
   });
+}
+
+function parseJson(text) {
+  try {
+    return JSON.parse(text || "null");
+  } catch {
+    return null;
+  }
 }
 
 export async function searchUserByName(name) {
@@ -156,7 +202,9 @@ export async function createUser(user) {
 }
 
 export async function getActiveBorrowings(userId) {
-  return fetch(`${API_BASE_URL}/users/${userId}/borrowings`).then(handleResponse);
+  return fetch(`${API_BASE_URL}/users/${userId}/borrowings`)
+    .then(handleResponse)
+    .then((borrowings) => (Array.isArray(borrowings) ? borrowings : []));
 }
 
 export async function createBorrowing(userId, itemIds, durationHours) {
@@ -181,7 +229,8 @@ export async function returnBorrowedItem(orderId, objectId) {
 export async function getBorrowingHistory(itemId) {
   const response = await fetch(`${API_BASE_URL}/catalog/items/${itemId}/borrowings/history`);
   if (response.status === 404) return [];
-  return handleResponse(response);
+  const history = await handleResponse(response);
+  return Array.isArray(history) ? history : [];
 }
 
 export const GetItemByID = getItem;

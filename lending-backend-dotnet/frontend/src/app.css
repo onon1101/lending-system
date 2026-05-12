@@ -265,6 +265,44 @@ h3 {
   margin-bottom: 1rem;
 }
 
+.catalog-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.status-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 46px;
+  padding: 0.25rem;
+  border: 2px solid #111827;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.status-tabs button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #374151;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 900;
+  padding: 0.35rem 0.7rem;
+  white-space: nowrap;
+}
+
+.status-tabs button:hover,
+.status-tabs button.active {
+  background: #111827;
+  color: #ffffff;
+}
+
 .catalog-header p,
 .section-title span {
   color: #4b5563;
@@ -345,6 +383,10 @@ h3 {
 
 .status-pill.available {
   background: #22c55e;
+}
+
+.status-pill.borrowed {
+  background: #60a5fa;
 }
 
 .empty-state {
@@ -565,6 +607,20 @@ h3 {
 
   .search-input {
     max-width: none;
+  }
+
+  .catalog-tools,
+  .status-tabs {
+    width: 100%;
+  }
+
+  .status-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .status-tabs button {
+    width: 100%;
   }
 
   .overview-grid {

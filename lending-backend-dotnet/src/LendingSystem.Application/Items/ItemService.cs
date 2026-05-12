@@ -55,7 +55,7 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
         }
 
         var stored = await storage.UploadItemImageAsync(stream, size, fileName, contentType, cancellationToken);
-        var item = await items.UpdateAsync(objectId, null, null, null, stored.Url, cancellationToken);
+        var item = await items.UpdateAsync(objectId, null, null, null, RewritePublicMediaHost(stored.Url), cancellationToken);
         if (item is null)
         {
             await storage.DeleteObjectAsync(stored.ObjectName, cancellationToken);

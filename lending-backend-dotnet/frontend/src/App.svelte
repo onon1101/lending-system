@@ -6,12 +6,24 @@
   let loading = true;
   let error = "";
   let search = "";
+  let statusFilter = "all";
 
-  $: availableItems = items.filter((item) => item.current_status === "Available");
-  $: filteredItems = availableItems.filter((item) => {
+  const statusFilters = [
+    { key: "all", label: "全部" },
+    { key: "available", label: "可借閱" },
+    { key: "borrowed", label: "借閱中" },
+    { key: "unavailable", label: "不可借閱" },
+  ];
+
+  $: availableItems = items.filter((item) => getStatusGroup(item.current_status) === "available");
+  $: borrowedItems = items.filter((item) => getStatusGroup(item.current_status) === "borrowed");
+  $: unavailableItems = items.filter((item) => getStatusGroup(item.current_status) === "unavailable");
+  $: statusFilteredItems = items.filter((item) => statusFilter === "all" || getStatusGroup(item.current_status) === statusFilter);
+  $: filteredItems = statusFilteredItems.filter((item) => {
     const text = `${item.object_name} ${item.description} ${item.owner_name ?? ""}`.toLowerCase();
     return text.includes(search.trim().toLowerCase());
   });
+  $: activeStatusLabel = statusFilters.find((filter) => filter.key === statusFilter)?.label ?? "全部";
 
   onMount(async () => {
     try {
@@ -22,6 +34,20 @@
       loading = false;
     }
   });
+
+  function getStatusGroup(status) {
+    const normalized = String(status ?? "").trim().toLowerCase();
+    if (["available", "可借閱", "可借出"].includes(normalized)) return "available";
+    if (["on loan", "borrowed", "borrowing", "借閱中", "借出中"].includes(normalized)) return "borrowed";
+    return "unavailable";
+  }
+
+  function getStatusLabel(status) {
+    const group = getStatusGroup(status);
+    if (group === "available") return "可借閱";
+    if (group === "borrowed") return "借閱中";
+    return "不可借閱";
+  }
 </script>
 
 <main class="home-page">
@@ -35,23 +61,38 @@
 
   <section class="home-hero">
     <div>
-      <p class="eyebrow">Available Catalog</p>
-      <h1>可借閱物品總覽</h1>
-      <p class="hero-copy">快速瀏覽目前可借出的設備、器材與資源，點選卡片可查看完整物品資訊與借閱紀錄。</p>
+      <p class="eyebrow">Item Catalog</p>
+      <h1>物品總覽</h1>
+      <p class="hero-copy">快速瀏覽設備、器材與資源目前狀態，點選卡片可查看完整物品資訊與借閱紀錄。</p>
     </div>
     <div class="hero-stat">
-      <span>{availableItems.length}</span>
-      <small>目前可借</small>
+      <span>{items.length}</span>
+      <small>全部物品</small>
     </div>
   </section>
 
   <section class="catalog-section">
     <div class="catalog-header">
       <div>
-        <h2>所有可借物品</h2>
-        <p>{filteredItems.length} 件符合條件</p>
+        <h2>{activeStatusLabel}物品</h2>
+        <p>
+          {filteredItems.length} 件符合條件 · 可借閱 {availableItems.length} · 借閱中 {borrowedItems.length} · 不可借閱 {unavailableItems.length}
+        </p>
       </div>
-      <input class="search-input" bind:value={search} placeholder="搜尋物品、描述或保管人" />
+      <div class="catalog-tools">
+        <div class="status-tabs" aria-label="物品狀態篩選">
+          {#each statusFilters as filter}
+            <button
+              type="button"
+              class:active={statusFilter === filter.key}
+              on:click={() => (statusFilter = filter.key)}
+            >
+              {filter.label}
+            </button>
+          {/each}
+        </div>
+        <input class="search-input" bind:value={search} placeholder="搜尋物品、描述或保管人" />
+      </div>
     </div>
 
     {#if loading}
@@ -59,7 +100,7 @@
     {:else if error}
       <div class="empty-state error-state">{error}</div>
     {:else if filteredItems.length === 0}
-      <div class="empty-state">目前沒有符合條件的可借物品</div>
+      <div class="empty-state">目前沒有符合條件的{activeStatusLabel}物品</div>
     {:else}
       <div class="overview-grid">
         {#each filteredItems as item (item.object_id)}
@@ -72,7 +113,9 @@
               {/if}
             </div>
             <div class="overview-content">
-              <span class="status-pill available">可借閱</span>
+              <span class="status-pill" class:available={getStatusGroup(item.current_status) === "available"} class:borrowed={getStatusGroup(item.current_status) === "borrowed"}>
+                {getStatusLabel(item.current_status)}
+              </span>
               <h3>{item.object_name}</h3>
               <p>{item.description || "尚無物品描述。"}</p>
             </div>

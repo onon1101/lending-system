@@ -2,13 +2,13 @@ namespace LendingSystem.Infrastructure.Persistence;
 
 public sealed class UserEntity
 {
-    public int UserId { get; set; }
+    public int UserId { get; init; }
     public string Name { get; set; } = "";
     public string? Email { get; set; }
     public string? PasswordHash { get; set; }
     public bool IsDeleted { get; set; }
-    public string? Nickname { get; set; }
-    public string? Role { get; set; } = "user";
+    // public string? Nickname { get; set; }
+    public string? Role { get; set; } = "user"; // user or admin 
     public DateTimeOffset? CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
     public ICollection<OrderEntity> Orders { get; set; } = [];

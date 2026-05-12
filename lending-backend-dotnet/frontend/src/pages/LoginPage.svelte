@@ -23,6 +23,7 @@
   let userQuery = "";
   let selectedUser = null;
   let durationHours = 24;
+  let isRegistering = false;
   let loginForm = { email: "", password: "" };
   let userForm = { name: "", email: "", password: "" };
   let itemForm = { objectName: "", description: "" };
@@ -58,6 +59,15 @@
       token = result.access_token;
       loginForm = { email: "", password: "" };
     }, "已登入，可執行管理操作。");
+  }
+
+  async function handleRegister() {
+    await run(async () => {
+      await createUser(userForm);
+      loginForm = { email: userForm.email, password: "" };
+      userForm = { name: "", email: "", password: "" };
+      isRegistering = false;
+    }, "註冊成功，請使用新帳號登入。");
   }
 
   function logout() {
@@ -136,75 +146,178 @@
   }
 </script>
 
-<main class="admin-page">
-  <header class="topbar">
-    <a class="brand" href="/">
-      <span class="brand-mark">LS</span>
+<main class="mx-auto w-[min(1180px,calc(100vw-2rem))] px-0 py-4 pb-12 text-slate-900">
+  <header class="flex min-h-[72px] items-center justify-between gap-4">
+    <a class="inline-flex items-center gap-3 text-[1.05rem] font-black text-inherit no-underline" href="/">
+      <span class="grid h-[42px] w-[42px] place-items-center rounded-lg bg-slate-900 font-black text-white">LS</span>
       <span>物品借閱系統</span>
     </a>
-    <a class="subtle-link" href="/">返回首頁</a>
+    <a
+      class="min-h-[42px] rounded-lg border-2 border-slate-900 bg-white px-4 py-2.5 font-black text-slate-900 no-underline hover:bg-slate-100 focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
+      href="/"
+    >
+      返回首頁
+    </a>
   </header>
 
-  <section class="admin-hero">
+  <section class="grid items-end gap-5 border-b-[3px] border-slate-900 py-[clamp(2rem,5vw,4rem)] pb-6 md:grid-cols-[minmax(0,1fr)_auto]">
     <div>
-      <p class="eyebrow">Admin Console</p>
-      <h1>管理登入</h1>
-      <p class="hero-copy">登入後可建立使用者、登錄借閱、歸還物品與新增物品。</p>
+      <p class="mb-1.5 text-xs font-black uppercase text-slate-700">Admin Console</p>
+      <h1 class="mb-4 text-[clamp(2.4rem,6vw,5.25rem)] font-black leading-[0.95] text-slate-900">管理登入</h1>
+      <p class="mb-0 max-w-[680px] text-lg leading-7 text-slate-700">
+        登入後可建立使用者、登錄借閱、歸還物品與新增物品。
+      </p>
     </div>
     {#if token}
-      <button class="ghost-button" type="button" on:click={logout}>登出</button>
+      <button
+        class="min-h-[42px] whitespace-nowrap rounded-lg border-2 border-slate-900 bg-white px-4 py-2.5 font-black text-slate-900 hover:bg-slate-100 focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
+        type="button"
+        on:click={logout}
+      >
+        登出
+      </button>
     {/if}
   </section>
 
   {#if !token}
-    <section class="login-card">
-      <label>
-        <span>Email</span>
-        <input bind:value={loginForm.email} placeholder="admin@example.com" autocomplete="username" />
-      </label>
-      <label>
-        <span>Password</span>
-        <input bind:value={loginForm.password} placeholder="Password" type="password" autocomplete="current-password" />
-      </label>
-      <button class="primary-button" type="button" on:click={handleLogin}>登入管理後台</button>
+    <section
+      class="mx-auto mt-5 grid w-[min(520px,100%)] gap-4 rounded-lg border-2 border-slate-900 bg-white p-5 shadow-[8px_8px_0_#111827]"
+    >
+      {#if isRegistering}
+        <label class="grid gap-2 font-black text-slate-900">
+          <span>姓名</span>
+          <input
+            class="w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15"
+            bind:value={userForm.name}
+            placeholder="王小明"
+            autocomplete="name"
+          />
+        </label>
+        <label class="grid gap-2 font-black text-slate-900">
+          <span>Email</span>
+          <input
+            class="w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15"
+            bind:value={userForm.email}
+            placeholder="user@example.com"
+            autocomplete="email"
+          />
+        </label>
+        <label class="grid gap-2 font-black text-slate-900">
+          <span>Password</span>
+          <input
+            class="w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15"
+            bind:value={userForm.password}
+            placeholder="Password"
+            type="password"
+            autocomplete="new-password"
+          />
+        </label>
+        <button
+          class="min-h-[42px] whitespace-nowrap rounded-lg border-2 border-slate-900 bg-slate-900 px-4 py-2.5 font-black text-white hover:bg-black focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
+          type="button"
+          on:click={handleRegister}
+        >
+          建立帳號
+        </button>
+        <button
+          class="min-h-[42px] whitespace-nowrap rounded-lg border-2 border-slate-900 bg-white px-4 py-2.5 font-black text-slate-900 hover:bg-slate-100 focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
+          type="button"
+          on:click={() => (isRegistering = false)}
+        >
+          返回登入
+        </button>
+      {:else}
+        <label class="grid gap-2 font-black text-slate-900">
+          <span>Email</span>
+          <input
+            class="w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15"
+            bind:value={loginForm.email}
+            placeholder="admin@example.com"
+            autocomplete="username"
+          />
+        </label>
+        <label class="grid gap-2 font-black text-slate-900">
+          <span>Password</span>
+          <input
+            class="w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15"
+            bind:value={loginForm.password}
+            placeholder="Password"
+            type="password"
+            autocomplete="current-password"
+          />
+        </label>
+        <button
+          class="min-h-[42px] whitespace-nowrap rounded-lg border-2 border-slate-900 bg-slate-900 px-4 py-2.5 font-black text-white hover:bg-black focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
+          type="button"
+          on:click={handleLogin}
+        >
+          登入管理後台
+        </button>
+        <button
+          class="min-h-[42px] whitespace-nowrap rounded-lg border-2 border-slate-900 bg-white px-4 py-2.5 font-black text-slate-900 hover:bg-slate-100 focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
+          type="button"
+          on:click={() => (isRegistering = true)}
+        >
+          註冊
+        </button>
+      {/if}
     </section>
   {:else}
-    <section class="admin-grid">
-      <section class="panel compact">
-        <div class="section-title">
-          <h2>使用者</h2>
+    <section class="mt-5 grid gap-4 md:grid-cols-2">
+      <section class="grid gap-3 rounded-lg border-2 border-slate-900 bg-white p-4 shadow-[8px_8px_0_#111827]">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="mb-0 text-xl font-black text-slate-900">使用者</h2>
         </div>
-        <div class="inline-form">
-          <input bind:value={userQuery} placeholder="姓名搜尋" on:keydown={(event) => event.key === "Enter" && handleUserSearch()} />
-          <button type="button" class="icon-button" aria-label="搜尋使用者" on:click={handleUserSearch}>⌕</button>
+        <div class="flex items-center gap-3">
+          <input
+            class="w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15"
+            bind:value={userQuery}
+            placeholder="姓名搜尋"
+            on:keydown={(event) => event.key === "Enter" && handleUserSearch()}
+          />
+          <button
+            type="button"
+            class="min-h-[42px] whitespace-nowrap rounded-lg border-2 border-slate-900 bg-slate-900 px-4 py-2.5 font-black text-white hover:bg-black focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
+            aria-label="搜尋使用者"
+            on:click={handleUserSearch}
+          >
+            ⌕
+          </button>
         </div>
         {#if selectedUser}
-          <div class="selected-user light">
+          <div class="grid gap-0.5 rounded-lg border-2 border-slate-900 bg-slate-100 p-3">
             <strong>{selectedUser.name}</strong>
-            <span>{selectedUser.email}</span>
+            <span class="text-sm font-bold text-slate-600">{selectedUser.email}</span>
           </div>
         {/if}
-        <details>
-          <summary>新增使用者</summary>
-          <input bind:value={userForm.name} placeholder="姓名" />
-          <input bind:value={userForm.email} placeholder="Email" />
-          <input bind:value={userForm.password} placeholder="初始密碼" type="password" />
-          <button type="button" class="secondary-button" on:click={handleCreateUser}>建立</button>
+        <details class="grid gap-3">
+          <summary class="mt-1 mb-3 cursor-pointer font-black text-slate-900">新增使用者</summary>
+          <input class="mb-3 w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15" bind:value={userForm.name} placeholder="姓名" />
+          <input class="mb-3 w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15" bind:value={userForm.email} placeholder="Email" />
+          <input class="mb-3 w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15" bind:value={userForm.password} placeholder="初始密碼" type="password" />
+          <button
+            type="button"
+            class="min-h-[42px] whitespace-nowrap rounded-lg border-2 border-slate-900 bg-white px-4 py-2.5 font-black text-slate-900 hover:bg-slate-100 focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
+            on:click={handleCreateUser}
+          >
+            建立
+          </button>
         </details>
       </section>
 
-      <section class="panel compact">
-        <div class="section-title">
-          <h2>建立借閱</h2>
-          <span>{selectedItemIds.length} 件</span>
+      <section class="grid gap-3 rounded-lg border-2 border-slate-900 bg-white p-4 shadow-[8px_8px_0_#111827]">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="mb-0 text-xl font-black text-slate-900">建立借閱</h2>
+          <span class="mb-0 text-sm font-extrabold text-slate-600">{selectedItemIds.length} 件</span>
         </div>
         {#if loading}
-          <p class="muted">載入物品中</p>
+          <p class="font-bold text-slate-600">載入物品中</p>
         {:else}
-          <div class="borrow-list">
+          <div class="grid max-h-[220px] grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-2 overflow-auto">
             {#each availableItems as item (item.object_id)}
-              <label>
+              <label class="flex min-w-0 items-center gap-2 rounded-lg border-2 border-slate-300 p-2.5 font-extrabold text-slate-900">
                 <input
+                  class="w-auto"
                   type="checkbox"
                   checked={selectedItemIds.includes(item.object_id)}
                   on:change={() => toggleBorrowItem(item.object_id)}
@@ -214,38 +327,56 @@
             {/each}
           </div>
         {/if}
-        <div class="inline-form">
-          <input bind:value={durationHours} type="number" min="1" max="720" />
-          <button type="button" class="primary-button" on:click={handleCreateBorrowing}>送出借閱</button>
+        <div class="flex items-center gap-3">
+          <input class="w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15" bind:value={durationHours} type="number" min="1" max="720" />
+          <button
+            type="button"
+            class="min-h-[42px] whitespace-nowrap rounded-lg border-2 border-slate-900 bg-slate-900 px-4 py-2.5 font-black text-white hover:bg-black focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
+            on:click={handleCreateBorrowing}
+          >
+            送出借閱
+          </button>
         </div>
       </section>
 
-      <section class="panel compact">
-        <div class="section-title">
-          <h2>新增物品</h2>
+      <section class="grid gap-3 rounded-lg border-2 border-slate-900 bg-white p-4 shadow-[8px_8px_0_#111827]">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="mb-0 text-xl font-black text-slate-900">新增物品</h2>
         </div>
-        <input bind:value={itemForm.objectName} placeholder="物品名稱" />
-        <textarea bind:value={itemForm.description} placeholder="描述"></textarea>
-        <button type="button" class="secondary-button" on:click={handleCreateItem}>建立物品</button>
+        <input class="w-full rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15" bind:value={itemForm.objectName} placeholder="物品名稱" />
+        <textarea class="min-h-24 w-full resize-y rounded-lg border-2 border-slate-400 bg-white px-3.5 py-3 text-slate-900 outline-none focus:border-slate-900 focus:ring-4 focus:ring-slate-900/15" bind:value={itemForm.description} placeholder="描述"></textarea>
+        <button
+          type="button"
+          class="min-h-[42px] whitespace-nowrap rounded-lg border-2 border-slate-900 bg-white px-4 py-2.5 font-black text-slate-900 hover:bg-slate-100 focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
+          on:click={handleCreateItem}
+        >
+          建立物品
+        </button>
       </section>
 
-      <section class="panel compact">
-        <div class="section-title">
-          <h2>目前借閱</h2>
-          <span>{activeBorrowings.length}</span>
+      <section class="grid gap-3 rounded-lg border-2 border-slate-900 bg-white p-4 shadow-[8px_8px_0_#111827]">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="mb-0 text-xl font-black text-slate-900">目前借閱</h2>
+          <span class="mb-0 text-sm font-extrabold text-slate-600">{activeBorrowings.length}</span>
         </div>
         {#each activeBorrowings as loan}
-          <div class="loan-card">
-            <strong>#{loan.order_id} · {formatDate(loan.end_time)}</strong>
+          <div class="grid gap-3 border-l-4 border-slate-900 pl-3">
+            <strong class="block text-sm text-slate-600">#{loan.order_id} · {formatDate(loan.end_time)}</strong>
             {#each loan.items as item}
-              <div class="loan-row">
+              <div class="flex items-center justify-between gap-3">
                 <span>{item.object_name}</span>
-                <button type="button" class="ghost-button" on:click={() => handleReturn(loan.order_id, item.object_id)}>歸還</button>
+                <button
+                  type="button"
+                  class="min-h-[42px] whitespace-nowrap rounded-lg border-2 border-slate-900 bg-white px-4 py-2.5 font-black text-slate-900 hover:bg-slate-100 focus-visible:border-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/15"
+                  on:click={() => handleReturn(loan.order_id, item.object_id)}
+                >
+                  歸還
+                </button>
               </div>
             {/each}
           </div>
         {:else}
-          <p class="muted">尚未載入或沒有進行中的借閱。</p>
+          <p class="font-bold text-slate-600">尚未載入或沒有進行中的借閱。</p>
         {/each}
       </section>
     </section>
@@ -253,5 +384,9 @@
 </main>
 
 {#if message || error}
-  <div class:error class="toast">{error || message}</div>
+  <div
+    class={`fixed right-4 bottom-4 max-w-[min(420px,calc(100vw-2rem))] rounded-lg border-2 border-slate-900 px-4 py-3 font-extrabold text-white shadow-[8px_8px_0_rgba(0,0,0,0.18)] ${error ? "bg-red-800" : "bg-slate-900"}`}
+  >
+    {error || message}
+  </div>
 {/if}

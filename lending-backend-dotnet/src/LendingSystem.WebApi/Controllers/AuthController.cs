@@ -16,7 +16,6 @@ public sealed class AuthController(AuthService auth) : ControllerBase
         this.ToActionResult(await auth.LoginAsync(request, cancellationToken));
 
     [HttpPost("/api/v1/users")]
-    [Authorize(Roles = "admin")]
     public async Task<ActionResult<ApiResponse<UserResponse>>> Register([FromBody] CreateUserRequest request, CancellationToken cancellationToken)
     {
         var created = await auth.RegisterAsync(request, cancellationToken);

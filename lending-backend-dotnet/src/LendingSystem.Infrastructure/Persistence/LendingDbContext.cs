@@ -26,7 +26,7 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
             entity.Property(x => x.IsDeleted)
                 .HasColumnName("is_deleted")
                 .HasDefaultValue(false);
-            entity.Property(x => x.Nickname).HasColumnName("nickname");
+            // entity.Property(x => x.Nickname).HasColumnName("nickname");
             entity.Property(x => x.Role)
                 .HasColumnName("role")
                 .HasDefaultValue("user")
