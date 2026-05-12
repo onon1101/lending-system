@@ -31,7 +31,7 @@ public sealed class ItemEntity
     /// <summary>
     /// 物品所屬者 Id
     /// </summary>
-    public int? OwnerId { get; set; }
+    public int OwnerId { get; set; }
 
     /// <summary>
     /// 物品名稱
@@ -41,9 +41,9 @@ public sealed class ItemEntity
     /// <summary>
     /// 借月狀態
     /// </summary>
-    public string? CurrentStatus { get; set; } = "Available";
+    public string CurrentStatus { get; set; } = "Available";
     public string? ImageUrl { get; set; }
-    public string? Description { get; set; } = "";
+    public string Description { get; set; } = "";
 
     public UserEntity? Owner { get; set; }
 

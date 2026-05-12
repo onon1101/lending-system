@@ -6,15 +6,17 @@ namespace LendingSystem.Infrastructure.Persistence;
 
 public sealed class ItemRepository(LendingDbContext db) : IItemRepository
 {
-    public async Task<Item> CreateAsync(string objectName, string maker, string material, string description, CancellationToken cancellationToken)
+    public async Task<Item> CreateAsync(int userId, string objectName, string maker, string material, string description, string imageUrl, CancellationToken cancellationToken)
     {
         var entity = new ItemEntity
         {
+            OwnerId = userId,
             ObjectName = objectName,
             Maker = maker,
             Material = material,
             Description = description,
-            CurrentStatus = ItemStatuses.Available
+            CurrentStatus = ItemStatuses.Available,
+            ImageUrl = imageUrl
         };
 
         db.Items.Add(entity);

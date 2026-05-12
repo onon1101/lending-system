@@ -50,7 +50,7 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
             entity.ToTable("items");
             entity.HasKey(x => x.ItemId).HasName("items_pkey");
             entity.Property(x => x.ItemId).HasColumnName("item_id").ValueGeneratedOnAdd();
-            entity.Property(x => x.OwnerId).HasColumnName("owner_id");
+            entity.Property(x => x.OwnerId).HasColumnName("owner_id").IsRequired();
             entity.Property(x => x.ObjectName).HasColumnName("object_name").HasMaxLength(100).IsRequired();
             entity.Property(x => x.Maker).HasColumnName("maker").HasMaxLength(100).IsRequired();
             entity.Property(x => x.Material).HasColumnName("material").HasMaxLength(100).IsRequired();
@@ -60,11 +60,11 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
                 .HasDefaultValue("Available")
                 .ValueGeneratedOnAdd();
             entity.Property(x => x.ImageUrl).HasColumnName("image_url").HasMaxLength(300).HasDefaultValue(null);
-            entity.Property(x => x.Description).HasColumnName("description");
+            entity.Property(x => x.Description).HasColumnName("description").IsRequired();
             entity.HasOne(x => x.Owner)
                 .WithMany()
                 .HasForeignKey(x => x.OwnerId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<OrderEntity>(entity =>

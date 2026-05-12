@@ -17,7 +17,7 @@ public interface IUserRepository
 
 public interface IItemRepository
 {
-    Task<Item> CreateAsync(string objectName, string maker, string material, string description, CancellationToken cancellationToken);
+    Task<Item> CreateAsync(int userId, string objectName, string maker, string material, string description, string imageUrl, CancellationToken cancellationToken);
     Task<Item?> GetByIdAsync(int itemId, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<ItemSummary>> GetAllAsync(CancellationToken cancellationToken);
     Task<IReadOnlyCollection<ItemSummary>> GetItemsByUserId(int userId,

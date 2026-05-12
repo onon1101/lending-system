@@ -8,18 +8,32 @@ namespace LendingSystem.Application.Items;
 
 public sealed class ItemService(IItemRepository items, IMediaRepository media, IObjectStorage storage)
 {
-    public async Task<Result<ItemResponse>> CreateAsync(CreateItemRequest request, CancellationToken cancellationToken)
+    public async Task<Result<ItemResponse>> CreateAsync(CreateItemRequest request, int userId, FileFormat? fileFormat, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.ObjectName))
         {
             return Result<ItemResponse>.Failure(ErrorCodes.Validation, "ObjectName is required");
         }
 
+        var imageUrl = "";
+        if (fileFormat is not null)
+        {
+            var uploadedImage = await UploadItemImageFileAsync(fileFormat, cancellationToken);
+            if (!uploadedImage.IsSuccess)
+            {
+                return Result<ItemResponse>.Failure(uploadedImage.Error.Code, uploadedImage.Error.Message);
+            }
+
+            imageUrl = RewritePublicMediaHost(uploadedImage.Data!.Url);
+        }
+
         return Result<ItemResponse>.Success(Map(await items.CreateAsync(
+            userId,
             request.ObjectName.Trim(),
             request.Maker?.Trim() ?? "",
             request.Material?.Trim() ?? "",
             request.Description,
+            imageUrl,
             cancellationToken)));
     }
 
@@ -78,18 +92,18 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
             : Result<ItemResponse>.Success(Map(item));
     }
 
-    public async Task<Result<ItemResponse>> UploadImageAsync(int itemId, Stream stream, long size, string fileName, string contentType, CancellationToken cancellationToken)
+    public async Task<Result<ItemResponse>> UploadImageAsync(int itemId, FileFormat fileFormat, CancellationToken cancellationToken)
     {
-        if (!contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        var uploadedImage = await UploadItemImageFileAsync(fileFormat, cancellationToken);
+        if (!uploadedImage.IsSuccess)
         {
-            return Result<ItemResponse>.Failure(ErrorCodes.UnsupportedFileType, "File must be an image type");
+            return Result<ItemResponse>.Failure(uploadedImage.Error.Code, uploadedImage.Error.Message);
         }
 
-        var stored = await storage.UploadItemImageAsync(stream, size, fileName, contentType, cancellationToken);
-        var item = await items.UpdateAsync(itemId, null, null, null, null, null, RewritePublicMediaHost(stored.Url), cancellationToken);
+        var item = await items.UpdateAsync(itemId, null, null, null, null, null, RewritePublicMediaHost(uploadedImage.Data!.Url), cancellationToken);
         if (item is null)
         {
-            await storage.DeleteObjectAsync(stored.ObjectName, cancellationToken);
+            await storage.DeleteObjectAsync(uploadedImage.Data.ObjectName, cancellationToken);
             return Result<ItemResponse>.Failure(ErrorCodes.NotFound, "Item not found");
         }
 
@@ -127,6 +141,17 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
         }
 
         return Result<UploadedMediaFile>.Failure(ErrorCodes.UnsupportedFileType, "Unsupported file type");
+    }
+
+    private async Task<Result<StoredObject>> UploadItemImageFileAsync(FileFormat fileFormat, CancellationToken cancellationToken)
+    {
+        if (!fileFormat.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<StoredObject>.Failure(ErrorCodes.UnsupportedFileType, "File must be an image type");
+        }
+
+        var stored = await storage.UploadItemImageAsync(fileFormat.Stream, fileFormat.Size, fileFormat.FileName, fileFormat.ContentType, cancellationToken);
+        return Result<StoredObject>.Success(stored);
     }
 
     private static string RewritePublicMediaHost(string url)
