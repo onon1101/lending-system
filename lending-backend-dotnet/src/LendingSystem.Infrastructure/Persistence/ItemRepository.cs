@@ -46,7 +46,7 @@ public sealed class ItemRepository(LendingDbContext db) : IItemRepository
                 item.Material,
                 item.Description ?? "",
                 item.CurrentStatus ?? "",
-                owner == null ? null : owner.Name,
+                owner == null ? null : owner.DisplayName,
                 owner == null ? null : owner.Email,
                 item.ImageUrl))
             .ToArrayAsync(cancellationToken);
@@ -103,7 +103,7 @@ public sealed class ItemRepository(LendingDbContext db) : IItemRepository
             .Where(x => x.ObjectId == itemId)
             .Select(x => new ItemMediaSummary(
                 x.Type,
-                x.Order == null || x.Order.User == null ? null : x.Order.User.Name,
+                x.Order == null || x.Order.User == null ? null : x.Order.User.DisplayName,
                 x.Description ?? "",
                 x.Link ?? "",
                 x.Url,

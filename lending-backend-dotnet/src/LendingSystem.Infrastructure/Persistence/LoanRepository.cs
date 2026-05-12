@@ -134,7 +134,7 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
             .Select(x => new LoanRecord(
                 x.Order!.StartTime,
                 x.Order.EndTime,
-                x.Order.User == null ? null : x.Order.User.Name,
+                x.Order.User == null ? null : x.Order.User.DisplayName,
                 x.Order.Status))
             .ToArrayAsync(cancellationToken);
 

@@ -16,11 +16,16 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
 
         modelBuilder.Entity<UserEntity>(entity =>
         {
-            entity.ToTable("users");
+            entity.ToTable("users", table =>
+            {
+                table.HasCheckConstraint("ck_users_name_english_letters", "name ~ '^[A-Za-z]+$'");
+            });
             entity.HasKey(x => x.UserId).HasName("users_pkey");
             entity.HasIndex(x => x.Email).IsUnique().HasDatabaseName("users_email_key");
+            entity.HasIndex(x => x.Name).IsUnique().HasDatabaseName("users_name_key");
             entity.Property(x => x.UserId).HasColumnName("user_id").ValueGeneratedOnAdd();
             entity.Property(x => x.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
+            entity.Property(x => x.DisplayName).HasColumnName("display_name").HasMaxLength(100).IsRequired();
             entity.Property(x => x.Email).HasColumnName("email").HasMaxLength(100);
             entity.Property(x => x.PasswordHash).HasColumnName("password_hash").HasMaxLength(255);
             entity.Property(x => x.IsDeleted)
