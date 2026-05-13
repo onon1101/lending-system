@@ -155,6 +155,12 @@ export async function getItemsByUserId(userId) {
     .then((items) => (Array.isArray(items) ? items : []));
 }
 
+export async function getItemsByUserName(username) {
+  return fetch(`${API_BASE_URL}/catalog/items/user/${encodeURIComponent(username)}`)
+    .then(handleResponse)
+    .then((items) => (Array.isArray(items) ? items : []));
+}
+
 export async function getItem(itemId) {
   return fetch(`${API_BASE_URL}/catalog/items/${itemId}`).then(handleResponse);
 }

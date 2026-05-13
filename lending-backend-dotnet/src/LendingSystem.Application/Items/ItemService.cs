@@ -64,7 +64,33 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
         CancellationToken cancellationToken)
     {
         var result = await items.GetItemsByUserId(userId, cancellationToken);
-        return Result<IReadOnlyCollection<ItemSummaryResponse>>.Success(result.Select(x => new ItemSummaryResponse(
+        if (result is null)
+        {
+            return Result<IReadOnlyCollection<ItemSummaryResponse>>.Failure(ErrorCodes.NotFound, "User not found");
+        }
+
+        return Result<IReadOnlyCollection<ItemSummaryResponse>>.Success(MapSummary(result));
+    }
+
+    public async Task<Result<IReadOnlyCollection<ItemSummaryResponse>>> GetItemsByUserName(string username,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return Result<IReadOnlyCollection<ItemSummaryResponse>>.Failure(ErrorCodes.Validation, "Username is required");
+        }
+
+        var result = await items.GetItemsByUserName(Uri.UnescapeDataString(username.Trim()), cancellationToken);
+        if (result is null)
+        {
+            return Result<IReadOnlyCollection<ItemSummaryResponse>>.Failure(ErrorCodes.NotFound, "User not found");
+        }
+
+        return Result<IReadOnlyCollection<ItemSummaryResponse>>.Success(MapSummary(result));
+    }
+
+    private static ItemSummaryResponse[] MapSummary(IReadOnlyCollection<ItemSummary> result) =>
+        result.Select(x => new ItemSummaryResponse(
             x.ItemId,
             x.ObjectName,
             x.Maker,
@@ -73,8 +99,7 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
             x.CurrentStatus,
             x.OwnerName,
             x.OwnerEmail,
-            x.ImageUrl)).ToArray());
-    }
+            x.ImageUrl)).ToArray();
 
     public async Task<Result<ItemResponse>> UpdateAsync(int itemId, UpdateItemRequest request, CancellationToken cancellationToken)
     {

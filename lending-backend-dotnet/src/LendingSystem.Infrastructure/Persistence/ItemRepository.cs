@@ -54,16 +54,49 @@ public sealed class ItemRepository(LendingDbContext db) : IItemRepository
             .ToArrayAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyCollection<ItemSummary>> GetItemsByUserId(int userId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<ItemSummary>?> GetItemsByUserId(int userId, CancellationToken cancellationToken)
     {
         var user = await db.Users
             .AsNoTracking()
             .Where(x => x.UserId == userId && !x.IsDeleted)
-            .FirstAsync(cancellationToken);
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (user is null)
+        {
+            return null;
+        }
         
         return await db.Items
             .AsNoTracking()
             .Where(x => x.OwnerId == userId)
+            .Select(x => new ItemSummary(
+                x.ItemId,
+                x.ObjectName,
+                x.Maker,
+                x.Material,
+                x.Description ?? "",
+                x.CurrentStatus ?? "",
+                user.DisplayName,
+                user.Email,
+                x.ImageUrl))
+            .ToArrayAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyCollection<ItemSummary>?> GetItemsByUserName(string username, CancellationToken cancellationToken)
+    {
+        var user = await db.Users
+            .AsNoTracking()
+            .Where(x => x.Name == username && !x.IsDeleted)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (user is null)
+        {
+            return null;
+        }
+
+        return await db.Items
+            .AsNoTracking()
+            .Where(x => x.OwnerId == user.UserId)
             .Select(x => new ItemSummary(
                 x.ItemId,
                 x.ObjectName,

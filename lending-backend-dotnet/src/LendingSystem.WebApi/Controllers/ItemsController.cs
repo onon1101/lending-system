@@ -23,9 +23,22 @@ public sealed class ItemsController(ItemService items) : ControllerBase
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     [HttpGet("/api/v1/catalog/items/user/{userId:int}")]
+    [AllowAnonymous]
     public async Task<ActionResult<ApiResponse<IReadOnlyCollection<ItemSummaryResponse>>>> GetItemsByUserId(
         [FromRoute] int userId, CancellationToken cancellationToken)
         => this.ToActionResult(await items.GetItemsByUserId(userId, cancellationToken));
+
+    /// <summary>
+    /// 依照使用者名稱取得該使用者擁有的所有物品
+    /// </summary>
+    /// <param name="username"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    [HttpGet("/api/v1/catalog/items/user/{username}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<IReadOnlyCollection<ItemSummaryResponse>>>> GetItemsByUserName(
+        [FromRoute] string username, CancellationToken cancellationToken)
+        => this.ToActionResult(await items.GetItemsByUserName(username, cancellationToken));
         
 
     [HttpPost("/api/v1/catalog/items")]

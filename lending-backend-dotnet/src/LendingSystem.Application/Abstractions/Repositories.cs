@@ -20,8 +20,8 @@ public interface IItemRepository
     Task<Item> CreateAsync(int userId, string objectName, string maker, string material, string description, string imageUrl, CancellationToken cancellationToken);
     Task<Item?> GetByIdAsync(int itemId, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<ItemSummary>> GetAllAsync(CancellationToken cancellationToken);
-    Task<IReadOnlyCollection<ItemSummary>> GetItemsByUserId(int userId,
-        CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<ItemSummary>?> GetItemsByUserId(int userId, CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<ItemSummary>?> GetItemsByUserName(string username, CancellationToken cancellationToken);
     Task<Item?> UpdateAsync(int itemId, string? objectName, string? maker, string? material, string? description, string? currentStatus, string? imageUrl, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<ItemMediaSummary>> GetMediaByItemIdAsync(int itemId, CancellationToken cancellationToken);
 }

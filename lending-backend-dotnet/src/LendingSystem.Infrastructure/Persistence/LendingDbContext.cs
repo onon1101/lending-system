@@ -18,7 +18,7 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
         {
             entity.ToTable("users", table =>
             {
-                table.HasCheckConstraint("ck_users_name_english_letters", "name ~ '^[A-Za-z]+$'");
+                table.HasCheckConstraint("ck_users_name_english_letters", "name ~ '^[A-Za-z0-9]+$'");
             });
             entity.HasKey(x => x.UserId).HasName("users_pkey");
             entity.HasIndex(x => x.Email).IsUnique().HasDatabaseName("users_email_key");

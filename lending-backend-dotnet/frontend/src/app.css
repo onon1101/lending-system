@@ -184,6 +184,7 @@ h1 {
   line-height: 0.95;
   letter-spacing: 0;
   margin-bottom: 1rem;
+  overflow-wrap: anywhere;
 }
 
 h2 {
