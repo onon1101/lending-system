@@ -31,6 +31,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_APP_API_URL: ${BACKEND_ENDPOINT}
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
     container_name: lending_frontend
     ports:
       - "80:80" 

@@ -1,4 +1,3 @@
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using LendingSystem.Application.Abstractions;
 using LendingSystem.Domain.Users;
@@ -19,6 +18,26 @@ public sealed class UserRepository(LendingDbContext db) : IUserRepository
                 x.PasswordHash ?? "",
                 x.DisplayName,
                 x.Role ?? "",
+                x.AuthProvider,
+                x.ProviderUserId,
+                x.CreatedAt ?? default,
+                x.UpdatedAt ?? default))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<User?> FindByProviderAsync(string authProvider, string providerUserId, CancellationToken cancellationToken)
+    {
+        return await db.Users
+            .AsNoTracking()
+            .Where(x => x.AuthProvider == authProvider && x.ProviderUserId == providerUserId && !x.IsDeleted)
+            .Select(x => new User(
+                x.UserId,
+                x.Email ?? "",
+                x.PasswordHash ?? "",
+                x.DisplayName,
+                x.Role ?? "",
+                x.AuthProvider,
+                x.ProviderUserId,
                 x.CreatedAt ?? default,
                 x.UpdatedAt ?? default))
             .FirstOrDefaultAsync(cancellationToken);
@@ -31,13 +50,50 @@ public sealed class UserRepository(LendingDbContext db) : IUserRepository
             Name = await CreateUniqueNameAsync(email, cancellationToken),
             DisplayName = name,
             Email = email,
-            PasswordHash = passwordHash
+            PasswordHash = passwordHash,
+            AuthProvider = "local"
         };
 
         db.Users.Add(entity);
         await db.SaveChangesAsync(cancellationToken);
 
         return new UserProfile(entity.UserId, entity.DisplayName, entity.Email ?? "");
+    }
+
+    public async Task<User> CreateExternalAsync(string name, string email, string authProvider, string providerUserId, CancellationToken cancellationToken)
+    {
+        var entity = new UserEntity
+        {
+            Name = await CreateUniqueNameAsync(email, cancellationToken),
+            DisplayName = name,
+            Email = email,
+            AuthProvider = authProvider,
+            ProviderUserId = providerUserId
+        };
+
+        db.Users.Add(entity);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return MapUser(entity);
+    }
+
+    public async Task<User?> LinkProviderAsync(int userId, string authProvider, string providerUserId, CancellationToken cancellationToken)
+    {
+        var entity = await db.Users
+            .FirstOrDefaultAsync(x => x.UserId == userId && !x.IsDeleted, cancellationToken);
+
+        if (entity is null)
+        {
+            return null;
+        }
+
+        entity.AuthProvider = authProvider;
+        entity.ProviderUserId = providerUserId;
+        entity.UpdatedAt = DateTimeOffset.UtcNow;
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        return MapUser(entity);
     }
 
     public async Task<UserProfile?> GetByIdAsync(int userId, CancellationToken cancellationToken)
@@ -97,7 +153,7 @@ public sealed class UserRepository(LendingDbContext db) : IUserRepository
 
         foreach (var character in localPart)
         {
-            if (character is >= 'A' and <= 'Z' or >= 'a' and <= 'z')
+            if (character is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or >= '0' and <= '9')
             {
                 builder.Append(char.ToLowerInvariant(character));
             }
@@ -121,4 +177,15 @@ public sealed class UserRepository(LendingDbContext db) : IUserRepository
 
         return builder.ToString();
     }
+
+    private static User MapUser(UserEntity entity) => new(
+        entity.UserId,
+        entity.Email ?? "",
+        entity.PasswordHash ?? "",
+        entity.DisplayName,
+        entity.Role ?? "",
+        entity.AuthProvider,
+        entity.ProviderUserId,
+        entity.CreatedAt ?? default,
+        entity.UpdatedAt ?? default);
 }

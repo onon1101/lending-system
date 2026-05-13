@@ -26,3 +26,6 @@ public sealed record DeleteResponse(
     [property: JsonPropertyName("deleted")] bool Deleted,
     [property: JsonPropertyName("message")] string Message
 );
+
+public sealed record GoogleLoginRequest(
+    [property: JsonPropertyName("id_token")] string IdToken);

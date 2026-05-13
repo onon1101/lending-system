@@ -44,4 +44,11 @@ public sealed class AuthController(AuthService auth) : ControllerBase
     [Authorize(Roles = "admin")]
     public async Task<ActionResult<ApiResponse<DeleteResponse>>> DeleteByUserId([FromRoute] int userId, CancellationToken cancellationToken) =>
         this.ToActionResult(await auth.DeleteByIdAsync(userId, cancellationToken));
+
+    [HttpPost("/api/v1/auth/google")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<AuthResponse>>> GoogleLogin(
+        [FromBody] GoogleLoginRequest request,
+        CancellationToken cancellationToken) =>
+        this.ToActionResult(await auth.GoogleLoginAsync(request, cancellationToken));
 }

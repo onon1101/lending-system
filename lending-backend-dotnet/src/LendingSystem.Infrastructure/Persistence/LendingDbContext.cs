@@ -23,11 +23,22 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
             entity.HasKey(x => x.UserId).HasName("users_pkey");
             entity.HasIndex(x => x.Email).IsUnique().HasDatabaseName("users_email_key");
             entity.HasIndex(x => x.Name).IsUnique().HasDatabaseName("users_name_key");
+            entity.HasIndex(x => new { x.AuthProvider, x.ProviderUserId })
+                .IsUnique()
+                .HasDatabaseName("users_auth_provider_provider_user_id_key");
             entity.Property(x => x.UserId).HasColumnName("user_id").ValueGeneratedOnAdd();
             entity.Property(x => x.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
             entity.Property(x => x.DisplayName).HasColumnName("display_name").HasMaxLength(100).IsRequired();
             entity.Property(x => x.Email).HasColumnName("email").HasMaxLength(100);
             entity.Property(x => x.PasswordHash).HasColumnName("password_hash").HasMaxLength(255);
+            entity.Property(x => x.AuthProvider)
+                .HasColumnName("auth_provider")
+                .HasMaxLength(50)
+                .HasDefaultValue("local")
+                .IsRequired();
+            entity.Property(x => x.ProviderUserId)
+                .HasColumnName("provider_user_id")
+                .HasMaxLength(255);
             entity.Property(x => x.IsDeleted)
                 .HasColumnName("is_deleted")
                 .HasDefaultValue(false);

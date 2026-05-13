@@ -1,3 +1,7 @@
+<svelte:head>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</svelte:head>
+
 <script>
   import { onMount } from "svelte";
   import {
@@ -11,6 +15,7 @@
     getCurrentUserFromToken,
     getFullImageUrl,
     getItemsByUserId,
+    googleLogin,
     login,
     returnBorrowedItem,
     searchUserByName,
@@ -60,6 +65,45 @@
   onMount(async () => {
     if (!token) return;
     await initializeWorkspace();
+  });
+
+  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+  onMount(() => {
+    if (!GOOGLE_CLIENT_ID || token) return;
+
+    let cancelled = false;
+    let timeoutId;
+    const intervalId = window.setInterval(() => {
+      if (cancelled || !window.google?.accounts?.id) return;
+
+      const button = document.getElementById("google-signin-button");
+      if (!button) return;
+
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: async (response) => {
+          try {
+            await googleLogin(response.credential);
+            window.location.href = "/login";
+          } catch (err) {
+            error = err?.message || "Google 登入失敗";
+          }
+        },
+      });
+
+      window.google.accounts.id.renderButton(button, { theme: "outline", size: "large", width: 280 });
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+    }, 100);
+
+    timeoutId = window.setTimeout(() => window.clearInterval(intervalId), 5000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+    };
   });
 
   async function run(action, successText = "") {
@@ -355,6 +399,12 @@
         </label>
         <button class="primary-button" type="button" on:click={handleLogin}>登入</button>
         <button class="secondary-button" type="button" on:click={() => (isRegistering = true)}>註冊</button>
+      {/if}
+      {#if GOOGLE_CLIENT_ID}
+        <div class="auth-divider" aria-hidden="true"></div>
+        <div class="google-auth-area">
+          <div id="google-signin-button" class="google-signin-button"></div>
+        </div>
       {/if}
     </section>
   {:else}
@@ -716,6 +766,28 @@
     font-size: 1.08rem;
     line-height: 1.7;
     margin-bottom: 0;
+  }
+
+  .auth-divider {
+    width: 100%;
+    height: 3px;
+    background: #111827;
+    margin: 0.1rem 0 0.05rem;
+  }
+
+  .google-auth-area {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    padding-top: 0.1rem;
+  }
+
+  .google-signin-button {
+    display: flex;
+    justify-content: center;
+    width: 280px;
+    max-width: 100%;
+    min-height: 40px;
   }
 
   .leftbar {

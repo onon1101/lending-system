@@ -9,9 +9,11 @@ RUN npm install
 
 # 🎯 修正點 1: 宣告一個建構參數 (ARG)
 ARG VITE_APP_API_URL
+ARG VITE_GOOGLE_CLIENT_ID
 
 # 🎯 修正點 2: 將建構參數轉換為環境變數 (ENV)，供 npm run build 使用
 ENV VITE_APP_API_URL=${VITE_APP_API_URL}
+ENV VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
 
 # 複製程式碼並建置
 COPY . .

@@ -1,15 +1,18 @@
-using System.IO.Pipelines;
+using Google.Apis.Auth;
 using LendingSystem.Application.Abstractions;
 using LendingSystem.Application.Common;
+using Microsoft.Extensions.Configuration;
 
 namespace LendingSystem.Application.Auth;
 
-public sealed class AuthService(IUserRepository users, IPasswordHasher passwords, ITokenService tokens)
+public sealed class AuthService(IUserRepository users, IPasswordHasher passwords, ITokenService tokens, IConfiguration configuration)
 {
+    private const string GoogleProvider = "google";
+
     public async Task<Result<AuthResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
     {
         var user = await users.FindByEmailAsync(request.Email, cancellationToken);
-        if (user is null || !passwords.Verify(request.Password, user.PasswordHash))
+        if (user is null || string.IsNullOrWhiteSpace(user.PasswordHash) || !passwords.Verify(request.Password, user.PasswordHash))
         {
             return Result<AuthResponse>.Failure(ErrorCodes.Unauthorized, "帳號或密碼錯誤");
         }
@@ -56,5 +59,72 @@ public sealed class AuthService(IUserRepository users, IPasswordHasher passwords
         return IsSuccess
             ? Result<DeleteResponse>.Success(new DeleteResponse(true, $"Delete user from userid {userId} is successful."))
             : Result<DeleteResponse>.Failure(ErrorCodes.ServerError, "Delete user is not successful.");
+    }
+
+    public async Task<Result<AuthResponse>> GoogleLoginAsync(
+        GoogleLoginRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.IdToken))
+        {
+            return Result<AuthResponse>.Failure(ErrorCodes.Validation, "Google token is required");
+        }
+
+        var googleClientId = configuration["GOOGLE_CLIENT_ID"] ?? configuration["Google:ClientId"];
+        if (string.IsNullOrWhiteSpace(googleClientId))
+        {
+            return Result<AuthResponse>.Failure(ErrorCodes.ServerError, "Google ClientId is not configured");
+        }
+
+        GoogleJsonWebSignature.Payload payload;
+
+        try
+        {
+            payload = await GoogleJsonWebSignature.ValidateAsync(
+                request.IdToken,
+                new GoogleJsonWebSignature.ValidationSettings
+                {
+                    Audience = [googleClientId]
+                });
+        }
+        catch (InvalidJwtException)
+        {
+            return Result<AuthResponse>.Failure(ErrorCodes.Unauthorized, "Google 登入驗證失敗");
+        }
+
+        if (payload.EmailVerified != true || string.IsNullOrWhiteSpace(payload.Email) || string.IsNullOrWhiteSpace(payload.Subject))
+        {
+            return Result<AuthResponse>.Failure(ErrorCodes.Unauthorized, "Google 帳號資料未驗證");
+        }
+
+        var user = await users.FindByProviderAsync(GoogleProvider, payload.Subject, cancellationToken);
+        if (user is not null)
+        {
+            var existingTokenPair = tokens.Generate(user);
+            return Result<AuthResponse>.Success(new AuthResponse(existingTokenPair.AccessToken, existingTokenPair.RefreshToken));
+        }
+
+        user = await users.FindByEmailAsync(payload.Email, cancellationToken);
+        if (user is null)
+        {
+            var name = payload.Name ?? payload.Email.Split('@')[0];
+            user = await users.CreateExternalAsync(
+                name,
+                payload.Email,
+                GoogleProvider,
+                payload.Subject,
+                cancellationToken);
+        }
+        else if (user.AuthProvider != GoogleProvider || user.ProviderUserId != payload.Subject)
+        {
+            user = await users.LinkProviderAsync(user.Id, GoogleProvider, payload.Subject, cancellationToken);
+            if (user is null)
+            {
+                return Result<AuthResponse>.Failure(ErrorCodes.Unauthorized, "Google 帳號連結失敗");
+            }
+        }
+
+        var tokenPair = tokens.Generate(user);
+        return Result<AuthResponse>.Success(new AuthResponse(tokenPair.AccessToken, tokenPair.RefreshToken));
     }
 }

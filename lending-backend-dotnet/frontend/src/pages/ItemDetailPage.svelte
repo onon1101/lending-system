@@ -299,6 +299,16 @@
           {productData.current_status}
         </span>
         <h1>{productData.object_name}</h1>
+        <dl class="item-meta">
+          <div>
+            <dt>作者</dt>
+            <dd>{productData.maker || "未填寫"}</dd>
+          </div>
+          <div>
+            <dt>材質</dt>
+            <dd>{productData.material || "未填寫"}</dd>
+          </div>
+        </dl>
         <p>{productData.description || "尚無物品描述。"}</p>
 
         {#if canMutateData}

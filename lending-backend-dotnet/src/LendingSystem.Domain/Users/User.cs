@@ -6,6 +6,8 @@ public sealed record User(
     string PasswordHash,
     string Name,
     string Role,
+    string AuthProvider,
+    string? ProviderUserId,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 

@@ -14,6 +14,17 @@ export function getAccessToken() {
   return localStorage.getItem(TOKEN_KEY) || "";
 }
 
+export async function googleLogin(idToken) {
+  const result = await fetch(`${API_BASE_URL}/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id_token: idToken }),
+  }).then(handleResponse);
+
+  saveAccessToken(result.access_token);
+  return result;
+}
+
 export function saveAccessToken(token) {
   if (token) localStorage.setItem(TOKEN_KEY, token);
 }
