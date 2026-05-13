@@ -43,7 +43,7 @@
   $: availableItems = items.filter((item) => getStatusGroup(item.current_status) === "available");
   $: sidebarItems = [
     { key: "owned", label: "我的抱枕", visible: canUseWorkspace },
-    { key: "overview", label: "紀錄總覽", href: "/my-pillows.html", visible: canUseWorkspace },
+    { key: "overview", label: "紀錄總覽", href: "/my-pillows", visible: canUseWorkspace },
     { key: "users", label: "使用者", visible: isAdmin },
     { key: "borrow", label: "建立借閱", visible: isAdmin },
     { key: "items", label: "新增物品", visible: isAdmin },
@@ -351,7 +351,7 @@
           {:else}
             <div class="owned-grid">
               {#each ownedItems as item (item.object_id)}
-                <a class="owned-card" href={`/item.html?id=${item.object_id}`}>
+                <a class="owned-card" href={`/items/${item.object_id}`}>
                   <div class="owned-image">
                     {#if item.image_url}
                       <img src={getFullImageUrl(item.image_url)} alt={item.object_name} />

@@ -56,7 +56,7 @@
       <span class="brand-mark">LS</span>
       <span>物品借閱系統</span>
     </a>
-    <a class="login-link" href="/login.html">登入</a>
+    <a class="login-link" href="/login">登入</a>
   </header>
 
   <section class="home-hero">
@@ -104,7 +104,7 @@
     {:else}
       <div class="overview-grid">
         {#each filteredItems as item (item.object_id)}
-          <a class="overview-card" href={`/item.html?id=${item.object_id}`}>
+          <a class="overview-card" href={`/items/${item.object_id}`}>
             <div class="overview-image">
               {#if item.image_url}
                 <img src={getFullImageUrl(item.image_url)} alt={item.object_name} />

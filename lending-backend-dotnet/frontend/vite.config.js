@@ -1,20 +1,9 @@
 import { defineConfig } from 'vite'
-import { svelte } from '@sveltejs/vite-plugin-svelte'
-import { resolve } from 'node:path'
+import { sveltekit } from '@sveltejs/kit/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [svelte()],
-  build: {
-    rollupOptions: {
-      input: {
-        index: resolve(__dirname, 'index.html'),
-        item: resolve(__dirname, 'item.html'),
-        login: resolve(__dirname, 'login.html'),
-        myPillows: resolve(__dirname, 'my-pillows.html'),
-      },
-    },
-  },
+  plugins: [sveltekit()],
   
   // ======================================
   // 核心配置：讓伺服器監聽所有介面 (0.0.0.0)
