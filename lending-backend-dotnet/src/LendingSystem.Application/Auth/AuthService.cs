@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Google.Apis.Auth;
 using LendingSystem.Application.Abstractions;
 using LendingSystem.Application.Common;
@@ -11,6 +12,11 @@ public sealed class AuthService(IUserRepository users, IPasswordHasher passwords
 
     public async Task<Result<AuthResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
     {
+        if (!IsValidEmail(request.Email))
+        {
+            return Result<AuthResponse>.Failure(ErrorCodes.Validation, "錯誤的 Email 格式");
+        }
+
         var user = await users.FindByEmailAsync(request.Email, cancellationToken);
         if (user is null || string.IsNullOrWhiteSpace(user.PasswordHash) || !passwords.Verify(request.Password, user.PasswordHash))
         {
@@ -19,6 +25,24 @@ public sealed class AuthService(IUserRepository users, IPasswordHasher passwords
 
         var tokenPair = tokens.Generate(user);
         return Result<AuthResponse>.Success(new AuthResponse(tokenPair.AccessToken, tokenPair.RefreshToken));
+    }
+
+    private bool IsValidEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return false;
+
+        if (!new EmailAddressAttribute().IsValid(email))
+            return false;
+
+        var parts = email.Split('@');
+        if (parts.Length != 2)
+            return false;
+
+        var domainParts = parts[1].Split('.');
+        return domainParts.Length >= 2 &&
+           domainParts.All(p => !string.IsNullOrWhiteSpace(p)) &&
+           domainParts[^1].Length >= 2;
     }
 
     public async Task<Result<UserResponse>> RegisterAsync(CreateUserRequest request, CancellationToken cancellationToken)

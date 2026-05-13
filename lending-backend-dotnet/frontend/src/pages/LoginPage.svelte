@@ -14,6 +14,7 @@
     getAllItems,
     getCurrentUserFromToken,
     getFullImageUrl,
+    getItemDetailPath,
     getItemsByUserId,
     googleLogin,
     login,
@@ -457,7 +458,7 @@
             <div class="owned-grid">
               {#each ownedItems as item (item.object_id)}
                 <article class="owned-card">
-                  <a class="owned-card-link" href={`/items/${item.object_id}`} aria-label={`查看 ${item.object_name}`}>
+                  <a class="owned-card-link" href={getItemDetailPath(item)} aria-label={`查看 ${item.object_name}`}>
                     <div class="owned-image">
                       {#if item.image_url}
                         <img src={getFullImageUrl(item.image_url)} alt={item.object_name} />
@@ -483,7 +484,7 @@
                       <p>{item.description || "尚無抱枕描述。"}</p>
                     </div>
                   </a>
-                  {#if isAdmin}
+                  {#if canUseWorkspace}
                     <button class="edit-card-button" type="button" on:click={() => openEditItemModal(item)}>
                       編輯
                     </button>

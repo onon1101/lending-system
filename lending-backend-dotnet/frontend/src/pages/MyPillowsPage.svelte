@@ -5,6 +5,7 @@
     getBorrowingHistory,
     getCurrentUserFromToken,
     getFullImageUrl,
+    getItemDetailPath,
     getItemsByUserId,
   } from "../stores/api";
 
@@ -165,7 +166,7 @@
                 <div class="border-t-2 border-gray-900 p-4">
                   <div class="mb-3 flex items-center justify-between gap-4">
                     <h4 class="m-0 text-base font-black text-gray-900">借閱歷史</h4>
-                    <a class="font-black text-gray-900" href={`/items/${item.object_id}`}>查看細節</a>
+                    <a class="font-black text-gray-900" href={getItemDetailPath(item)}>查看細節</a>
                   </div>
                   {#if historyLoadingId === item.object_id}
                     <p class="font-bold text-gray-600">載入借閱歷史中</p>

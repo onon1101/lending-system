@@ -8,6 +8,7 @@ public static class ItemStatuses
 
 public sealed record Item(
     int ItemId,
+    int OwnerId,
     string ObjectName,
     string Maker,
     string Material,
@@ -17,11 +18,13 @@ public sealed record Item(
 
 public sealed record ItemSummary(
     int ItemId,
+    int OwnerId,
     string ObjectName,
     string Maker,
     string Material,
     string Description,
     string CurrentStatus,
+    string? OwnerUsername,
     string? OwnerName,
     string? OwnerEmail,
     string? ImageUrl);

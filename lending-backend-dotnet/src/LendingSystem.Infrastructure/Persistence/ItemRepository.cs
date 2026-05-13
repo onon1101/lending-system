@@ -34,6 +34,15 @@ public sealed class ItemRepository(LendingDbContext db) : IItemRepository
         return entity is null ? null : Map(entity);
     }
 
+    public async Task<Item?> GetByNameAsync(int userId, string itemName, CancellationToken cancellation)
+    {
+        var entity = await db.Items
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.ObjectName == itemName && x.OwnerId == userId, cancellation);
+
+        return entity is null ? null : Map(entity);
+    }
+
     public async Task<IReadOnlyCollection<ItemSummary>> GetAllAsync(CancellationToken cancellationToken)
     {
         return await (
@@ -43,11 +52,13 @@ public sealed class ItemRepository(LendingDbContext db) : IItemRepository
             orderby item.ItemId
             select new ItemSummary(
                 item.ItemId,
+                item.OwnerId,
                 item.ObjectName,
                 item.Maker,
                 item.Material,
                 item.Description ?? "",
                 item.CurrentStatus ?? "",
+                owner == null ? null : owner.Name,
                 owner == null ? null : owner.DisplayName,
                 owner == null ? null : owner.Email,
                 item.ImageUrl))
@@ -71,11 +82,13 @@ public sealed class ItemRepository(LendingDbContext db) : IItemRepository
             .Where(x => x.OwnerId == userId)
             .Select(x => new ItemSummary(
                 x.ItemId,
+                x.OwnerId,
                 x.ObjectName,
                 x.Maker,
                 x.Material,
                 x.Description ?? "",
                 x.CurrentStatus ?? "",
+                user.Name,
                 user.DisplayName,
                 user.Email,
                 x.ImageUrl))
@@ -99,11 +112,13 @@ public sealed class ItemRepository(LendingDbContext db) : IItemRepository
             .Where(x => x.OwnerId == user.UserId)
             .Select(x => new ItemSummary(
                 x.ItemId,
+                x.OwnerId,
                 x.ObjectName,
                 x.Maker,
                 x.Material,
                 x.Description ?? "",
                 x.CurrentStatus ?? "",
+                user.Name,
                 user.DisplayName,
                 user.Email,
                 x.ImageUrl))
@@ -171,6 +186,7 @@ public sealed class ItemRepository(LendingDbContext db) : IItemRepository
 
     private static Item Map(ItemEntity entity) => new(
         entity.ItemId,
+        entity.OwnerId,
         entity.ObjectName,
         entity.Maker,
         entity.Material,

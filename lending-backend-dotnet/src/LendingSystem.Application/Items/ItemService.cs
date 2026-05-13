@@ -45,16 +45,31 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
             : Result<ItemResponse>.Success(Map(item));
     }
 
+    public async Task<Result<ItemResponse>> GetByNameAsync(int userId, string itemName, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(itemName))
+        {
+            return Result<ItemResponse>.Failure(ErrorCodes.Validation, "Item name is required");
+        }
+
+        var item = await items.GetByNameAsync(userId, Uri.UnescapeDataString(itemName.Trim()), cancellationToken);
+        return item is null
+            ? Result<ItemResponse>.Failure(ErrorCodes.NotFound, "Item not found")
+            : Result<ItemResponse>.Success(Map(item));
+    }
+
     public async Task<Result<IReadOnlyCollection<ItemSummaryResponse>>> GetAllAsync(CancellationToken cancellationToken)
     {
         var result = await items.GetAllAsync(cancellationToken);
         return Result<IReadOnlyCollection<ItemSummaryResponse>>.Success(result.Select(x => new ItemSummaryResponse(
             x.ItemId,
+            x.OwnerId,
             x.ObjectName,
             x.Maker,
             x.Material,
             x.Description,
             x.CurrentStatus,
+            x.OwnerUsername,
             x.OwnerName,
             x.OwnerEmail,
             x.ImageUrl)).ToArray());
@@ -92,17 +107,30 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
     private static ItemSummaryResponse[] MapSummary(IReadOnlyCollection<ItemSummary> result) =>
         result.Select(x => new ItemSummaryResponse(
             x.ItemId,
+            x.OwnerId,
             x.ObjectName,
             x.Maker,
             x.Material,
             x.Description,
             x.CurrentStatus,
+            x.OwnerUsername,
             x.OwnerName,
             x.OwnerEmail,
             x.ImageUrl)).ToArray();
 
-    public async Task<Result<ItemResponse>> UpdateAsync(int itemId, UpdateItemRequest request, CancellationToken cancellationToken)
+    public async Task<Result<ItemResponse>> UpdateAsync(int itemId, UpdateItemRequest request, int currentUserId, bool isAdmin, CancellationToken cancellationToken)
     {
+        var existingItem = await items.GetByIdAsync(itemId, cancellationToken);
+        if (existingItem is null)
+        {
+            return Result<ItemResponse>.Failure(ErrorCodes.NotFound, "Item not found");
+        }
+
+        if (!isAdmin && existingItem.OwnerId != currentUserId)
+        {
+            return Result<ItemResponse>.Failure(ErrorCodes.Unauthorized, "You can only update your own items");
+        }
+
         var item = await items.UpdateAsync(
             itemId,
             request.ObjectName?.Trim(),
@@ -112,13 +140,22 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
             request.CurrentStatus,
             request.ImageUrl,
             cancellationToken);
-        return item is null
-            ? Result<ItemResponse>.Failure(ErrorCodes.NotFound, "Item not found")
-            : Result<ItemResponse>.Success(Map(item));
+        return Result<ItemResponse>.Success(Map(item!));
     }
 
-    public async Task<Result<ItemResponse>> UploadImageAsync(int itemId, FileFormat fileFormat, CancellationToken cancellationToken)
+    public async Task<Result<ItemResponse>> UploadImageAsync(int itemId, FileFormat fileFormat, int currentUserId, bool isAdmin, CancellationToken cancellationToken)
     {
+        var existingItem = await items.GetByIdAsync(itemId, cancellationToken);
+        if (existingItem is null)
+        {
+            return Result<ItemResponse>.Failure(ErrorCodes.NotFound, "Item not found");
+        }
+
+        if (!isAdmin && existingItem.OwnerId != currentUserId)
+        {
+            return Result<ItemResponse>.Failure(ErrorCodes.Unauthorized, "You can only update your own items");
+        }
+
         var uploadedImage = await UploadItemImageFileAsync(fileFormat, cancellationToken);
         if (!uploadedImage.IsSuccess)
         {
@@ -135,8 +172,19 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
         return Result<ItemResponse>.Success(Map(item));
     }
 
-    public async Task<Result<MediaResponse>> UploadMediaAsync(int? orderId, int objectId, string description, string link, Stream stream, long size, string fileName, string contentType, CancellationToken cancellationToken)
+    public async Task<Result<MediaResponse>> UploadMediaAsync(int? orderId, int objectId, string description, string link, Stream stream, long size, string fileName, string contentType, int currentUserId, bool isAdmin, CancellationToken cancellationToken)
     {
+        var existingItem = await items.GetByIdAsync(objectId, cancellationToken);
+        if (existingItem is null)
+        {
+            return Result<MediaResponse>.Failure(ErrorCodes.NotFound, "Item not found");
+        }
+
+        if (!isAdmin && existingItem.OwnerId != currentUserId)
+        {
+            return Result<MediaResponse>.Failure(ErrorCodes.Unauthorized, "You can only update your own items");
+        }
+
         var upload = await UploadMediaFileAsync(stream, size, fileName, contentType, cancellationToken);
         if (!upload.IsSuccess)
         {
@@ -190,7 +238,7 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
         return builder.Uri.ToString();
     }
 
-    private static ItemResponse Map(Item item) => new(item.ItemId, item.ObjectName, item.Maker, item.Material, item.Description, item.CurrentStatus, item.ImageUrl);
+    private static ItemResponse Map(Item item) => new(item.ItemId, item.OwnerId, item.ObjectName, item.Maker, item.Material, item.Description, item.CurrentStatus, item.ImageUrl);
 
     private sealed record UploadedMediaFile(string Type, StoredObject Stored);
 }

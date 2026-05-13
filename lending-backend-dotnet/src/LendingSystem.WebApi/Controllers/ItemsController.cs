@@ -80,21 +80,48 @@ public sealed class ItemsController(ItemService items) : ControllerBase
     public async Task<ActionResult<ApiResponse<ItemResponse>>> GetById([FromRoute] int objectId, CancellationToken cancellationToken) =>
         this.ToActionResult(await items.GetByIdAsync(objectId, cancellationToken));
 
+    [HttpGet("/api/v1/catalog/users/{userId:int}/items/{objectName}")]
+    public async Task<ActionResult<ApiResponse<ItemResponse>>> GetByName(
+        [FromRoute] int userId,
+        [FromRoute] string objectName,
+        CancellationToken cancellation) =>
+        this.ToActionResult(await items.GetByNameAsync(userId, objectName, cancellation));
+
+
     [HttpPut("/api/v1/catalog/items/{objectId:int}")]
-    [Authorize(Roles = "admin")]
-    public async Task<ActionResult<ApiResponse<ItemResponse>>> Update([FromRoute] int objectId, [FromBody] UpdateItemRequest request, CancellationToken cancellationToken) =>
-        this.ToActionResult(await items.UpdateAsync(objectId, request, cancellationToken));
+    [Authorize(Roles = "user,admin")]
+    public async Task<ActionResult<ApiResponse<ItemResponse>>> Update([FromRoute] int objectId, [FromBody] UpdateItemRequest request, CancellationToken cancellationToken)
+    {
+        if (!TryGetUserId(User, out var userId))
+        {
+            return this.ApiFailure<ItemResponse>(ErrorCodes.Unauthorized, "Invalid token");
+        }
+
+        return this.ToActionResult(await items.UpdateAsync(objectId, request, userId, IsAdmin(User), cancellationToken));
+    }
 
     [HttpPost("/api/v1/catalog/items/{objectId:int}/image")]
+    [Authorize(Roles = "user,admin")]
     public async Task<ActionResult<ApiResponse<ItemResponse>>> UploadImage([FromRoute] int objectId, IFormFile file, CancellationToken cancellationToken)
     {
+        if (!TryGetUserId(User, out var userId))
+        {
+            return this.ApiFailure<ItemResponse>(ErrorCodes.Unauthorized, "Invalid token");
+        }
+
         await using var stream = file.OpenReadStream();
-        return this.ToActionResult(await items.UploadImageAsync(objectId, new FileFormat(stream, file.Length, file.FileName, file.ContentType), cancellationToken));
+        return this.ToActionResult(await items.UploadImageAsync(objectId, new FileFormat(stream, file.Length, file.FileName, file.ContentType), userId, IsAdmin(User), cancellationToken));
     }
 
     [HttpPost("/api/v1/catalog/items/media")]
+    [Authorize(Roles = "user,admin")]
     public async Task<ActionResult<ApiResponse<MediaResponse>>> UploadMedia(CancellationToken cancellationToken)
     {
+        if (!TryGetUserId(User, out var userId))
+        {
+            return this.ApiFailure<MediaResponse>(ErrorCodes.Unauthorized, "Invalid token");
+        }
+
         var file = Request.Form.Files["file"];
         if (file is null)
         {
@@ -129,6 +156,8 @@ public sealed class ItemsController(ItemService items) : ControllerBase
             file.Length,
             file.FileName,
             file.ContentType,
+            userId,
+            IsAdmin(User),
             cancellationToken);
 
         return this.ToCreatedActionResult($"/api/v1/catalog/items/{objectId}/media", result);
@@ -143,6 +172,8 @@ public sealed class ItemsController(ItemService items) : ControllerBase
         var value = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("id");
         return int.TryParse(value, out userId);
     }
+
+    private static bool IsAdmin(ClaimsPrincipal user) => user.IsInRole("admin");
 }
 
 public sealed class CreateItemFormRequest

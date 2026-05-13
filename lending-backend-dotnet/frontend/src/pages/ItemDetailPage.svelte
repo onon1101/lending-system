@@ -11,9 +11,11 @@
     getFullImageUrl,
     updateBorrowingRecordTime,
     uploadItemImage,
+    getItemsByUserName,
   } from "../stores/api";
 
   export let itemId;
+  export let username = "";
 
   let productData = null;
   let history = [];
@@ -21,7 +23,9 @@
   let error = "";
   let imageFile = null;
   let coverUploading = false;
+  let currentUser = null;
   let canMutateData = false;
+  let canViewHistory = false;
   let isUploadModalOpen = false;
   let isRecordModalOpen = false;
   let isEditingRecords = false;
@@ -36,9 +40,14 @@
   };
 
   $: visibleHistory = history.filter(hasLoanRecord);
+  $: resolvedItemId = productData?.item_id || productData?.object_id || null;
+  $: isAdmin = String(currentUser?.role || "").toLowerCase() === "admin";
+  $: isOwner = Number(productData?.owner_id || productData?.ownerId || 0) === Number(currentUser?.user_id || 0);
+  $: canMutateData = Boolean(currentUser?.user_id && productData && (isAdmin || isOwner));
+  $: canViewHistory = Boolean(currentUser?.user_id && ["admin", "user"].includes(String(currentUser?.role || "").toLowerCase()));
 
   onMount(async () => {
-    canMutateData = Boolean(getCurrentUserFromToken()?.user_id);
+    currentUser = getCurrentUserFromToken();
     itemId = itemId || new URLSearchParams(window.location.search).get("id");
     if (!itemId) {
       error = "缺少物品 ID。";
@@ -47,12 +56,22 @@
     }
 
     try {
-      const [item, loanHistory] = await Promise.all([
-        GetItemByID(itemId),
-        GetLoanHistoryByItemID(itemId),
-      ]);
+      const item = username
+        ? (await getItemsByUserName(username)).find(
+            (entry) => entry.object_name === decodeURIComponent(itemId),
+          )
+        : await GetItemByID(itemId);
+
+      if (!item) {
+        throw new Error("找不到這個物品。");
+      }
+
       productData = item;
-      history = loanHistory || [];
+      replaceIdUrlWithScopedName(item);
+      if (canViewHistory) {
+        const loanHistory = await GetLoanHistoryByItemID(item.item_id || item.object_id);
+        history = loanHistory || [];
+      }
     } catch (err) {
       error = err.message || "載入失敗。";
     } finally {
@@ -62,12 +81,12 @@
 
   async function handleCoverUpload() {
     if (!canMutateData) return;
-    if (!itemId || !imageFile) return;
+    if (!resolvedItemId || !imageFile) return;
 
     coverUploading = true;
     try {
-      await uploadItemImage(itemId, imageFile);
-      productData = await GetItemByID(itemId);
+      await uploadItemImage(resolvedItemId, imageFile);
+      productData = await GetItemByID(resolvedItemId);
       imageFile = null;
     } catch (err) {
       error = err.message || "封面圖片更新失敗。";
@@ -77,7 +96,9 @@
   }
 
   async function reloadHistory() {
-    history = await GetLoanHistoryByItemID(itemId);
+    if (!resolvedItemId) return;
+    if (!canViewHistory) return;
+    history = await GetLoanHistoryByItemID(resolvedItemId);
   }
 
   function getCurrentUserId() {
@@ -124,7 +145,7 @@
     try {
       await createBorrowingRecord({
         userId,
-        itemId,
+        itemId: resolvedItemId,
         borrowerName: newRecord.borrowerName.trim(),
         startTime: fromDateTimeLocal(newRecord.startTime),
         endTime: fromDateTimeLocal(newRecord.endTime),
@@ -264,6 +285,16 @@
 
   function fromDateTimeLocal(value) {
     return new Date(value).toISOString();
+  }
+
+  function replaceIdUrlWithScopedName(item) {
+    const ownerUsername = item?.owner_username || item?.ownerUsername || username;
+    if (!ownerUsername || !item?.object_name || typeof window === "undefined") return;
+
+    const canonicalPath = `/users/${encodeURIComponent(ownerUsername)}/items/${encodeURIComponent(item.object_name)}`;
+    if (window.location.pathname !== canonicalPath) {
+      window.history.replaceState(window.history.state, "", canonicalPath);
+    }
   }
 </script>
 
@@ -408,13 +439,13 @@
     </section>
 
     <section class="detail-section media-section">
-      <MediaGallery {itemId} />
+      <MediaGallery itemId={resolvedItemId} />
     </section>
   </main>
 
   {#if canMutateData && isUploadModalOpen}
     <UploadMediaModal
-      objectId={itemId}
+      objectId={resolvedItemId}
       on:close={() => (isUploadModalOpen = false)}
       on:success={() => {
         isUploadModalOpen = false;

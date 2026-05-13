@@ -172,8 +172,27 @@ export async function getItemsByUserName(username) {
     .then((items) => (Array.isArray(items) ? items : []));
 }
 
-export async function getItem(itemId) {
-  return fetch(`${API_BASE_URL}/catalog/items/${itemId}`).then(handleResponse);
+export function getItemDetailPath(item) {
+  const itemName = item?.object_name || item?.objectName || item?.name || item?.item_id || item?.object_id || "";
+  const ownerUsername = item?.owner_username || item?.ownerUsername || item?.owner_name || item?.ownerName || "";
+
+  if (ownerUsername && itemName) {
+    return `/users/${encodeURIComponent(String(ownerUsername))}/items/${encodeURIComponent(String(itemName))}`;
+  }
+
+  return `/items/${encodeURIComponent(String(itemName))}`;
+}
+
+export async function getItem(itemIdentifier) {
+  return fetch(`${API_BASE_URL}/catalog/items/${encodeURIComponent(itemIdentifier)}`).then(handleResponse);
+}
+
+export async function getItemByUserAndName(userId, objectName) {
+  return fetch(`${API_BASE_URL}/catalog/users/${encodeURIComponent(userId)}/items/${encodeURIComponent(objectName)}`).then(handleResponse);
+}
+
+export async function getItemByUsernameAndItemName(username, objectName) {
+  return fetch(`${API_BASE_URL}/catalog/users/${encodeURIComponent(username)}/items/${encodeURIComponent(objectName)}`).then(handleResponse);
 }
 
 export async function createItem(item) {
@@ -281,7 +300,9 @@ function parseJson(text) {
 }
 
 export async function searchUserByName(name) {
-  return fetch(`${API_BASE_URL}/users/search/${encodeURIComponent(name)}`).then(handleResponse);
+  return fetch(`${API_BASE_URL}/users/search/${encodeURIComponent(name)}`, {
+    headers: headers(),
+  }).then(handleResponse);
 }
 
 export async function createUser(user) {
@@ -297,7 +318,9 @@ export async function createUser(user) {
 }
 
 export async function getActiveBorrowings(userId) {
-  return fetch(`${API_BASE_URL}/users/${userId}/borrowings`)
+  return fetch(`${API_BASE_URL}/users/${userId}/borrowings`, {
+    headers: headers(),
+  })
     .then(handleResponse)
     .then((borrowings) => (Array.isArray(borrowings) ? borrowings : []));
 }
@@ -322,7 +345,9 @@ export async function returnBorrowedItem(orderId, objectId) {
 }
 
 export async function getBorrowingHistory(itemId) {
-  const response = await fetch(`${API_BASE_URL}/catalog/items/${itemId}/borrowings/history`);
+  const response = await fetch(`${API_BASE_URL}/catalog/items/${itemId}/borrowings/history`, {
+    headers: headers(),
+  });
   if (response.status === 404) return [];
   const history = await handleResponse(response);
   return Array.isArray(history) ? history : [];
@@ -362,5 +387,6 @@ export async function deleteBorrowingRecord(orderId, userId) {
 }
 
 export const GetItemByID = getItem;
+export const GetItemByNameForUser = getItemByUserAndName;
 export const GetLoanHistoryByItemID = getBorrowingHistory;
 export const getActiveLoans = getActiveBorrowings;
