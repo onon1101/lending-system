@@ -39,15 +39,11 @@ public sealed class ItemsController(ItemService items) : ControllerBase
     [Authorize(Roles = "admin,user")]
     [Consumes("multipart/form-data")]
     public async Task<ActionResult<ApiResponse<ItemResponse>>> CreateWithForm(
-        [FromForm(Name = "object_name")] string objectName,
-        [FromForm] string? maker,
-        [FromForm] string? material,
-        [FromForm] string description,
-        [FromForm(Name = "image")] IFormFile? image,
+        [FromForm] CreateItemFormRequest form,
         CancellationToken cancellationToken)
     {
-        var request = new CreateItemRequest(objectName, maker, material, description);
-        return await CreateForCurrentUserAsync(request, image, cancellationToken);
+        var request = new CreateItemRequest(form.ObjectName, form.Maker, form.Material, form.Description);
+        return await CreateForCurrentUserAsync(request, form.Image, cancellationToken);
     }
 
     private async Task<ActionResult<ApiResponse<ItemResponse>>> CreateForCurrentUserAsync(
@@ -134,4 +130,22 @@ public sealed class ItemsController(ItemService items) : ControllerBase
         var value = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("id");
         return int.TryParse(value, out userId);
     }
+}
+
+public sealed class CreateItemFormRequest
+{
+    [FromForm(Name = "object_name")]
+    public string ObjectName { get; init; } = "";
+
+    [FromForm(Name = "maker")]
+    public string? Maker { get; init; }
+
+    [FromForm(Name = "material")]
+    public string? Material { get; init; }
+
+    [FromForm(Name = "description")]
+    public string Description { get; init; } = "";
+
+    [FromForm(Name = "image")]
+    public IFormFile? Image { get; init; }
 }

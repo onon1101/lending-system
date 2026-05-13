@@ -11,6 +11,7 @@ export default defineConfig({
         index: resolve(__dirname, 'index.html'),
         item: resolve(__dirname, 'item.html'),
         login: resolve(__dirname, 'login.html'),
+        myPillows: resolve(__dirname, 'my-pillows.html'),
       },
     },
   },

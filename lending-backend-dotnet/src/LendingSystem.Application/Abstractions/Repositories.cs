@@ -30,6 +30,9 @@ public interface ILoanRepository
 {
     Task<IReadOnlyCollection<UserLoan>> GetActiveLoansByUserIdAsync(int userId, CancellationToken cancellationToken);
     Task<Result<UserLoan>> CreateAsync(int? borrowerId, string? borrowerName, IReadOnlyCollection<int> itemIds, int durationHours, CancellationToken cancellationToken);
+    Task<Result<UserLoan>> CreateRecordAsync(int ownerId, int? borrowerId, string? borrowerName, int itemId, DateTimeOffset startTime, DateTimeOffset endTime, CancellationToken cancellationToken);
+    Task<Result<UserLoan>> UpdateRecordTimeAsync(int ownerId, int orderId, DateTimeOffset? startTime, DateTimeOffset? endTime, CancellationToken cancellationToken);
+    Task<Result<bool>> DeleteRecordAsync(int ownerId, int orderId, CancellationToken cancellationToken);
     Task<Result<UserLoan>> ReturnItemAsync(int orderId, int objectId, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<LoanRecord>> GetHistoryByItemIdAsync(int itemId, CancellationToken cancellationToken);
 }

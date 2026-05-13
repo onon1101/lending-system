@@ -20,6 +20,39 @@ public sealed class CreateLoanRequest
     public int DurationHours { get; init; }
 }
 
+public sealed class CreateRecordRequest
+{
+    [JsonPropertyName("user_id")]
+    public int UserId { get; init; }
+
+    [JsonPropertyName("borrower_id")]
+    public int? BorrowerId { get; init; }
+
+    [JsonPropertyName("borrower_name")]
+    public string? BorrowerName { get; init; }
+
+    [JsonPropertyName("item_id")]
+    public int ItemId { get; init; }
+
+    [JsonPropertyName("start_time")]
+    public DateTimeOffset StartTime { get; init; }
+
+    [JsonPropertyName("end_time")]
+    public DateTimeOffset EndTime { get; init; }
+}
+
+public sealed class UpdateRecordTimeRequest
+{
+    [JsonPropertyName("user_id")]
+    public int UserId { get; init; }
+
+    [JsonPropertyName("start_time")]
+    public DateTimeOffset? StartTime { get; init; }
+
+    [JsonPropertyName("end_time")]
+    public DateTimeOffset? EndTime { get; init; }
+}
+
 public sealed record ReturnLoanItemRequest(
     [property: JsonPropertyName("object_id")] int ObjectId);
 
@@ -38,7 +71,12 @@ public sealed record UserLoanResponse(
     [property: JsonPropertyName("order_status")] string OrderStatus,
     [property: JsonPropertyName("items")] IReadOnlyCollection<LoanItemDetailResponse> Items);
 
+public sealed record DeleteLoanRecordResponse(
+    [property: JsonPropertyName("deleted")] bool Deleted,
+    [property: JsonPropertyName("message")] string Message);
+
 public sealed record LoanRecordResponse(
+    [property: JsonPropertyName("order_id")] int? OrderId,
     [property: JsonPropertyName("start_time")] DateTimeOffset? StartTime,
     [property: JsonPropertyName("end_time")] DateTimeOffset? EndTime,
     [property: JsonPropertyName("name")] string? Name,

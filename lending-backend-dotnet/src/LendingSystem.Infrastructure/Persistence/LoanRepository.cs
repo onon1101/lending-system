@@ -89,6 +89,144 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
         return Result<UserLoan>.Success(new UserLoan(order.OrderId, borrowerId ?? 0, now, endTime, LoanStatuses.OnLoan, []));
     }
 
+    public async Task<Result<UserLoan>> CreateRecordAsync(int ownerId, int? borrowerId, string? borrowerName, int itemId, DateTimeOffset startTime, DateTimeOffset endTime, CancellationToken cancellationToken)
+    {
+        var item = await db.Items
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.ItemId == itemId, cancellationToken);
+        if (item is null)
+        {
+            return Result<UserLoan>.Failure(ErrorCodes.NotFound, $"物品 ID {itemId} 不存在");
+        }
+
+        if (item.OwnerId != ownerId)
+        {
+            return Result<UserLoan>.Failure(ErrorCodes.Conflict, $"物品 ID {itemId} 不屬於使用者 ID {ownerId}");
+        }
+
+        UserEntity? borrower = null;
+        if (borrowerId is not null)
+        {
+            borrower = await db.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.UserId == borrowerId && !x.IsDeleted, cancellationToken);
+            if (borrower is null)
+            {
+                return Result<UserLoan>.Failure(ErrorCodes.NotFound, $"使用者 ID {borrowerId} 不存在");
+            }
+        }
+
+        var displayName = borrower?.DisplayName ?? borrowerName?.Trim() ?? "";
+        var record = new OrderEntity
+        {
+            BorrowerId = borrowerId,
+            BorrowerName = displayName,
+            StartTime = startTime,
+            EndTime = endTime,
+            Status = LoanStatuses.Returned,
+        };
+        record.Details.Add(new OrderDetailEntity
+        {
+            ObjectId = itemId,
+            DetailStatus = LoanStatuses.Returned,
+            ActualReturnTime = endTime
+        });
+
+        db.Orders.Add(record);
+        await db.SaveChangesAsync(cancellationToken);
+
+        var created = await GetByOrderIdAsync(record.OrderId, cancellationToken);
+        return created is null
+            ? Result<UserLoan>.Failure(ErrorCodes.NotFound, "Loan record not found")
+            : Result<UserLoan>.Success(created);
+    }
+
+    public async Task<Result<bool>> DeleteRecordAsync(int ownerId, int orderId, CancellationToken cancellationToken)
+    {
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+
+        var order = await db.Orders
+            .Include(x => x.Details)
+            .ThenInclude(x => x.Item)
+            .FirstOrDefaultAsync(x => x.OrderId == orderId, cancellationToken);
+        if (order is null)
+        {
+            await tx.RollbackAsync(cancellationToken);
+            return Result<bool>.Failure(ErrorCodes.NotFound, $"借閱紀錄 ID {orderId} 不存在");
+        }
+
+        if (order.Details.Count == 0)
+        {
+            await tx.RollbackAsync(cancellationToken);
+            return Result<bool>.Failure(ErrorCodes.Conflict, $"借閱紀錄 ID {orderId} 沒有物品明細");
+        }
+
+        if (order.Details.Any(x => x.Item is null || x.Item.OwnerId != ownerId))
+        {
+            await tx.RollbackAsync(cancellationToken);
+            return Result<bool>.Failure(ErrorCodes.Conflict, $"借閱紀錄 ID {orderId} 包含不屬於使用者 ID {ownerId} 的物品");
+        }
+
+        foreach (var detail in order.Details.Where(x => x.DetailStatus == LoanStatuses.OnLoan))
+        {
+            detail.Item!.CurrentStatus = ItemStatuses.Available;
+        }
+
+        db.Orders.Remove(order);
+        await db.SaveChangesAsync(cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+
+        return Result<bool>.Success(true);
+    }
+
+    public async Task<Result<UserLoan>> UpdateRecordTimeAsync(int ownerId, int orderId, DateTimeOffset? startTime, DateTimeOffset? endTime, CancellationToken cancellationToken)
+    {
+        var order = await db.Orders
+            .Include(x => x.Details)
+            .ThenInclude(x => x.Item)
+            .FirstOrDefaultAsync(x => x.OrderId == orderId, cancellationToken);
+        if (order is null)
+        {
+            return Result<UserLoan>.Failure(ErrorCodes.NotFound, $"借閱紀錄 ID {orderId} 不存在");
+        }
+
+        if (order.Details.Count == 0)
+        {
+            return Result<UserLoan>.Failure(ErrorCodes.Conflict, $"借閱紀錄 ID {orderId} 沒有物品明細");
+        }
+
+        if (order.Details.Any(x => x.Item is null || x.Item.OwnerId != ownerId))
+        {
+            return Result<UserLoan>.Failure(ErrorCodes.Conflict, $"借閱紀錄 ID {orderId} 包含不屬於使用者 ID {ownerId} 的物品");
+        }
+
+        var updatedStartTime = startTime ?? order.StartTime;
+        var updatedEndTime = endTime ?? order.EndTime;
+        if (updatedStartTime >= updatedEndTime)
+        {
+            return Result<UserLoan>.Failure(ErrorCodes.Validation, "start_time must be earlier than end_time");
+        }
+
+        var oldEndTime = order.EndTime;
+        order.StartTime = updatedStartTime;
+        order.EndTime = updatedEndTime;
+
+        if (endTime is not null)
+        {
+            foreach (var detail in order.Details.Where(x => x.ActualReturnTime == oldEndTime))
+            {
+                detail.ActualReturnTime = updatedEndTime;
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        var updated = await GetByOrderIdAsync(orderId, cancellationToken);
+        return updated is null
+            ? Result<UserLoan>.Failure(ErrorCodes.NotFound, "Loan record not found")
+            : Result<UserLoan>.Success(updated);
+    }
+
     public async Task<Result<UserLoan>> ReturnItemAsync(int orderId, int objectId, CancellationToken cancellationToken)
     {
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -148,13 +286,14 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
             .Where(x => x.ObjectId == itemId)
             .OrderByDescending(x => x.Order!.StartTime)
             .Select(x => new LoanRecord(
+                x.OrderId,
                 x.Order!.StartTime,
                 x.Order.EndTime,
                 x.Order.User == null ? x.Order.BorrowerName : x.Order.User.DisplayName,
                 x.Order.Status))
             .ToArrayAsync(cancellationToken);
 
-        return records.Length == 0 ? [new LoanRecord(null, null, null, null)] : records;
+        return records.Length == 0 ? [new LoanRecord(null, null, null, null, null)] : records;
     }
 
     private async Task<UserLoan?> GetByOrderIdAsync(int orderId, CancellationToken cancellationToken)

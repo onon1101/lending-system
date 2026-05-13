@@ -22,6 +22,7 @@ public sealed record UserLoan(
     IReadOnlyCollection<LoanItemDetail> Items);
 
 public sealed record LoanRecord(
+    int? OrderId,
     DateTimeOffset? StartTime,
     DateTimeOffset? EndTime,
     string? Name,

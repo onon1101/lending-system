@@ -43,6 +43,7 @@
   $: availableItems = items.filter((item) => getStatusGroup(item.current_status) === "available");
   $: sidebarItems = [
     { key: "owned", label: "我的抱枕", visible: canUseWorkspace },
+    { key: "overview", label: "紀錄總覽", href: "/my-pillows.html", visible: canUseWorkspace },
     { key: "users", label: "使用者", visible: isAdmin },
     { key: "borrow", label: "建立借閱", visible: isAdmin },
     { key: "items", label: "新增物品", visible: isAdmin },
@@ -308,13 +309,17 @@
       </a>
       <nav aria-label="登入後功能">
         {#each sidebarItems as item}
-          <button
-            class:active={activeTab === item.key}
-            type="button"
-            on:click={() => (activeTab = item.key)}
-          >
-            {item.label}
-          </button>
+          {#if item.href}
+            <a href={item.href}>{item.label}</a>
+          {:else}
+            <button
+              class:active={activeTab === item.key}
+              type="button"
+              on:click={() => (activeTab = item.key)}
+            >
+              {item.label}
+            </button>
+          {/if}
         {/each}
       </nav>
     </aside>
@@ -581,17 +586,23 @@
     gap: 0.5rem;
   }
 
-  .leftbar button {
+  .leftbar button,
+  .leftbar a {
     min-height: 48px;
+    display: grid;
+    place-items: center;
     border: 2px solid transparent;
     border-radius: 8px;
     background: transparent;
     color: #374151;
     font-weight: 950;
+    text-align: center;
+    text-decoration: none;
   }
 
   .leftbar button:hover,
-  .leftbar button.active {
+  .leftbar button.active,
+  .leftbar a:hover {
     border-color: #111827;
     background: #ffffff;
     color: #111827;
@@ -742,7 +753,8 @@
       padding-bottom: 0.25rem;
     }
 
-    .leftbar button {
+    .leftbar button,
+    .leftbar a {
       padding: 0 0.8rem;
       white-space: nowrap;
     }

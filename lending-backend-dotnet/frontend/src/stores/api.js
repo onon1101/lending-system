@@ -309,6 +309,39 @@ export async function getBorrowingHistory(itemId) {
   return Array.isArray(history) ? history : [];
 }
 
+export async function createBorrowingRecord(record) {
+  return fetch(`${API_BASE_URL}/management/borrowings`, {
+    method: "POST",
+    headers: headers({ "Content-Type": "application/json" }),
+    body: JSON.stringify({
+      user_id: Number(record.userId),
+      borrower_name: record.borrowerName,
+      item_id: Number(record.itemId),
+      start_time: record.startTime,
+      end_time: record.endTime,
+    }),
+  }).then(handleResponse);
+}
+
+export async function updateBorrowingRecordTime(orderId, record) {
+  return fetch(`${API_BASE_URL}/management/borrowings/${orderId}/time`, {
+    method: "PATCH",
+    headers: headers({ "Content-Type": "application/json" }),
+    body: JSON.stringify({
+      user_id: Number(record.userId),
+      start_time: record.startTime,
+      end_time: record.endTime,
+    }),
+  }).then(handleResponse);
+}
+
+export async function deleteBorrowingRecord(orderId, userId) {
+  return fetch(`${API_BASE_URL}/management/borrowings/${orderId}?user_id=${encodeURIComponent(userId)}`, {
+    method: "DELETE",
+    headers: headers(),
+  }).then(handleResponse);
+}
+
 export const GetItemByID = getItem;
 export const GetLoanHistoryByItemID = getBorrowingHistory;
 export const getActiveLoans = getActiveBorrowings;
