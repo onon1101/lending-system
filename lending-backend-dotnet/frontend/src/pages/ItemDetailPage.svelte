@@ -21,6 +21,7 @@
   let error = "";
   let imageFile = null;
   let coverUploading = false;
+  let canMutateData = false;
   let isUploadModalOpen = false;
   let isRecordModalOpen = false;
   let isEditingRecords = false;
@@ -37,6 +38,7 @@
   $: visibleHistory = history.filter(hasLoanRecord);
 
   onMount(async () => {
+    canMutateData = Boolean(getCurrentUserFromToken()?.user_id);
     itemId = itemId || new URLSearchParams(window.location.search).get("id");
     if (!itemId) {
       error = "缺少物品 ID。";
@@ -59,6 +61,7 @@
   });
 
   async function handleCoverUpload() {
+    if (!canMutateData) return;
     if (!itemId || !imageFile) return;
 
     coverUploading = true;
@@ -93,6 +96,7 @@
   }
 
   function openCreateRecordModal() {
+    if (!canMutateData) return;
     recordError = "";
     setDefaultNewRecordTime();
     isRecordModalOpen = true;
@@ -135,6 +139,7 @@
   }
 
   function toggleRecordEditMode() {
+    if (!canMutateData) return;
     recordError = "";
     if (isEditingRecords) {
       isEditingRecords = false;
@@ -296,28 +301,30 @@
         <h1>{productData.object_name}</h1>
         <p>{productData.description || "尚無物品描述。"}</p>
 
-        <div class="media-actions">
-          <label>
-            <span>封面圖片</span>
-            <input
-              type="file"
-              accept="image/*"
-              class="bg-blue-500"
-              on:change={(event) => (imageFile = event.currentTarget.files?.[0])}
-            />
-          </label>
-          <button
-            type="button"
-            class="secondary-button"
-            disabled={!imageFile || coverUploading}
-            on:click={handleCoverUpload}
-          >
-            {coverUploading ? "更新中..." : "更新封面"}
-          </button>
-          <button type="button" class="primary-button" on:click={() => (isUploadModalOpen = true)}>
-            管理媒體
-          </button>
-        </div>
+        {#if canMutateData}
+          <div class="media-actions">
+            <label>
+              <span>封面圖片</span>
+              <input
+                type="file"
+                accept="image/*"
+                class="bg-blue-500"
+                on:change={(event) => (imageFile = event.currentTarget.files?.[0])}
+              />
+            </label>
+            <button
+              type="button"
+              class="secondary-button"
+              disabled={!imageFile || coverUploading}
+              on:click={handleCoverUpload}
+            >
+              {coverUploading ? "更新中..." : "更新封面"}
+            </button>
+            <button type="button" class="primary-button" on:click={() => (isUploadModalOpen = true)}>
+              管理媒體
+            </button>
+          </div>
+        {/if}
       </aside>
     </section>
 
@@ -327,16 +334,18 @@
           <h2>借閱紀錄</h2>
           <span>- {visibleHistory.length} 筆</span>
         </div>
-        <div class="record-actions" aria-label="借閱紀錄操作">
-          <button class="record-action-button" type="button" aria-label="新增" title="新增" on:click={openCreateRecordModal}>
-            <span aria-hidden="true">+</span>
-          </button>
-          <button class:active={isEditingRecords} class="record-action-button" type="button" aria-label="修改" title="修改" on:click={toggleRecordEditMode}>
-            <span aria-hidden="true">⚙</span>
-          </button>
-        </div>
+        {#if canMutateData}
+          <div class="record-actions" aria-label="借閱紀錄操作">
+            <button class="record-action-button" type="button" aria-label="新增" title="新增" on:click={openCreateRecordModal}>
+              <span aria-hidden="true">+</span>
+            </button>
+            <button class:active={isEditingRecords} class="record-action-button" type="button" aria-label="修改" title="修改" on:click={toggleRecordEditMode}>
+              <span aria-hidden="true">⚙</span>
+            </button>
+          </div>
+        {/if}
       </div>
-      {#if recordError}
+      {#if canMutateData && recordError}
         <p class="record-error">{recordError}</p>
       {/if}
       {#if visibleHistory.length > 0}
@@ -345,7 +354,7 @@
             <div class:marked-delete={deletedRecordIds.has(record.order_id)} class="record-row">
               <div class="record-main">
                 <strong>{record.name || "使用者"}</strong>
-                {#if isEditingRecords && record.order_id}
+                {#if canMutateData && isEditingRecords && record.order_id}
                   <div class="record-time-editor">
                     <label>
                       <span>開始</span>
@@ -370,7 +379,7 @@
                   <span>{record.status || "N/A"} · {formatDate(record.start_time)} - {formatDate(record.end_time)}</span>
                 {/if}
               </div>
-              {#if isEditingRecords && record.order_id}
+              {#if canMutateData && isEditingRecords && record.order_id}
                 <button class="delete-record-button" type="button" on:click={() => toggleDeleteRecord(record.order_id)}>
                   {deletedRecordIds.has(record.order_id) ? "復原" : "刪除"}
                 </button>
@@ -379,7 +388,7 @@
           {/each}
         </div>
       {/if}
-      {#if isEditingRecords}
+      {#if canMutateData && isEditingRecords}
         <div class="record-submit-row">
           <button class="primary-button" type="button" disabled={recordSaving} on:click={handleSubmitRecordChanges}>
             {recordSaving ? "送出中..." : "確定修改"}
@@ -393,7 +402,7 @@
     </section>
   </main>
 
-  {#if isUploadModalOpen}
+  {#if canMutateData && isUploadModalOpen}
     <UploadMediaModal
       objectId={itemId}
       on:close={() => (isUploadModalOpen = false)}
@@ -404,7 +413,7 @@
     />
   {/if}
 
-  {#if isRecordModalOpen}
+  {#if canMutateData && isRecordModalOpen}
     <div class="record-modal-backdrop" role="presentation">
       <div class="record-modal" role="dialog" aria-modal="true" aria-labelledby="record-modal-title">
         <div class="record-modal-header">
