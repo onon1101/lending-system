@@ -48,7 +48,7 @@ public sealed class MinioObjectStorage(IMinioClient client, IConfiguration confi
                 .WithContentType(contentType),
             cancellationToken);
 
-        var url = new UriBuilder(Uri.UriSchemeHttp, PublicEndpoint)
+        var url = new UriBuilder(CreatePublicEndpointUri(PublicEndpoint))
         {
             Path = $"{BucketName}/{objectName}"
         }.Uri.ToString();
@@ -81,5 +81,14 @@ public sealed class MinioObjectStorage(IMinioClient client, IConfiguration confi
             .Replace(".", "_", StringComparison.Ordinal);
 
         return $"{baseName}{extension}";
+    }
+
+    private static Uri CreatePublicEndpointUri(string endpoint)
+    {
+        var normalizedEndpoint = endpoint.Contains("://", StringComparison.Ordinal)
+            ? endpoint
+            : $"{Uri.UriSchemeHttp}://{endpoint}";
+
+        return new Uri(normalizedEndpoint, UriKind.Absolute);
     }
 }

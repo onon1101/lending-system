@@ -199,6 +199,8 @@ export async function updateItem(itemId, item) {
     headers: headers({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       object_name: item.objectName,
+      maker: item.maker,
+      material: item.material,
       description: item.description,
       current_status: item.currentStatus,
       image_url: item.imageUrl,

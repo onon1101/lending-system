@@ -14,7 +14,10 @@
     login,
     returnBorrowedItem,
     searchUserByName,
+    updateItem,
   } from "../stores/api";
+
+  export let initialRegistering = false;
 
   let items = [];
   let ownedItems = [];
@@ -30,12 +33,16 @@
   let userQuery = "";
   let selectedUser = null;
   let durationHours = 24;
-  let isRegistering = false;
+  let isRegistering = initialRegistering;
   let isCreateItemModalOpen = false;
+  let isEditItemModalOpen = false;
   let creatingItem = false;
+  let updatingItem = false;
+  let editingItem = null;
   let loginForm = { email: "", password: "" };
   let userForm = { name: "", email: "", password: "" };
   let itemForm = { objectName: "", maker: "", material: "", description: "", cover: null };
+  let editItemForm = { objectName: "", maker: "", material: "", description: "" };
 
   $: role = String(currentUser?.role || "").toLowerCase();
   $: isAdmin = isAdminRole(role);
@@ -46,7 +53,7 @@
     { key: "overview", label: "紀錄總覽", href: "/my-pillows", visible: canUseWorkspace },
     { key: "users", label: "使用者", visible: isAdmin },
     { key: "borrow", label: "建立借閱", visible: isAdmin },
-    { key: "items", label: "新增物品", visible: isAdmin },
+    { key: "items", label: "物品管理", visible: isAdmin },
     { key: "active", label: "目前借閱", visible: isAdmin },
   ].filter((item) => item.visible);
 
@@ -177,6 +184,34 @@
     creatingItem = false;
   }
 
+  async function handleUpdateItem() {
+    if (!editingItem) return;
+
+    const trimmedName = editItemForm.objectName.trim();
+    const trimmedDescription = editItemForm.description.trim();
+
+    if (!trimmedName || !trimmedDescription) {
+      error = "請填寫物品名稱與描述。";
+      message = "";
+      return;
+    }
+
+    updatingItem = true;
+    await run(async () => {
+      await updateItem(editingItem.object_id, {
+        objectName: trimmedName,
+        maker: editItemForm.maker.trim(),
+        material: editItemForm.material.trim(),
+        description: trimmedDescription,
+        currentStatus: editingItem.current_status,
+        imageUrl: editingItem.image_url,
+      });
+      closeEditItemModal();
+      await Promise.all([loadItems(), loadOwnedItems()]);
+    }, "物品資訊已更新。").catch(() => {});
+    updatingItem = false;
+  }
+
   function openCreateItemModal() {
     error = "";
     message = "";
@@ -191,6 +226,26 @@
 
   function resetItemForm() {
     itemForm = { objectName: "", maker: "", material: "", description: "", cover: null };
+  }
+
+  function openEditItemModal(item) {
+    error = "";
+    message = "";
+    editingItem = item;
+    editItemForm = {
+      objectName: item.object_name || "",
+      maker: item.maker || "",
+      material: item.material || "",
+      description: item.description || "",
+    };
+    isEditItemModalOpen = true;
+  }
+
+  function closeEditItemModal() {
+    if (updatingItem) return;
+    isEditItemModalOpen = false;
+    editingItem = null;
+    editItemForm = { objectName: "", maker: "", material: "", description: "" };
   }
 
   function handleCoverChange(event) {
@@ -351,22 +406,39 @@
           {:else}
             <div class="owned-grid">
               {#each ownedItems as item (item.object_id)}
-                <a class="owned-card" href={`/items/${item.object_id}`}>
-                  <div class="owned-image">
-                    {#if item.image_url}
-                      <img src={getFullImageUrl(item.image_url)} alt={item.object_name} />
-                    {:else}
-                      <span>{item.object_name.slice(0, 2).toUpperCase()}</span>
-                    {/if}
-                  </div>
-                  <div class="owned-copy">
-                    <span class:available={getStatusGroup(item.current_status) === "available"} class:borrowed={getStatusGroup(item.current_status) === "borrowed"} class="status-pill">
-                      {getStatusLabel(item.current_status)}
-                    </span>
-                    <h3>{item.object_name}</h3>
-                    <p>{item.description || "尚無抱枕描述。"}</p>
-                  </div>
-                </a>
+                <article class="owned-card">
+                  <a class="owned-card-link" href={`/items/${item.object_id}`} aria-label={`查看 ${item.object_name}`}>
+                    <div class="owned-image">
+                      {#if item.image_url}
+                        <img src={getFullImageUrl(item.image_url)} alt={item.object_name} />
+                      {:else}
+                        <span>{item.object_name.slice(0, 2).toUpperCase()}</span>
+                      {/if}
+                    </div>
+                    <div class="owned-copy">
+                      <span class:available={getStatusGroup(item.current_status) === "available"} class:borrowed={getStatusGroup(item.current_status) === "borrowed"} class="status-pill">
+                        {getStatusLabel(item.current_status)}
+                      </span>
+                      <h3>{item.object_name}</h3>
+                      <dl class="owned-meta">
+                        <div>
+                          <dt>作者</dt>
+                          <dd>{item.maker || "未填寫"}</dd>
+                        </div>
+                        <div>
+                          <dt>材質</dt>
+                          <dd>{item.material || "未填寫"}</dd>
+                        </div>
+                      </dl>
+                      <p>{item.description || "尚無抱枕描述。"}</p>
+                    </div>
+                  </a>
+                  {#if isAdmin}
+                    <button class="edit-card-button" type="button" on:click={() => openEditItemModal(item)}>
+                      編輯
+                    </button>
+                  {/if}
+                </article>
               {/each}
             </div>
           {/if}
@@ -430,9 +502,49 @@
       {:else if activeTab === "items"}
         <section class="panel tool-panel">
           <div class="section-title">
-            <h2>新增物品</h2>
+            <div>
+              <h2>物品管理</h2>
+              <span>{items.length} 件物品</span>
+            </div>
+            <button class="secondary-button" type="button" on:click={openCreateItemModal}>新增</button>
           </div>
-          <button class="secondary-button" type="button" on:click={openCreateItemModal}>開啟新增物品浮窗</button>
+          {#if loading}
+            <div class="empty-state">載入物品中</div>
+          {:else}
+            <div class="admin-item-list">
+              {#each items as item (item.object_id)}
+                <article class="admin-item-row">
+                  <div class="admin-item-thumb">
+                    {#if item.image_url}
+                      <img src={getFullImageUrl(item.image_url)} alt={item.object_name} />
+                    {:else}
+                      <span>{item.object_name.slice(0, 2).toUpperCase()}</span>
+                    {/if}
+                  </div>
+                  <div>
+                    <span class:available={getStatusGroup(item.current_status) === "available"} class:borrowed={getStatusGroup(item.current_status) === "borrowed"} class="status-pill">
+                      {getStatusLabel(item.current_status)}
+                    </span>
+                    <h3>{item.object_name}</h3>
+                    <p>{item.description || "尚無物品描述。"}</p>
+                    <dl class="admin-item-meta">
+                      <div>
+                        <dt>作者</dt>
+                        <dd>{item.maker || "未填寫"}</dd>
+                      </div>
+                      <div>
+                        <dt>材質</dt>
+                        <dd>{item.material || "未填寫"}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                  <button class="secondary-button" type="button" on:click={() => openEditItemModal(item)}>編輯</button>
+                </article>
+              {:else}
+                <div class="empty-state">目前沒有物品。</div>
+              {/each}
+            </div>
+          {/if}
         </section>
       {:else if activeTab === "active"}
         <section class="panel tool-panel">
@@ -517,6 +629,58 @@
           <button class="ghost-button" type="button" on:click={closeCreateItemModal} disabled={creatingItem}>取消</button>
           <button class="primary-button" type="submit" disabled={creatingItem}>
             {creatingItem ? "建立中" : "建立物品"}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+{/if}
+
+{#if isEditItemModalOpen}
+  <div class="modal-backdrop" role="presentation" on:click={closeEditItemModal}>
+    <div
+      class="item-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="edit-item-title"
+      tabindex="-1"
+      on:click|stopPropagation
+      on:keydown|stopPropagation
+    >
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">Catalog</p>
+          <h2 id="edit-item-title">修改物品資訊</h2>
+        </div>
+        <button class="ghost-button" type="button" on:click={closeEditItemModal} disabled={updatingItem}>關閉</button>
+      </div>
+
+      <form class="item-form" on:submit|preventDefault={handleUpdateItem}>
+        <label>
+          <span>物品名稱</span>
+          <input bind:value={editItemForm.objectName} placeholder="例：雪ちゃん" disabled={updatingItem} />
+        </label>
+
+        <div class="form-grid">
+          <label>
+            <span>作者</span>
+            <input bind:value={editItemForm.maker} placeholder="可留空" disabled={updatingItem} />
+          </label>
+          <label>
+            <span>材質</span>
+            <input bind:value={editItemForm.material} placeholder="可留空" disabled={updatingItem} />
+          </label>
+        </div>
+
+        <label>
+          <span>描述</span>
+          <textarea bind:value={editItemForm.description} placeholder="輸入物品描述" disabled={updatingItem}></textarea>
+        </label>
+
+        <div class="modal-actions">
+          <button class="ghost-button" type="button" on:click={closeEditItemModal} disabled={updatingItem}>取消</button>
+          <button class="primary-button" type="submit" disabled={updatingItem}>
+            {updatingItem ? "儲存中" : "儲存修改"}
           </button>
         </div>
       </form>
@@ -637,22 +801,28 @@
   }
 
   .owned-card {
+    position: relative;
     min-width: 0;
-    display: grid;
-    grid-template-rows: 190px 1fr;
     overflow: hidden;
     border: 2px solid #111827;
     border-radius: 8px;
     background: #f9fafb;
     color: inherit;
-    text-decoration: none;
     transition: transform 160ms ease, box-shadow 160ms ease;
   }
 
   .owned-card:hover,
-  .owned-card:focus-visible {
+  .owned-card:focus-within {
     transform: translate(-3px, -3px);
     box-shadow: 7px 7px 0 #111827;
+  }
+
+  .owned-card-link {
+    min-height: 100%;
+    display: grid;
+    grid-template-rows: 190px 1fr;
+    color: inherit;
+    text-decoration: none;
   }
 
   .owned-image {
@@ -672,7 +842,35 @@
   }
 
   .owned-copy {
-    padding: 1rem;
+    padding: 1rem 1rem 4.3rem;
+  }
+
+  .owned-copy h3 {
+    padding-right: 4.5rem;
+  }
+
+  .owned-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+    margin: 0.6rem 0;
+  }
+
+  .owned-meta div {
+    min-width: 0;
+  }
+
+  .owned-meta dt {
+    color: #6b7280;
+    font-size: 0.78rem;
+    font-weight: 900;
+  }
+
+  .owned-meta dd {
+    margin: 0.15rem 0 0;
+    overflow-wrap: anywhere;
+    color: #111827;
+    font-weight: 900;
   }
 
   .owned-copy p {
@@ -681,8 +879,95 @@
     margin-bottom: 0;
   }
 
+  .edit-card-button {
+    position: absolute;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    min-height: 38px;
+    border: 2px solid #111827;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #111827;
+    font-weight: 950;
+    box-shadow: 3px 3px 0 #111827;
+    cursor: pointer;
+  }
+
+  .edit-card-button:hover,
+  .edit-card-button:focus-visible {
+    background: #facc15;
+  }
+
   .tool-panel {
     max-width: 860px;
+  }
+
+  .admin-item-list {
+    display: grid;
+    gap: 0.8rem;
+  }
+
+  .admin-item-row {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1rem;
+    border: 2px solid #111827;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 0.75rem;
+  }
+
+  .admin-item-thumb {
+    width: 96px;
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border: 2px solid #111827;
+    border-radius: 8px;
+    background: #d1d5db;
+    color: #111827;
+    font-weight: 950;
+  }
+
+  .admin-item-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .admin-item-row h3 {
+    margin: 0.5rem 0 0.35rem;
+  }
+
+  .admin-item-row p {
+    margin: 0;
+    color: #374151;
+    line-height: 1.45;
+  }
+
+  .admin-item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1rem;
+    margin: 0.55rem 0 0;
+  }
+
+  .admin-item-meta div {
+    display: flex;
+    gap: 0.35rem;
+  }
+
+  .admin-item-meta dt {
+    color: #6b7280;
+    font-weight: 900;
+  }
+
+  .admin-item-meta dd {
+    margin: 0;
+    color: #111827;
+    font-weight: 900;
   }
 
   .modal-backdrop {
@@ -764,12 +1049,18 @@
     }
 
     .form-grid,
-    .modal-actions {
+    .modal-actions,
+    .admin-item-row {
       grid-template-columns: 1fr;
     }
 
     .modal-actions {
       display: grid;
+    }
+
+    .admin-item-thumb {
+      width: 100%;
+      max-height: 180px;
     }
   }
 </style>
