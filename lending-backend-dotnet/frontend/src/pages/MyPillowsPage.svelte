@@ -60,7 +60,7 @@
   }
 
   function hasLoanRecord(record) {
-    return Boolean(record?.order_id || record?.name || record?.status || record?.start_time || record?.end_time);
+    return Boolean(record?.order_id || record?.name || record?.status || record?.start_date || record?.end_date);
   }
 
   function getStatusGroup(status) {
@@ -177,7 +177,7 @@
                       {#each histories[item.object_id] as record}
                         <div class="border-l-4 border-gray-900 pl-3">
                           <strong class="block text-gray-900">{record.name || "使用者"}</strong>
-                          <span class="block text-sm font-bold text-gray-600">{record.status || "N/A"} · {formatDate(record.start_time)} - {formatDate(record.end_time)}</span>
+                          <span class="block text-sm font-bold text-gray-600">{record.status || "N/A"} · {formatDate(record.start_date)} - {formatDate(record.end_date)}</span>
                         </div>
                       {/each}
                     </div>

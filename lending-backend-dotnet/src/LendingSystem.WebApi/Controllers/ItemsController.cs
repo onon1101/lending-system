@@ -66,7 +66,7 @@ public sealed class ItemsController(ItemService items) : ControllerBase
     {
         if (!TryGetUserId(User, out var userId))
         {
-            return this.ApiFailure<ItemResponse>(ErrorCodes.Unauthorized, "Invalid token");
+            return this.ApiFailure<ItemResponse>(ControllerApiErrors.TokenInvalid());
         }
 
         await using var stream = image?.OpenReadStream();
@@ -94,7 +94,7 @@ public sealed class ItemsController(ItemService items) : ControllerBase
     {
         if (!TryGetUserId(User, out var userId))
         {
-            return this.ApiFailure<ItemResponse>(ErrorCodes.Unauthorized, "Invalid token");
+            return this.ApiFailure<ItemResponse>(ControllerApiErrors.TokenInvalid());
         }
 
         return this.ToActionResult(await items.UpdateAsync(objectId, request, userId, IsAdmin(User), cancellationToken));
@@ -106,7 +106,7 @@ public sealed class ItemsController(ItemService items) : ControllerBase
     {
         if (!TryGetUserId(User, out var userId))
         {
-            return this.ApiFailure<ItemResponse>(ErrorCodes.Unauthorized, "Invalid token");
+            return this.ApiFailure<ItemResponse>(ControllerApiErrors.TokenInvalid());
         }
 
         await using var stream = file.OpenReadStream();
@@ -119,18 +119,18 @@ public sealed class ItemsController(ItemService items) : ControllerBase
     {
         if (!TryGetUserId(User, out var userId))
         {
-            return this.ApiFailure<MediaResponse>(ErrorCodes.Unauthorized, "Invalid token");
+            return this.ApiFailure<MediaResponse>(ControllerApiErrors.TokenInvalid());
         }
 
         var file = Request.Form.Files["file"];
         if (file is null)
         {
-            return this.ApiFailure<MediaResponse>(ErrorCodes.Validation, "Missing File");
+            return this.ApiFailure<MediaResponse>(ControllerApiErrors.MissingFiles());
         }
 
         if (!int.TryParse(Request.Form["object_id"].ToString(), out var objectId))
         {
-            return this.ApiFailure<MediaResponse>(ErrorCodes.Validation, "object_id is required");
+            return this.ApiFailure<MediaResponse>(ControllerApiErrors.MissingField(missingField: "object_id"));
         }
 
         var orderIdValue = Request.Form["order_id"].ToString();
@@ -139,7 +139,7 @@ public sealed class ItemsController(ItemService items) : ControllerBase
         {
             if (!int.TryParse(orderIdValue, out var parsedOrderId))
             {
-                return this.ApiFailure<MediaResponse>(ErrorCodes.Validation, "order_id must be a number");
+                return this.ApiFailure<MediaResponse>(ControllerApiErrors.MustBeInteger(missingField: "order_id"));
             }
 
             orderId = parsedOrderId;

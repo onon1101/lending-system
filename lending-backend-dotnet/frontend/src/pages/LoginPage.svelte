@@ -38,7 +38,7 @@
   let activeTab = "owned";
   let userQuery = "";
   let selectedUser = null;
-  let durationHours = 24;
+  let durationDays = 1;
   let isRegistering = initialRegistering;
   let isCreateItemModalOpen = false;
   let isEditItemModalOpen = false;
@@ -316,7 +316,7 @@
     }
 
     await run(async () => {
-      await createBorrowing(selectedUser.user_id, selectedItemIds, durationHours);
+      await createBorrowing(selectedUser.user_id, selectedItemIds, durationDays);
       selectedItemIds = [];
       activeBorrowings = await getActiveBorrowings(selectedUser.user_id);
       await Promise.all([loadItems(), loadOwnedItems()]);
@@ -546,7 +546,7 @@
             </div>
           {/if}
           <div class="inline-form">
-            <input bind:value={durationHours} type="number" min="1" max="720" />
+            <input bind:value={durationDays} type="number" min="1" max="365" />
             <button class="primary-button" type="button" on:click={handleCreateBorrowing}>送出借閱</button>
           </div>
         </section>
@@ -605,7 +605,7 @@
           </div>
           {#each activeBorrowings as loan}
             <div class="loan-card">
-              <strong>#{loan.order_id} · {formatDate(loan.end_time)}</strong>
+              <strong>#{loan.order_id} · {formatDate(loan.end_date)}</strong>
               {#each loan.items as item}
                 <div class="loan-row">
                   <span>{item.object_name}</span>

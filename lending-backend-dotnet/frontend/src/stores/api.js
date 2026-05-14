@@ -325,14 +325,14 @@ export async function getActiveBorrowings(userId) {
     .then((borrowings) => (Array.isArray(borrowings) ? borrowings : []));
 }
 
-export async function createBorrowing(userId, itemIds, durationHours) {
+export async function createBorrowing(userId, itemIds, durationDays) {
   return fetch(`${API_BASE_URL}/borrowings`, {
     method: "POST",
     headers: headers({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       user_id: Number(userId),
       items_id: itemIds.map(Number),
-      duration_hours: Number(durationHours),
+      duration_days: Number(durationDays),
     }),
   }).then(handleResponse);
 }
@@ -361,8 +361,8 @@ export async function createBorrowingRecord(record) {
       user_id: Number(record.userId),
       borrower_name: record.borrowerName,
       item_id: Number(record.itemId),
-      start_time: record.startTime,
-      end_time: record.endTime,
+      start_date: record.startDate,
+      end_date: record.endDate,
     }),
   }).then(handleResponse);
 }
@@ -373,8 +373,8 @@ export async function updateBorrowingRecordTime(orderId, record) {
     headers: headers({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       user_id: Number(record.userId),
-      start_time: record.startTime,
-      end_time: record.endTime,
+      start_date: record.startDate,
+      end_date: record.endDate,
     }),
   }).then(handleResponse);
 }

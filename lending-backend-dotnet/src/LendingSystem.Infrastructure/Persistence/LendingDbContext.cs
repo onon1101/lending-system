@@ -7,7 +7,7 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
     public DbSet<UserEntity> Users => Set<UserEntity>();
     public DbSet<ItemEntity> Items => Set<ItemEntity>();
     public DbSet<OrderEntity> Orders => Set<OrderEntity>();
-    public DbSet<OrderDetailEntity> OrderDetails => Set<OrderDetailEntity>();
+    public DbSet<BorrowerDetailEntity> BorrowerDetails => Set<BorrowerDetailEntity>();
     public DbSet<MediaEntity> Media => Set<MediaEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -83,37 +83,41 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
             entity.ToTable("orders");
             entity.HasKey(x => x.OrderId).HasName("orders_pkey");
             entity.Property(x => x.OrderId).HasColumnName("order_id").ValueGeneratedOnAdd();
-            entity.Property(x => x.BorrowerId).HasColumnName("borrower_id");
-            entity.Property(x => x.BorrowerName).HasColumnName("borrower_name").HasMaxLength(100).IsRequired();
-            entity.Property(x => x.StartTime).HasColumnName("start_time").IsRequired();
-            entity.Property(x => x.EndTime).HasColumnName("end_time").IsRequired();
+            entity.Property(x => x.BorrowerDetailId).HasColumnName("borrower_detail_id").IsRequired();
+            entity.Property(x => x.ObjectId).HasColumnName("item_id").IsRequired();
+            entity.Property(x => x.StartDate).HasColumnName("start_date").HasColumnType("date").IsRequired();
+            entity.Property(x => x.EndDate).HasColumnName("end_date").HasColumnType("date").IsRequired();
+            entity.Property(x => x.ActualReturnDate).HasColumnName("actual_return_date").HasColumnType("date");
             entity.Property(x => x.Status).HasColumnName("status").HasMaxLength(50).IsRequired();
-            entity.HasOne(x => x.User)
+            entity.HasOne(x => x.BorrowerDetail)
                 .WithMany(x => x.Orders)
-                .HasForeignKey(x => x.BorrowerId)
-                .HasConstraintName("orders_borrower_id_fkey")
+                .HasForeignKey(x => x.BorrowerDetailId)
+                .HasConstraintName("orders_borrower_detail_id_fkey")
                 .OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(x => x.Item)
+                .WithMany(x => x.Orders)
+                .HasForeignKey(x => x.ObjectId)
+                .HasConstraintName("orders_item_id_fkey")
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
-        modelBuilder.Entity<OrderDetailEntity>(entity =>
+        modelBuilder.Entity<BorrowerDetailEntity>(entity =>
         {
-            entity.ToTable("order_details");
-            entity.HasKey(x => x.ObjectDetailId).HasName("order_details_pkey");
-            entity.Property(x => x.ObjectDetailId).HasColumnName("order_detail_id").ValueGeneratedOnAdd();
-            entity.Property(x => x.OrderId).HasColumnName("order_id").IsRequired();
-            entity.Property(x => x.ObjectId).HasColumnName("item_id").IsRequired();
-            entity.Property(x => x.DetailStatus).HasColumnName("detail_status").HasMaxLength(50).IsRequired();
-            entity.Property(x => x.ActualReturnTime).HasColumnName("actual_return_time");
-            entity.HasOne(x => x.Order)
-                .WithMany(x => x.Details)
-                .HasForeignKey(x => x.OrderId)
-                .HasConstraintName("order_details_order_id_fkey")
-                .OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne(x => x.Item)
-                .WithMany(x => x.OrderDetails)
-                .HasForeignKey(x => x.ObjectId)
-                .HasConstraintName("order_details_item_id_fkey")
-                .OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable("borrower_details");
+            entity.HasKey(x => x.BorrowerDetailId).HasName("borrower_details_pkey");
+            entity.Property(x => x.BorrowerDetailId).HasColumnName("borrower_detail_id").ValueGeneratedOnAdd();
+            entity.Property(x => x.UserId).HasColumnName("user_id");
+            entity.Property(x => x.BorrowerName).HasColumnName("borrower_name").HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Link).HasColumnName("link").HasDefaultValue(string.Empty).IsRequired();
+            entity.Property(x => x.CreatedBy).HasColumnName("created_by").HasMaxLength(100).HasDefaultValue(string.Empty).IsRequired();
+            entity.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("date").IsRequired();
+            entity.Property(x => x.UpdatedBy).HasColumnName("updated_by").HasMaxLength(100).HasDefaultValue(string.Empty).IsRequired();
+            entity.Property(x => x.UpdatedAt).HasColumnName("updated_at").HasColumnType("date").IsRequired();
+            entity.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .HasConstraintName("borrower_details_user_id_fkey")
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<MediaEntity>(entity =>

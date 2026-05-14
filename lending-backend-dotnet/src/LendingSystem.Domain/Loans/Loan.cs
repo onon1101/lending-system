@@ -11,19 +11,19 @@ public sealed record LoanItemDetail(
     int ObjectId,
     string ObjectName,
     string DetailStatus,
-    DateTimeOffset? ActualReturnTime);
+    DateOnly? ActualReturnDate);
 
 public sealed record UserLoan(
     int OrderId,
     int UserId,
-    DateTimeOffset OrderStartTime,
-    DateTimeOffset OrderEndTime,
+    DateOnly OrderStartDate,
+    DateOnly OrderEndDate,
     string OrderStatus,
     IReadOnlyCollection<LoanItemDetail> Items);
 
 public sealed record LoanRecord(
     int? OrderId,
-    DateTimeOffset? StartTime,
-    DateTimeOffset? EndTime,
+    DateOnly? StartDate,
+    DateOnly? EndDate,
     string? Name,
     string? Status);

@@ -147,8 +147,8 @@
         userId,
         itemId: resolvedItemId,
         borrowerName: newRecord.borrowerName.trim(),
-        startTime: fromDateTimeLocal(newRecord.startTime),
-        endTime: fromDateTimeLocal(newRecord.endTime),
+        startDate: toDateOnly(newRecord.startTime),
+        endDate: toDateOnly(newRecord.endTime),
       });
       await reloadHistory();
       isRecordModalOpen = false;
@@ -175,8 +175,8 @@
         .map((record) => [
           record.order_id,
           {
-            startTime: toDateTimeLocal(record.start_time),
-            endTime: toDateTimeLocal(record.end_time),
+            startTime: toDateInput(record.start_date),
+            endTime: toDateInput(record.end_date),
           },
         ]),
     );
@@ -217,12 +217,12 @@
 
       const edit = recordEdits[record.order_id];
       if (!edit?.startTime || !edit?.endTime) {
-        recordError = "每筆紀錄都需要開始與結束時間。";
+        recordError = "每筆紀錄都需要開始與結束日期。";
         return;
       }
 
-      if (new Date(edit.startTime) >= new Date(edit.endTime)) {
-        recordError = "開始時間必須早於結束時間。";
+      if (edit.startTime >= edit.endTime) {
+        recordError = "開始日期必須早於結束日期。";
         return;
       }
     }
@@ -238,14 +238,14 @@
         if (deletedRecordIds.has(record.order_id)) continue;
 
         const edit = recordEdits[record.order_id];
-        const startChanged = edit.startTime !== toDateTimeLocal(record.start_time);
-        const endChanged = edit.endTime !== toDateTimeLocal(record.end_time);
+        const startChanged = edit.startTime !== toDateInput(record.start_date);
+        const endChanged = edit.endTime !== toDateInput(record.end_date);
         if (!startChanged && !endChanged) continue;
 
         await updateBorrowingRecordTime(record.order_id, {
           userId,
-          startTime: fromDateTimeLocal(edit.startTime),
-          endTime: fromDateTimeLocal(edit.endTime),
+          startDate: edit.startTime,
+          endDate: edit.endTime,
         });
       }
 
@@ -261,7 +261,7 @@
   }
 
   function formatDate(value) {
-    if (!value || value === "0001-01-01T00:00:00Z") return "N/A";
+    if (!value || value === "0001-01-01" || value === "0001-01-01T00:00:00Z") return "N/A";
     return new Date(value).toLocaleDateString("zh-TW", {
       year: "numeric",
       month: "long",
@@ -270,21 +270,16 @@
   }
 
   function hasLoanRecord(record) {
-    return Boolean(record?.order_id || record?.name || record?.status || record?.start_time || record?.end_time);
+    return Boolean(record?.order_id || record?.name || record?.status || record?.start_date || record?.end_date);
   }
 
-  function toDateTimeLocal(value) {
-    if (!value || value === "0001-01-01T00:00:00Z") return "";
-
-    const date = value instanceof Date ? value : new Date(value);
-    if (Number.isNaN(date.getTime())) return "";
-
-    const pad = (number) => String(number).padStart(2, "0");
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  function toDateInput(value) {
+    if (!value || value === "0001-01-01" || value === "0001-01-01T00:00:00Z") return "";
+    return String(value).slice(0, 10);
   }
 
-  function fromDateTimeLocal(value) {
-    return new Date(value).toISOString();
+  function toDateOnly(value) {
+    return String(value || "").slice(0, 10);
   }
 
   function replaceIdUrlWithScopedName(item) {
@@ -400,7 +395,7 @@
                     <label>
                       <span>開始</span>
                       <input
-                        type="datetime-local"
+                        type="date"
                         value={recordEdits[record.order_id]?.startTime || ""}
                         disabled={deletedRecordIds.has(record.order_id)}
                         on:input={(event) => updateRecordEdit(record.order_id, "startTime", event.currentTarget.value)}
@@ -409,7 +404,7 @@
                     <label>
                       <span>結束</span>
                       <input
-                        type="datetime-local"
+                        type="date"
                         value={recordEdits[record.order_id]?.endTime || ""}
                         disabled={deletedRecordIds.has(record.order_id)}
                         on:input={(event) => updateRecordEdit(record.order_id, "endTime", event.currentTarget.value)}
@@ -417,7 +412,7 @@
                     </label>
                   </div>
                 {:else}
-                  <span>{record.status || "N/A"} · {formatDate(record.start_time)} - {formatDate(record.end_time)}</span>
+                  <span>{record.status || "N/A"} · {formatDate(record.start_date)} - {formatDate(record.end_date)}</span>
                 {/if}
               </div>
               {#if canMutateData && isEditingRecords && record.order_id}

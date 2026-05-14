@@ -1,4 +1,6 @@
 using LendingSystem.Application.Common;
+using LendingSystem.Application.Loans;
+using LendingSystem.Domain.Commons;
 using LendingSystem.WebApi.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,7 +15,7 @@ internal static class ControllerResultExtensions
             return controller.Ok(ApiResponse<T>.Success(result.Data!));
         }
 
-        return controller.StatusCode(GetStatusCode(result.Error.Code), ApiResponse<T>.Failure(result.Error.Code, result.Error.Message));
+        return UnwarppErrorMessage<T>(controller, result.Error);
     }
 
     public static ActionResult<ApiResponse<T>> ToCreatedActionResult<T>(this ControllerBase controller, string location, Result<T> result)
@@ -23,20 +25,39 @@ internal static class ControllerResultExtensions
             return controller.Created(location, ApiResponse<T>.Success(result.Data!));
         }
 
-        return controller.StatusCode(GetStatusCode(result.Error.Code), ApiResponse<T>.Failure(result.Error.Code, result.Error.Message));
+        return UnwarppErrorMessage<T>(controller, result.Error);
     }
 
-    public static ActionResult<ApiResponse<T>> ApiFailure<T>(this ControllerBase controller, string errorCode, string errorMessage) =>
-        controller.StatusCode(GetStatusCode(errorCode), ApiResponse<T>.Failure(errorCode, errorMessage));
+    public static ActionResult<ApiResponse<T>> ApiFailure<T>(this ControllerBase controller, Errors errors) =>
+        UnwarppErrorMessage<T>(controller, errors);
 
-    private static int GetStatusCode(string errorCode) =>
-        errorCode switch
+    /// <summary>
+    /// 選擇是否錯誤回報時，應該選擇 Dev 還是 Pub 的環境訊息。
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="controller"></param>
+    /// <param name="errors"></param>
+    /// <returns></returns>
+    private static ActionResult<ApiResponse<T>> UnwarppErrorMessage<T>(ControllerBase controller, Errors errors)
+    {
+        var environment = controller.HttpContext.RequestServices
+            .GetRequiredService<IHostEnvironment>();
+
+        var message = errors.GetClientMessage(environment.IsDevelopment());
+
+        return controller.StatusCode(
+            GetStatusCode(errors), 
+            ApiResponse<T>.Failure(errors.Code, message));
+    }
+
+    private static int GetStatusCode(Errors errors) =>
+        errors.Type switch
         {
-            ErrorCodes.NotFound => StatusCodes.Status404NotFound,
-            ErrorCodes.Conflict => StatusCodes.Status409Conflict,
-            ErrorCodes.Unauthorized => StatusCodes.Status401Unauthorized,
-            ErrorCodes.BadGateway => StatusCodes.Status502BadGateway,
-            ErrorCodes.ServerError => StatusCodes.Status500InternalServerError,
+            ErrorType.NotFound=> StatusCodes.Status404NotFound,
+            ErrorType.Conflict => StatusCodes.Status409Conflict,
+            ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
+            ErrorType.BadGateway => StatusCodes.Status502BadGateway,
+            ErrorType.ServerError => StatusCodes.Status500InternalServerError,
             _ => StatusCodes.Status400BadRequest
         };
 }
