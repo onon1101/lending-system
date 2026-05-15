@@ -1,11 +1,14 @@
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace LendingSystem.Application.Items;
 
 public sealed record CreateItemRequest(
+    [Required]
     [property: JsonPropertyName("object_name")] string ObjectName,
     [property: JsonPropertyName("maker")] string? Maker,
     [property: JsonPropertyName("material")] string? Material,
+    [Required]
     [property: JsonPropertyName("description")] string Description);
 
 public sealed record UpdateItemRequest(

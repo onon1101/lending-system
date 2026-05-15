@@ -176,7 +176,11 @@ public sealed class ItemRepository(LendingDbContext db) : IItemRepository
             .Where(x => x.ObjectId == itemId)
             .Select(x => new ItemMediaSummary(
                 x.Type,
-                x.Order == null || x.Order.User == null ? null : x.Order.User.DisplayName,
+                x.Order == null || x.Order.BorrowerDetail == null
+                    ? null
+                    : x.Order.BorrowerDetail.User == null
+                        ? x.Order.BorrowerDetail.BorrowerName
+                        : x.Order.BorrowerDetail.User.DisplayName,
                 x.Description ?? "",
                 x.Link ?? "",
                 x.Url,

@@ -22,26 +22,26 @@ public sealed class LoanService(ILoanRepository loans)
 
         if ((borrowerId is null && string.IsNullOrWhiteSpace(request.BorrowerName)) || request.ItemsId.Length == 0 || request.DurationDays <= 0)
         {
-            return Result<UserLoanResponse>.Failure(ErrorCodes.Validation, "Missing required fields (borrower_id or borrower_name, items_id, duration_days)");
+            return Result<UserLoanResponse>.Failure(LoanErrors.MissingCreateFields());
         }
 
         var loan = await loans.CreateAsync(borrowerId, request.BorrowerName, request.ItemsId, request.DurationDays, cancellationToken);
         return loan.IsSuccess
             ? Result<UserLoanResponse>.Success(Map(loan.Data!))
-            : Result<UserLoanResponse>.Failure(loan.Error.Code, loan.Error.Message);
+            : Result<UserLoanResponse>.Failure(loan.Error);
     }
 
     public async Task<Result<UserLoanResponse>> ReturnItemAsync(int orderId, int objectId, CancellationToken cancellationToken)
     {
         if (orderId <= 0 || objectId <= 0)
         {
-            return Result<UserLoanResponse>.Failure(ErrorCodes.Validation, "Missing required fields (order_id, object_id)");
+            return Result<UserLoanResponse>.Failure(LoanErrors.MissingReturnFields());
         }
 
         var loan = await loans.ReturnItemAsync(orderId, objectId, cancellationToken);
         return loan.IsSuccess
             ? Result<UserLoanResponse>.Success(Map(loan.Data!))
-            : Result<UserLoanResponse>.Failure(loan.Error.Code, loan.Error.Message);
+            : Result<UserLoanResponse>.Failure(loan.Error);
     }
 
     public async Task<Result<UserLoanResponse>> CreateRecordAsync(CreateRecordRequest request,
@@ -56,33 +56,33 @@ public sealed class LoanService(ILoanRepository loans)
         if (request.UserId <= 0 || request.ItemId <= 0 || request.StartDate >= request.EndDate ||
             (borrowerId is null && string.IsNullOrWhiteSpace(request.BorrowerName)))
         {
-            return Result<UserLoanResponse>.Failure(ErrorCodes.Validation, "Missing required fields (user_id, borrower_id or borrower_name, item_id, start_date, end_date)");
+            return Result<UserLoanResponse>.Failure(LoanErrors.MissingCreateRecordFields());
         }
 
         var loan = await loans.CreateRecordAsync(request.UserId, borrowerId, request.BorrowerName, request.ItemId, request.StartDate, request.EndDate, cancellationToken);
         return loan.IsSuccess
             ? Result<UserLoanResponse>.Success(Map(loan.Data!))
-            : Result<UserLoanResponse>.Failure(loan.Error.Code, loan.Error.Message);
+            : Result<UserLoanResponse>.Failure(loan.Error);
     }
 
     public async Task<Result<DeleteLoanRecordResponse>> DeleteRecordAsync(int ownerId, int orderId, CancellationToken cancellationToken)
     {
         if (ownerId <= 0 || orderId <= 0)
         {
-            return Result<DeleteLoanRecordResponse>.Failure(ErrorCodes.Validation, "Missing required fields (user_id, order_id)");
+            return Result<DeleteLoanRecordResponse>.Failure(LoanErrors.MissingDeleteRecordFields());
         }
 
         var deleted = await loans.DeleteRecordAsync(ownerId, orderId, cancellationToken);
         return deleted.IsSuccess
             ? Result<DeleteLoanRecordResponse>.Success(new DeleteLoanRecordResponse(true, $"Delete borrowing record from order_id {orderId} is successful."))
-            : Result<DeleteLoanRecordResponse>.Failure(deleted.Error.Code, deleted.Error.Message);
+            : Result<DeleteLoanRecordResponse>.Failure(deleted.Error);
     }
 
     public async Task<Result<UserLoanResponse>> UpdateRecordTimeAsync(int orderId, UpdateRecordTimeRequest request, CancellationToken cancellationToken)
     {
         if (request.UserId <= 0 || orderId <= 0 || (request.StartDate is null && request.EndDate is null))
         {
-            return Result<UserLoanResponse>.Failure(ErrorCodes.Validation, "Missing required fields (user_id, order_id, start_date or end_date)");
+            return Result<UserLoanResponse>.Failure(LoanErrors.MissingUpdateRecordTimeFields());
         }
 
         if (request.StartDate is not null && request.EndDate is not null && request.StartDate >= request.EndDate)
@@ -93,7 +93,7 @@ public sealed class LoanService(ILoanRepository loans)
         var loan = await loans.UpdateRecordTimeAsync(request.UserId, orderId, request.StartDate, request.EndDate, cancellationToken);
         return loan.IsSuccess
             ? Result<UserLoanResponse>.Success(Map(loan.Data!))
-            : Result<UserLoanResponse>.Failure(loan.Error.Code, loan.Error.Message);
+            : Result<UserLoanResponse>.Failure(loan.Error);
     }
 
     public async Task<Result<IReadOnlyCollection<LoanRecordResponse>>> GetHistoryByItemIdAsync(int itemId, CancellationToken cancellationToken)

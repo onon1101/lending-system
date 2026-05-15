@@ -14,7 +14,6 @@ public sealed class UserEntity
     public string Role { get; set; } = "user"; // user or admin 
     public DateTimeOffset? CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
-    public ICollection<OrderEntity> Orders { get; set; } = [];
 }
 
 /// <summary>

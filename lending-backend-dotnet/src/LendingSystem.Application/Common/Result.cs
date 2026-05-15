@@ -2,11 +2,6 @@ using LendingSystem.Domain.Commons;
 
 namespace LendingSystem.Application.Common;
 
-public sealed record Error(string Code, string Message)
-{
-    public static Error None { get; } = new("", "");
-}
-
 public sealed record Result<T>
 {
     private Result(T? data, bool isSuccess, Errors error)

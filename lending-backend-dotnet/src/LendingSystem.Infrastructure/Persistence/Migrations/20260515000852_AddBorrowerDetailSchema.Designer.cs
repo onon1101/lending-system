@@ -3,6 +3,7 @@ using System;
 using LendingSystem.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LendingSystem.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(LendingDbContext))]
-    partial class LendingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260515000852_AddBorrowerDetailSchema")]
+    partial class AddBorrowerDetailSchema
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -1,5 +1,4 @@
 using LendingSystem.Application.Media;
-using LendingSystem.Application.Common;
 using LendingSystem.WebApi.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,12 +13,12 @@ public sealed class MediaController(MediaService media) : ControllerBase
         var file = Request.Form.Files["file"];
         if (file is null)
         {
-            return this.ApiFailure<MediaResponse>(ErrorCodes.Validation, "Missing File");
+            return this.ApiFailure<MediaResponse>(ControllerApiErrors.MissingFiles());
         }
 
         if (!int.TryParse(Request.Form["object_id"].ToString(), out var objectId))
         {
-            return this.ApiFailure<MediaResponse>(ErrorCodes.Validation, "object_id is required");
+            return this.ApiFailure<MediaResponse>(ControllerApiErrors.MissingField("object_id"));
         }
 
         var orderIdValue = Request.Form["order_id"].ToString();
@@ -28,7 +27,7 @@ public sealed class MediaController(MediaService media) : ControllerBase
         {
             if (!int.TryParse(orderIdValue, out var parsedOrderId))
             {
-                return this.ApiFailure<MediaResponse>(ErrorCodes.Validation, "order_id must be a number");
+                return this.ApiFailure<MediaResponse>(ControllerApiErrors.MustBeInteger("order_id"));
             }
 
             orderId = parsedOrderId;

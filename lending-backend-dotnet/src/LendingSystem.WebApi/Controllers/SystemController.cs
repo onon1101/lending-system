@@ -1,5 +1,4 @@
 using LendingSystem.Application.Abstractions;
-using LendingSystem.Application.Common;
 using LendingSystem.Application.System;
 using LendingSystem.WebApi.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -18,7 +17,7 @@ public sealed class SystemController(SystemStatusService system, IVideoDownloadC
         var response = await system.GetStatusAsync(cancellationToken);
         return response.Status == "ok"
             ? Ok(ApiResponse<SystemStatusResponse>.Success(response))
-            : StatusCode(StatusCodes.Status503ServiceUnavailable, ApiResponse<SystemStatusResponse>.Failure(ErrorCodes.ServerError, "Service is unavailable"));
+            : this.ApiFailure<SystemStatusResponse>(ControllerApiErrors.ServiceUnavailable());
     }
 
     [HttpGet("/api/download")]
@@ -26,7 +25,7 @@ public sealed class SystemController(SystemStatusService system, IVideoDownloadC
     {
         if (string.IsNullOrWhiteSpace(url) || !Uri.TryCreate(url, UriKind.Absolute, out var sourceUrl))
         {
-            return BadRequest(ApiResponse<object>.Failure(ErrorCodes.Validation, "url query parameter must be a valid absolute URL"));
+            return this.ApiFailureResult(ControllerApiErrors.InvalidAbsoluteUrl());
         }
 
         Response.ContentType = "application/octet-stream";
@@ -44,7 +43,7 @@ public sealed class SystemController(SystemStatusService system, IVideoDownloadC
             {
                 if (!wroteChunk)
                 {
-                    return StatusCode(StatusCodes.Status502BadGateway, ApiResponse<object>.Failure(ErrorCodes.BadGateway, chunk.ErrorMessage));
+                    return this.ApiFailureResult(ControllerApiErrors.BadGateway(chunk.ErrorMessage));
                 }
 
                 break;

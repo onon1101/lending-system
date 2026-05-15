@@ -25,7 +25,7 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
     {
         if (itemIds.Count != itemIds.Distinct().Count())
         {
-            return Result<UserLoan>.Failure(ErrorCodes.Conflict, "借閱物品不可重複，交易取消");
+            return Result<UserLoan>.Failure(LoanRepositoryErrors.DuplicateBorrowingItems());
         }
 
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -37,7 +37,7 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
         if (!borrowerResult.IsSuccess)
         {
             await tx.RollbackAsync(cancellationToken);
-            return Result<UserLoan>.Failure(borrowerResult.Error.Code, borrowerResult.Error.Message);
+            return Result<UserLoan>.Failure(borrowerResult.Error);
         }
 
         var items = await db.Items
@@ -50,7 +50,7 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
             if (item is null || item.CurrentStatus != ItemStatuses.Available)
             {
                 await tx.RollbackAsync(cancellationToken);
-                return Result<UserLoan>.Failure(ErrorCodes.Conflict, $"物品 ID {objectId} 不可用或不存在，交易取消");
+                return Result<UserLoan>.Failure(LoanRepositoryErrors.ItemUnavailableOrNotFound(objectId));
             }
         }
 
@@ -73,7 +73,7 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
 
         var created = await GetByOrderIdAsync(orders[0].OrderId, cancellationToken);
         return created is null
-            ? Result<UserLoan>.Failure(ErrorCodes.NotFound, "Loan not found")
+            ? Result<UserLoan>.Failure(LoanRepositoryErrors.LoanNotFound())
             : Result<UserLoan>.Success(created);
     }
 
@@ -84,18 +84,18 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
             .FirstOrDefaultAsync(x => x.ItemId == itemId, cancellationToken);
         if (item is null)
         {
-            return Result<UserLoan>.Failure(ErrorCodes.NotFound, $"物品 ID {itemId} 不存在");
+            return Result<UserLoan>.Failure(LoanRepositoryErrors.ItemNotFound(itemId));
         }
 
         if (item.OwnerId != ownerId)
         {
-            return Result<UserLoan>.Failure(ErrorCodes.Conflict, $"物品 ID {itemId} 不屬於使用者 ID {ownerId}");
+            return Result<UserLoan>.Failure(LoanRepositoryErrors.ItemDoesNotBelongToOwner(itemId, ownerId));
         }
 
         var borrowerResult = await GetOrCreateBorrowerDetailAsync(borrowerId, borrowerName, ownerId, Today(), cancellationToken);
         if (!borrowerResult.IsSuccess)
         {
-            return Result<UserLoan>.Failure(borrowerResult.Error.Code, borrowerResult.Error.Message);
+            return Result<UserLoan>.Failure(borrowerResult.Error);
         }
 
         var record = new OrderEntity
@@ -113,7 +113,7 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
 
         var created = await GetByOrderIdAsync(record.OrderId, cancellationToken);
         return created is null
-            ? Result<UserLoan>.Failure(ErrorCodes.NotFound, "Loan record not found")
+            ? Result<UserLoan>.Failure(LoanRepositoryErrors.LoanRecordNotFound())
             : Result<UserLoan>.Success(created);
     }
 
@@ -127,13 +127,13 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
         if (order is null)
         {
             await tx.RollbackAsync(cancellationToken);
-            return Result<bool>.Failure(ErrorCodes.NotFound, $"借閱紀錄 ID {orderId} 不存在");
+            return Result<bool>.Failure(LoanRepositoryErrors.LoanRecordNotFound(orderId));
         }
 
         if (order.Item is null || order.Item.OwnerId != ownerId)
         {
             await tx.RollbackAsync(cancellationToken);
-            return Result<bool>.Failure(ErrorCodes.Conflict, $"借閱紀錄 ID {orderId} 包含不屬於使用者 ID {ownerId} 的物品");
+            return Result<bool>.Failure(LoanRepositoryErrors.LoanRecordDoesNotBelongToOwner(orderId, ownerId));
         }
 
         if (order.Status == LoanStatuses.OnLoan)
@@ -155,19 +155,19 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
             .FirstOrDefaultAsync(x => x.OrderId == orderId, cancellationToken);
         if (order is null)
         {
-            return Result<UserLoan>.Failure(ErrorCodes.NotFound, $"借閱紀錄 ID {orderId} 不存在");
+            return Result<UserLoan>.Failure(LoanRepositoryErrors.LoanRecordNotFound(orderId));
         }
 
         if (order.Item is null || order.Item.OwnerId != ownerId)
         {
-            return Result<UserLoan>.Failure(ErrorCodes.Conflict, $"借閱紀錄 ID {orderId} 包含不屬於使用者 ID {ownerId} 的物品");
+            return Result<UserLoan>.Failure(LoanRepositoryErrors.LoanRecordDoesNotBelongToOwner(orderId, ownerId));
         }
 
         var updatedStartDate = startDate ?? order.StartDate;
         var updatedEndDate = endDate ?? order.EndDate;
         if (updatedStartDate >= updatedEndDate)
         {
-            return Result<UserLoan>.Failure(ErrorCodes.Validation, "start_date must be earlier than end_date");
+            return Result<UserLoan>.Failure(LoanDomainError.StartDateMustBeEarlierThanEndDate());
         }
 
         var oldEndDate = order.EndDate;
@@ -183,7 +183,7 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
 
         var updated = await GetByOrderIdAsync(orderId, cancellationToken);
         return updated is null
-            ? Result<UserLoan>.Failure(ErrorCodes.NotFound, "Loan record not found")
+            ? Result<UserLoan>.Failure(LoanRepositoryErrors.LoanRecordNotFound())
             : Result<UserLoan>.Success(updated);
     }
 
@@ -202,7 +202,7 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
         if (order is null)
         {
             await tx.RollbackAsync(cancellationToken);
-            return Result<UserLoan>.Failure(ErrorCodes.Conflict, $"借閱單 {orderId} 中的物品 ID {objectId} 不存在或已歸還");
+            return Result<UserLoan>.Failure(LoanRepositoryErrors.LoanItemAlreadyReturnedOrNotFound(orderId, objectId));
         }
 
         order.Status = LoanStatuses.Returned;
@@ -218,7 +218,7 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
 
         var loan = await GetByOrderIdAsync(orderId, cancellationToken);
         return loan is null
-            ? Result<UserLoan>.Failure(ErrorCodes.NotFound, "Loan not found")
+            ? Result<UserLoan>.Failure(LoanRepositoryErrors.LoanNotFound())
             : Result<UserLoan>.Success(loan);
     }
 
@@ -275,7 +275,7 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
                 .FirstOrDefaultAsync(x => x.UserId == borrowerId && !x.IsDeleted, cancellationToken);
             if (borrower is null)
             {
-                return Result<BorrowerDetailEntity>.Failure(ErrorCodes.NotFound, $"使用者 ID {borrowerId} 不存在");
+                return Result<BorrowerDetailEntity>.Failure(LoanRepositoryErrors.BorrowerNotFound(borrowerId.Value));
             }
         }
 

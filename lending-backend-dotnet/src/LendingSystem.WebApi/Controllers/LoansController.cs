@@ -1,4 +1,3 @@
-using LendingSystem.Application.Common;
 using LendingSystem.Application.Loans;
 using LendingSystem.WebApi.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -16,7 +15,7 @@ public sealed class LoansController(LoanService loans) : ControllerBase
     {
         if (!CanAccessUser(User, userId))
         {
-            return this.ApiFailure<IReadOnlyCollection<UserLoanResponse>>(ErrorCodes.Unauthorized, "You can only access your own borrowings");
+            return this.ApiFailure<IReadOnlyCollection<UserLoanResponse>>(ControllerApiErrors.AccessOwnBorrowingsOnly());
         }
 
         return this.ToActionResult(await loans.GetUserActiveLoansAsync(userId, cancellationToken));
@@ -29,7 +28,7 @@ public sealed class LoansController(LoanService loans) : ControllerBase
         var borrowerId = request.BorrowerId ?? request.UserId;
         if (!CanAccessUser(User, borrowerId))
         {
-            return this.ApiFailure<UserLoanResponse>(ErrorCodes.Unauthorized, "You can only create borrowings for yourself");
+            return this.ApiFailure<UserLoanResponse>(ControllerApiErrors.CreateBorrowingsForSelfOnly());
         }
 
         var created = await loans.CreateAsync(request, cancellationToken);
@@ -48,7 +47,7 @@ public sealed class LoansController(LoanService loans) : ControllerBase
     {
         if (!CanAccessUser(User, request.UserId))
         {
-            return this.ApiFailure<UserLoanResponse>(ErrorCodes.Unauthorized, "You can only manage your own item records");
+            return this.ApiFailure<UserLoanResponse>(ControllerApiErrors.ManageOwnItemRecordsOnly());
         }
 
         var created = await loans.CreateRecordAsync(request, cancellationToken);
@@ -62,7 +61,7 @@ public sealed class LoansController(LoanService loans) : ControllerBase
         [FromQuery(Name = "user_id")] int userId,
         CancellationToken cancellationToken) =>
         !CanAccessUser(User, userId)
-            ? this.ApiFailure<DeleteLoanRecordResponse>(ErrorCodes.Unauthorized, "You can only manage your own item records")
+            ? this.ApiFailure<DeleteLoanRecordResponse>(ControllerApiErrors.ManageOwnItemRecordsOnly())
             : this.ToActionResult(await loans.DeleteRecordAsync(userId, orderId, cancellationToken));
 
     [HttpPatch("/api/v1/management/borrowings/{orderId:int}/time")]
@@ -72,7 +71,7 @@ public sealed class LoansController(LoanService loans) : ControllerBase
         [FromBody] UpdateRecordTimeRequest request,
         CancellationToken cancellationToken) =>
         !CanAccessUser(User, request.UserId)
-            ? this.ApiFailure<UserLoanResponse>(ErrorCodes.Unauthorized, "You can only manage your own item records")
+            ? this.ApiFailure<UserLoanResponse>(ControllerApiErrors.ManageOwnItemRecordsOnly())
             : this.ToActionResult(await loans.UpdateRecordTimeAsync(orderId, request, cancellationToken));
 
     [HttpGet("/api/v1/catalog/items/{objectId:int}/borrowings/history")]

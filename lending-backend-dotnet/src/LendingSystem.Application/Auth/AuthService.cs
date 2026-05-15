@@ -14,13 +14,13 @@ public sealed class AuthService(IUserRepository users, IPasswordHasher passwords
     {
         if (!IsValidEmail(request.Email))
         {
-            return Result<AuthResponse>.Failure(ErrorCodes.Validation, "錯誤的 Email 格式");
+            return Result<AuthResponse>.Failure(AuthErrors.InvalidEmail());
         }
 
         var user = await users.FindByEmailAsync(request.Email, cancellationToken);
         if (user is null || string.IsNullOrWhiteSpace(user.PasswordHash) || !passwords.Verify(request.Password, user.PasswordHash))
         {
-            return Result<AuthResponse>.Failure(ErrorCodes.Unauthorized, "帳號或密碼錯誤");
+            return Result<AuthResponse>.Failure(AuthErrors.InvalidCredentials());
         }
 
         var tokenPair = tokens.Generate(user);
@@ -49,7 +49,7 @@ public sealed class AuthService(IUserRepository users, IPasswordHasher passwords
     {
         if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Email))
         {
-            return Result<UserResponse>.Failure(ErrorCodes.Validation, "Invalid request body");
+            return Result<UserResponse>.Failure(AuthErrors.InvalidRequestBody());
         }
 
         var passwordHash = request.PasswordHash.StartsWith("$2", StringComparison.Ordinal)
@@ -64,7 +64,7 @@ public sealed class AuthService(IUserRepository users, IPasswordHasher passwords
     {
         var user = await users.GetByIdAsync(userId, cancellationToken);
         return user is null
-            ? Result<UserResponse>.Failure(ErrorCodes.NotFound, "User not found")
+            ? Result<UserResponse>.Failure(AuthErrors.UserNotFound())
             : Result<UserResponse>.Success(new UserResponse(user.UserId, user.Name, user.Email));
     }
 
@@ -72,7 +72,7 @@ public sealed class AuthService(IUserRepository users, IPasswordHasher passwords
     {
         var user = await users.SearchByNameAsync(username, cancellationToken);
         return user is null
-            ? Result<UserResponse>.Failure(ErrorCodes.NotFound, "User not found")
+            ? Result<UserResponse>.Failure(AuthErrors.UserNotFound())
             : Result<UserResponse>.Success(new UserResponse(user.UserId, user.Name, user.Email));
     }
 
@@ -82,7 +82,7 @@ public sealed class AuthService(IUserRepository users, IPasswordHasher passwords
 
         return IsSuccess
             ? Result<DeleteResponse>.Success(new DeleteResponse(true, $"Delete user from userid {userId} is successful."))
-            : Result<DeleteResponse>.Failure(ErrorCodes.ServerError, "Delete user is not successful.");
+            : Result<DeleteResponse>.Failure(AuthErrors.DeleteUserFailed());
     }
 
     public async Task<Result<AuthResponse>> GoogleLoginAsync(
@@ -91,13 +91,13 @@ public sealed class AuthService(IUserRepository users, IPasswordHasher passwords
     {
         if (string.IsNullOrWhiteSpace(request.IdToken))
         {
-            return Result<AuthResponse>.Failure(ErrorCodes.Validation, "Google token is required");
+            return Result<AuthResponse>.Failure(AuthErrors.GoogleTokenRequired());
         }
 
         var googleClientId = configuration["GOOGLE_CLIENT_ID"] ?? configuration["Google:ClientId"];
         if (string.IsNullOrWhiteSpace(googleClientId))
         {
-            return Result<AuthResponse>.Failure(ErrorCodes.ServerError, "Google ClientId is not configured");
+            return Result<AuthResponse>.Failure(AuthErrors.GoogleClientIdNotConfigured());
         }
 
         GoogleJsonWebSignature.Payload payload;
@@ -113,12 +113,12 @@ public sealed class AuthService(IUserRepository users, IPasswordHasher passwords
         }
         catch (InvalidJwtException)
         {
-            return Result<AuthResponse>.Failure(ErrorCodes.Unauthorized, "Google 登入驗證失敗");
+            return Result<AuthResponse>.Failure(AuthErrors.GoogleLoginFailed());
         }
 
         if (payload.EmailVerified != true || string.IsNullOrWhiteSpace(payload.Email) || string.IsNullOrWhiteSpace(payload.Subject))
         {
-            return Result<AuthResponse>.Failure(ErrorCodes.Unauthorized, "Google 帳號資料未驗證");
+            return Result<AuthResponse>.Failure(AuthErrors.GoogleAccountNotVerified());
         }
 
         var user = await users.FindByProviderAsync(GoogleProvider, payload.Subject, cancellationToken);
@@ -144,7 +144,7 @@ public sealed class AuthService(IUserRepository users, IPasswordHasher passwords
             user = await users.LinkProviderAsync(user.Id, GoogleProvider, payload.Subject, cancellationToken);
             if (user is null)
             {
-                return Result<AuthResponse>.Failure(ErrorCodes.Unauthorized, "Google 帳號連結失敗");
+                return Result<AuthResponse>.Failure(AuthErrors.GoogleAccountLinkFailed());
             }
         }
 

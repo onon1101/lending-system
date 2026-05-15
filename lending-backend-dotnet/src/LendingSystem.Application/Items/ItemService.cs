@@ -12,7 +12,7 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
     {
         if (string.IsNullOrWhiteSpace(request.ObjectName))
         {
-            return Result<ItemResponse>.Failure(ErrorCodes.Validation, "ObjectName is required");
+            return Result<ItemResponse>.Failure(ItemErrors.ObjectNameRequired());
         }
 
         var imageUrl = "";
@@ -21,7 +21,7 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
             var uploadedImage = await UploadItemImageFileAsync(fileFormat, cancellationToken);
             if (!uploadedImage.IsSuccess)
             {
-                return Result<ItemResponse>.Failure(uploadedImage.Error.Code, uploadedImage.Error.Message);
+                return Result<ItemResponse>.Failure(uploadedImage.Error);
             }
 
             imageUrl = RewritePublicMediaHost(uploadedImage.Data!.Url);
@@ -41,7 +41,7 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
     {
         var item = await items.GetByIdAsync(itemId, cancellationToken);
         return item is null
-            ? Result<ItemResponse>.Failure(ErrorCodes.NotFound, "Item not found")
+            ? Result<ItemResponse>.Failure(ItemErrors.ItemNotFound())
             : Result<ItemResponse>.Success(Map(item));
     }
 
@@ -49,12 +49,12 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
     {
         if (string.IsNullOrWhiteSpace(itemName))
         {
-            return Result<ItemResponse>.Failure(ErrorCodes.Validation, "Item name is required");
+            return Result<ItemResponse>.Failure(ItemErrors.ItemNameRequired());
         }
 
         var item = await items.GetByNameAsync(userId, Uri.UnescapeDataString(itemName.Trim()), cancellationToken);
         return item is null
-            ? Result<ItemResponse>.Failure(ErrorCodes.NotFound, "Item not found")
+            ? Result<ItemResponse>.Failure(ItemErrors.ItemNotFound())
             : Result<ItemResponse>.Success(Map(item));
     }
 
@@ -81,7 +81,7 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
         var result = await items.GetItemsByUserId(userId, cancellationToken);
         if (result is null)
         {
-            return Result<IReadOnlyCollection<ItemSummaryResponse>>.Failure(ErrorCodes.NotFound, "User not found");
+            return Result<IReadOnlyCollection<ItemSummaryResponse>>.Failure(ItemErrors.UserNotFound());
         }
 
         return Result<IReadOnlyCollection<ItemSummaryResponse>>.Success(MapSummary(result));
@@ -92,13 +92,13 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
     {
         if (string.IsNullOrWhiteSpace(username))
         {
-            return Result<IReadOnlyCollection<ItemSummaryResponse>>.Failure(ErrorCodes.Validation, "Username is required");
+            return Result<IReadOnlyCollection<ItemSummaryResponse>>.Failure(ItemErrors.UsernameRequired());
         }
 
         var result = await items.GetItemsByUserName(Uri.UnescapeDataString(username.Trim()), cancellationToken);
         if (result is null)
         {
-            return Result<IReadOnlyCollection<ItemSummaryResponse>>.Failure(ErrorCodes.NotFound, "User not found");
+            return Result<IReadOnlyCollection<ItemSummaryResponse>>.Failure(ItemErrors.UserNotFound());
         }
 
         return Result<IReadOnlyCollection<ItemSummaryResponse>>.Success(MapSummary(result));
@@ -123,12 +123,12 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
         var existingItem = await items.GetByIdAsync(itemId, cancellationToken);
         if (existingItem is null)
         {
-            return Result<ItemResponse>.Failure(ErrorCodes.NotFound, "Item not found");
+            return Result<ItemResponse>.Failure(ItemErrors.ItemNotFound());
         }
 
         if (!isAdmin && existingItem.OwnerId != currentUserId)
         {
-            return Result<ItemResponse>.Failure(ErrorCodes.Unauthorized, "You can only update your own items");
+            return Result<ItemResponse>.Failure(ItemErrors.UpdateOwnItemsOnly());
         }
 
         var item = await items.UpdateAsync(
@@ -148,25 +148,25 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
         var existingItem = await items.GetByIdAsync(itemId, cancellationToken);
         if (existingItem is null)
         {
-            return Result<ItemResponse>.Failure(ErrorCodes.NotFound, "Item not found");
+            return Result<ItemResponse>.Failure(ItemErrors.ItemNotFound());
         }
 
         if (!isAdmin && existingItem.OwnerId != currentUserId)
         {
-            return Result<ItemResponse>.Failure(ErrorCodes.Unauthorized, "You can only update your own items");
+            return Result<ItemResponse>.Failure(ItemErrors.UpdateOwnItemsOnly());
         }
 
         var uploadedImage = await UploadItemImageFileAsync(fileFormat, cancellationToken);
         if (!uploadedImage.IsSuccess)
         {
-            return Result<ItemResponse>.Failure(uploadedImage.Error.Code, uploadedImage.Error.Message);
+            return Result<ItemResponse>.Failure(uploadedImage.Error);
         }
 
         var item = await items.UpdateAsync(itemId, null, null, null, null, null, RewritePublicMediaHost(uploadedImage.Data!.Url), cancellationToken);
         if (item is null)
         {
             await storage.DeleteObjectAsync(uploadedImage.Data.ObjectName, cancellationToken);
-            return Result<ItemResponse>.Failure(ErrorCodes.NotFound, "Item not found");
+            return Result<ItemResponse>.Failure(ItemErrors.ItemNotFound());
         }
 
         return Result<ItemResponse>.Success(Map(item));
@@ -177,18 +177,18 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
         var existingItem = await items.GetByIdAsync(objectId, cancellationToken);
         if (existingItem is null)
         {
-            return Result<MediaResponse>.Failure(ErrorCodes.NotFound, "Item not found");
+            return Result<MediaResponse>.Failure(ItemErrors.ItemNotFound());
         }
 
         if (!isAdmin && existingItem.OwnerId != currentUserId)
         {
-            return Result<MediaResponse>.Failure(ErrorCodes.Unauthorized, "You can only update your own items");
+            return Result<MediaResponse>.Failure(ItemErrors.UpdateOwnItemsOnly());
         }
 
         var upload = await UploadMediaFileAsync(stream, size, fileName, contentType, cancellationToken);
         if (!upload.IsSuccess)
         {
-            return Result<MediaResponse>.Failure(upload.Error.Code, upload.Error.Message);
+            return Result<MediaResponse>.Failure(upload.Error);
         }
 
         var asset = await media.CreateAsync(orderId, objectId, upload.Data!.Type, RewritePublicMediaHost(upload.Data.Stored.Url), link, description, cancellationToken);
@@ -213,14 +213,14 @@ public sealed class ItemService(IItemRepository items, IMediaRepository media, I
             return Result<UploadedMediaFile>.Success(new UploadedMediaFile(MediaTypes.Image, await storage.UploadItemImageAsync(stream, size, fileName, contentType, cancellationToken)));
         }
 
-        return Result<UploadedMediaFile>.Failure(ErrorCodes.UnsupportedFileType, "Unsupported file type");
+        return Result<UploadedMediaFile>.Failure(ItemErrors.UnsupportedFileType());
     }
 
     private async Task<Result<StoredObject>> UploadItemImageFileAsync(FileFormat fileFormat, CancellationToken cancellationToken)
     {
         if (!fileFormat.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
         {
-            return Result<StoredObject>.Failure(ErrorCodes.UnsupportedFileType, "File must be an image type");
+            return Result<StoredObject>.Failure(ItemErrors.FileMustBeImageType());
         }
 
         var stored = await storage.UploadItemImageAsync(fileFormat.Stream, fileFormat.Size, fileFormat.FileName, fileFormat.ContentType, cancellationToken);

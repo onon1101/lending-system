@@ -1,4 +1,4 @@
-namespace LendingSystem.Application.Common;
+namespace LendingSystem.Domain.Commons;
 
 public enum ErrorType
 {
@@ -8,6 +8,8 @@ public enum ErrorType
     NotFound,
     Conflict,
     Unauthorized,
+    Forbidden,
     BadGateway,
+    ServiceUnavailable,
     ServerError
 }

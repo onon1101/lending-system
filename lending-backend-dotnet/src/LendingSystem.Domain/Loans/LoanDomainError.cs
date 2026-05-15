@@ -1,6 +1,6 @@
 using LendingSystem.Domain.Commons;
 
-namespace LendingSystem.Application.Loans;
+namespace LendingSystem.Domain.Loans;
 
 public static class LoanDomainError
 {

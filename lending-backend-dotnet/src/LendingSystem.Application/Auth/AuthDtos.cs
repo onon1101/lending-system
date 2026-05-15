@@ -1,15 +1,27 @@
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace LendingSystem.Application.Auth;
 
 public sealed record LoginRequest(
+    [Required]
     [property: JsonPropertyName("email")] string Email,
+    [Required]
     [property: JsonPropertyName("password")] string Password);
 
 public sealed record CreateUserRequest(
+    [Required]
     [property: JsonPropertyName("name")] string Name,
+    [Required]
     [property: JsonPropertyName("email")] string Email,
+    [Required]
     [property: JsonPropertyName("password_hash")] string PasswordHash);
+
+public sealed record GoogleLoginRequest(
+    [Required]
+    [property: JsonPropertyName("id_token")] string IdToken);
+
+// ----------------- Response ----------------- 
 
 public sealed record UserResponse(
     [property: JsonPropertyName("user_id")] int UserId,
@@ -26,6 +38,3 @@ public sealed record DeleteResponse(
     [property: JsonPropertyName("deleted")] bool Deleted,
     [property: JsonPropertyName("message")] string Message
 );
-
-public sealed record GoogleLoginRequest(
-    [property: JsonPropertyName("id_token")] string IdToken);

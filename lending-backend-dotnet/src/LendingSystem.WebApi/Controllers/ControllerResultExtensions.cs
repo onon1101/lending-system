@@ -1,5 +1,4 @@
 using LendingSystem.Application.Common;
-using LendingSystem.Application.Loans;
 using LendingSystem.Domain.Commons;
 using LendingSystem.WebApi.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -15,7 +14,7 @@ internal static class ControllerResultExtensions
             return controller.Ok(ApiResponse<T>.Success(result.Data!));
         }
 
-        return UnwarppErrorMessage<T>(controller, result.Error);
+        return UnwrapErrorMessage<T>(controller, result.Error);
     }
 
     public static ActionResult<ApiResponse<T>> ToCreatedActionResult<T>(this ControllerBase controller, string location, Result<T> result)
@@ -25,11 +24,23 @@ internal static class ControllerResultExtensions
             return controller.Created(location, ApiResponse<T>.Success(result.Data!));
         }
 
-        return UnwarppErrorMessage<T>(controller, result.Error);
+        return UnwrapErrorMessage<T>(controller, result.Error);
     }
 
     public static ActionResult<ApiResponse<T>> ApiFailure<T>(this ControllerBase controller, Errors errors) =>
-        UnwarppErrorMessage<T>(controller, errors);
+        UnwrapErrorMessage<T>(controller, errors);
+
+    public static IActionResult ApiFailureResult(this ControllerBase controller, Errors errors)
+    {
+        var environment = controller.HttpContext.RequestServices
+            .GetRequiredService<IHostEnvironment>();
+
+        var message = errors.GetClientMessage(environment.IsDevelopment());
+
+        return controller.StatusCode(
+            GetStatusCode(errors),
+            ApiResponse<object>.Failure(errors.Code, message));
+    }
 
     /// <summary>
     /// 選擇是否錯誤回報時，應該選擇 Dev 還是 Pub 的環境訊息。
@@ -38,7 +49,7 @@ internal static class ControllerResultExtensions
     /// <param name="controller"></param>
     /// <param name="errors"></param>
     /// <returns></returns>
-    private static ActionResult<ApiResponse<T>> UnwarppErrorMessage<T>(ControllerBase controller, Errors errors)
+    private static ActionResult<ApiResponse<T>> UnwrapErrorMessage<T>(ControllerBase controller, Errors errors)
     {
         var environment = controller.HttpContext.RequestServices
             .GetRequiredService<IHostEnvironment>();
@@ -53,10 +64,12 @@ internal static class ControllerResultExtensions
     private static int GetStatusCode(Errors errors) =>
         errors.Type switch
         {
-            ErrorType.NotFound=> StatusCodes.Status404NotFound,
+            ErrorType.NotFound => StatusCodes.Status404NotFound,
             ErrorType.Conflict => StatusCodes.Status409Conflict,
             ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
+            ErrorType.Forbidden => StatusCodes.Status403Forbidden,
             ErrorType.BadGateway => StatusCodes.Status502BadGateway,
+            ErrorType.ServiceUnavailable => StatusCodes.Status503ServiceUnavailable,
             ErrorType.ServerError => StatusCodes.Status500InternalServerError,
             _ => StatusCodes.Status400BadRequest
         };

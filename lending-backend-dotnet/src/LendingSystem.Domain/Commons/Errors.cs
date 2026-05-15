@@ -1,5 +1,3 @@
-using LendingSystem.Application.Common;
-
 namespace LendingSystem.Domain.Commons;
 
 public abstract record Errors(
@@ -48,5 +46,25 @@ public sealed record ControllerErrors(
     string Code, 
     string DevelopmentMessage, 
     string PublicMessage, 
+    ErrorType ErrorType)
+    : Errors(Code, DevelopmentMessage, PublicMessage, ErrorType);
+
+/// <summary>
+/// 用於處理 Application 層的錯誤
+/// </summary>
+public sealed record ApplicationErrors(
+    string Code,
+    string DevelopmentMessage,
+    string PublicMessage,
+    ErrorType ErrorType)
+    : Errors(Code, DevelopmentMessage, PublicMessage, ErrorType);
+
+/// <summary>
+/// 用於處理 Repository/Infrastructure 層的錯誤
+/// </summary>
+public sealed record RepositoryErrors(
+    string Code,
+    string DevelopmentMessage,
+    string PublicMessage,
     ErrorType ErrorType)
     : Errors(Code, DevelopmentMessage, PublicMessage, ErrorType);

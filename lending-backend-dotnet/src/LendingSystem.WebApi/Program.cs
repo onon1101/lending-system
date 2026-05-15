@@ -1,8 +1,9 @@
 using System.Text;
 using System.Text.Json.Serialization;
-using LendingSystem.Application.Common;
+using LendingSystem.Domain.Commons;
 using LendingSystem.Infrastructure;
 using LendingSystem.Infrastructure.Persistence;
+using LendingSystem.WebApi.Controllers;
 using LendingSystem.WebApi.Middleware;
 using LendingSystem.WebApi.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -11,6 +12,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
+var isDevelopment = builder.Environment.IsDevelopment();
 
 var appPort = builder.Configuration["APP_PORT"] ?? builder.Configuration["App:Port"] ?? "8000";
 builder.WebHost.UseUrls($"http://0.0.0.0:{appPort}");
@@ -30,9 +32,7 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
             .SelectMany(x => x.Errors)
             .Select(x => string.IsNullOrWhiteSpace(x.ErrorMessage) ? "Invalid request body" : x.ErrorMessage));
 
-        return new BadRequestObjectResult(ApiResponse<object>.Failure(
-            ErrorCodes.Validation,
-            string.IsNullOrWhiteSpace(message) ? "Invalid request body" : message));
+        return new BadRequestObjectResult(ToFailureResponse(ControllerApiErrors.InvalidRequestBody(message), isDevelopment));
     };
 });
 
@@ -68,12 +68,12 @@ builder.Services
             {
                 context.HandleResponse();
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                await context.Response.WriteAsJsonAsync(ApiResponse<object>.Failure(ErrorCodes.Unauthorized, "Unauthorized"));
+                await context.Response.WriteAsJsonAsync(ToFailureResponse(ControllerApiErrors.Unauthorized(), isDevelopment));
             },
             OnForbidden = async context =>
             {
                 context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                await context.Response.WriteAsJsonAsync(ApiResponse<object>.Failure(ErrorCodes.Unauthorized, "Forbidden"));
+                await context.Response.WriteAsJsonAsync(ToFailureResponse(ControllerApiErrors.Forbidden(), isDevelopment));
             }
         };
     });
@@ -103,3 +103,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+static ApiResponse<object> ToFailureResponse(Errors error, bool isDevelopment) =>
+    ApiResponse<object>.Failure(error.Code, error.GetClientMessage(isDevelopment));

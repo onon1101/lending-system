@@ -11,7 +11,7 @@ public sealed class MediaService(IMediaRepository media, IObjectStorage storage)
         var upload = await UploadAsync(stream, size, fileName, contentType, cancellationToken);
         if (!upload.IsSuccess)
         {
-            return Result<MediaResponse>.Failure(upload.Error.Code, upload.Error.Message);
+            return Result<MediaResponse>.Failure(upload.Error);
         }
 
         var asset = await media.CreateAsync(orderId, objectId, upload.Data!.Type, RewritePublicMediaHost(upload.Data.Stored.Url), link, description, cancellationToken);
@@ -30,7 +30,7 @@ public sealed class MediaService(IMediaRepository media, IObjectStorage storage)
             return Result<UploadedMediaFile>.Success(new UploadedMediaFile(MediaTypes.Image, await storage.UploadItemImageAsync(stream, size, fileName, contentType, cancellationToken)));
         }
 
-        return Result<UploadedMediaFile>.Failure(ErrorCodes.UnsupportedFileType, "Unsupported file type");
+        return Result<UploadedMediaFile>.Failure(MediaErrors.UnsupportedFileType());
     }
 
     private static string RewritePublicMediaHost(string url)
