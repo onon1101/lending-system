@@ -75,7 +75,6 @@ public sealed class LoansController(LoanService loans) : ControllerBase
             : this.ToActionResult(await loans.UpdateRecordTimeAsync(orderId, request, cancellationToken));
 
     [HttpGet("/api/v1/catalog/items/{objectId:int}/borrowings/history")]
-    [Authorize(Roles = "user,admin")]
     public async Task<ActionResult<ApiResponse<IReadOnlyCollection<LoanRecordResponse>>>> GetItemHistory([FromRoute] int objectId, CancellationToken cancellationToken) =>
         this.ToActionResult(await loans.GetHistoryByItemIdAsync(objectId, cancellationToken));
 
