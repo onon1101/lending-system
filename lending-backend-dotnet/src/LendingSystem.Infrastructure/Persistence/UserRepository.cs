@@ -7,12 +7,12 @@ namespace LendingSystem.Infrastructure.Persistence;
 
 public sealed class UserRepository(LendingDbContext db) : IUserRepository
 {
-    public async Task<User?> FindByEmailAsync(string email, CancellationToken cancellationToken)
+    public async Task<Domain.Users.UserEntity?> FindByEmailAsync(string email, CancellationToken cancellationToken)
     {
         return await db.Users
             .AsNoTracking()
             .Where(x => x.Email == email && !x.IsDeleted)
-            .Select(x => new User(
+            .Select(x => new Domain.Users.UserEntity(
                 x.UserId,
                 x.Email ?? "",
                 x.PasswordHash ?? "",
@@ -25,12 +25,12 @@ public sealed class UserRepository(LendingDbContext db) : IUserRepository
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async Task<User?> FindByProviderAsync(string authProvider, string providerUserId, CancellationToken cancellationToken)
+    public async Task<Domain.Users.UserEntity?> FindByProviderAsync(string authProvider, string providerUserId, CancellationToken cancellationToken)
     {
         return await db.Users
             .AsNoTracking()
             .Where(x => x.AuthProvider == authProvider && x.ProviderUserId == providerUserId && !x.IsDeleted)
-            .Select(x => new User(
+            .Select(x => new Domain.Users.UserEntity(
                 x.UserId,
                 x.Email ?? "",
                 x.PasswordHash ?? "",
@@ -60,7 +60,7 @@ public sealed class UserRepository(LendingDbContext db) : IUserRepository
         return new UserProfile(entity.UserId, entity.DisplayName, entity.Email ?? "");
     }
 
-    public async Task<User> CreateExternalAsync(string name, string email, string authProvider, string providerUserId, CancellationToken cancellationToken)
+    public async Task<Domain.Users.UserEntity> CreateExternalAsync(string name, string email, string authProvider, string providerUserId, CancellationToken cancellationToken)
     {
         var entity = new UserEntity
         {
@@ -77,7 +77,7 @@ public sealed class UserRepository(LendingDbContext db) : IUserRepository
         return MapUser(entity);
     }
 
-    public async Task<User?> LinkProviderAsync(int userId, string authProvider, string providerUserId, CancellationToken cancellationToken)
+    public async Task<Domain.Users.UserEntity?> LinkProviderAsync(int userId, string authProvider, string providerUserId, CancellationToken cancellationToken)
     {
         var entity = await db.Users
             .FirstOrDefaultAsync(x => x.UserId == userId && !x.IsDeleted, cancellationToken);
@@ -178,7 +178,7 @@ public sealed class UserRepository(LendingDbContext db) : IUserRepository
         return builder.ToString();
     }
 
-    private static User MapUser(UserEntity entity) => new(
+    private static Domain.Users.UserEntity MapUser(UserEntity entity) => new(
         entity.UserId,
         entity.Email ?? "",
         entity.PasswordHash ?? "",

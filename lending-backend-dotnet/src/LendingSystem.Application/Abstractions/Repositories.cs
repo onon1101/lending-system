@@ -8,11 +8,11 @@ namespace LendingSystem.Application.Abstractions;
 
 public interface IUserRepository
 {
-    Task<User?> FindByEmailAsync(string email, CancellationToken cancellationToken);
-    Task<User?> FindByProviderAsync(string authProvider, string providerUserId, CancellationToken cancellationToken);
+    Task<UserEntity?> FindByEmailAsync(string email, CancellationToken cancellationToken);
+    Task<UserEntity?> FindByProviderAsync(string authProvider, string providerUserId, CancellationToken cancellationToken);
     Task<UserProfile> CreateAsync(string name, string email, string passwordHash, CancellationToken cancellationToken);
-    Task<User> CreateExternalAsync(string name, string email, string authProvider, string providerUserId, CancellationToken cancellationToken);
-    Task<User?> LinkProviderAsync(int userId, string authProvider, string providerUserId, CancellationToken cancellationToken);
+    Task<UserEntity> CreateExternalAsync(string name, string email, string authProvider, string providerUserId, CancellationToken cancellationToken);
+    Task<UserEntity?> LinkProviderAsync(int userId, string authProvider, string providerUserId, CancellationToken cancellationToken);
     Task<UserProfile?> GetByIdAsync(int userId, CancellationToken cancellationToken);
     Task<UserProfile?> SearchByNameAsync(string username, CancellationToken cancellationToken);
     Task<bool> DeleteAsync(int userId, CancellationToken cancellationToken);

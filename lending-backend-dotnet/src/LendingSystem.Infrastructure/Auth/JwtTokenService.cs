@@ -10,7 +10,7 @@ namespace LendingSystem.Infrastructure.Auth;
 
 public sealed class JwtTokenService(IConfiguration configuration) : ITokenService
 {
-    public TokenPair Generate(User user)
+    public TokenPair Generate(UserEntity userEntity)
     {
         var secret = configuration["SECRET_KEY"] ?? configuration["Jwt:SecretKey"] ?? "development-secret-key-change-before-production";
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
@@ -19,10 +19,10 @@ public sealed class JwtTokenService(IConfiguration configuration) : ITokenServic
 
         var accessClaims = new[]
         {
-            new Claim("id", user.Id.ToString()),
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Role, user.Role)
+            new Claim("id", userEntity.Id.ToString()),
+            new Claim(ClaimTypes.NameIdentifier, userEntity.Id.ToString()),
+            new Claim(ClaimTypes.Email, userEntity.EmailEntity),
+            new Claim(ClaimTypes.Role, userEntity.Role)
         };
 
         var access = new JwtSecurityToken(
@@ -32,7 +32,7 @@ public sealed class JwtTokenService(IConfiguration configuration) : ITokenServic
             signingCredentials: credentials);
 
         var refresh = new JwtSecurityToken(
-            claims: [new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString())],
+            claims: [new Claim(JwtRegisteredClaimNames.Sub, userEntity.Id.ToString())],
             notBefore: now.UtcDateTime,
             expires: now.AddDays(7).UtcDateTime,
             signingCredentials: credentials);

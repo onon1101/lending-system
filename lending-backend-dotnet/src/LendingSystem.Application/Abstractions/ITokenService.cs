@@ -6,5 +6,5 @@ public sealed record TokenPair(string AccessToken, string RefreshToken);
 
 public interface ITokenService
 {
-    TokenPair Generate(User user);
+    TokenPair Generate(UserEntity userEntity);
 }
