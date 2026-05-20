@@ -1,6 +1,6 @@
-using LendingSystem.Application.Items;
-using LendingSystem.Application.Media;
-using LendingSystem.Application.Common;
+using LendingSystem.Lending.Application.Items;
+using LendingSystem.Lending.Application.Media;
+using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.WebApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

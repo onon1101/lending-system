@@ -1,8 +1,8 @@
 using System.Text;
 using System.Text.Json.Serialization;
-using LendingSystem.Domain.Commons;
+using LendingSystem.SharedKernel.Domain.Common;
 using LendingSystem.Infrastructure;
-using LendingSystem.Infrastructure.Persistence;
+using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using LendingSystem.WebApi.Controllers;
 using LendingSystem.WebApi.Middleware;
 using LendingSystem.WebApi.Models;

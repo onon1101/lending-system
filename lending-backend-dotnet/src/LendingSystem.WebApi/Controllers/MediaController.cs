@@ -1,4 +1,4 @@
-using LendingSystem.Application.Media;
+using LendingSystem.Lending.Application.Media;
 using LendingSystem.WebApi.Models;
 using Microsoft.AspNetCore.Mvc;
 

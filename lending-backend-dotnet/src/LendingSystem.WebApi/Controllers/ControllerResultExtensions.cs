@@ -1,5 +1,5 @@
-using LendingSystem.Application.Common;
-using LendingSystem.Domain.Commons;
+using LendingSystem.SharedKernel.Application.Common;
+using LendingSystem.SharedKernel.Domain.Common;
 using LendingSystem.WebApi.Models;
 using Microsoft.AspNetCore.Mvc;
 

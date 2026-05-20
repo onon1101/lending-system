@@ -1,4 +1,4 @@
-using LendingSystem.Domain.Commons;
+using LendingSystem.SharedKernel.Domain.Common;
 
 namespace LendingSystem.WebApi.Controllers;
 

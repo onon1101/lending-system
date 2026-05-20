@@ -1,4 +1,4 @@
-using LendingSystem.Application.Auth;
+using LendingSystem.Auth.Application.Auth;
 using LendingSystem.WebApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

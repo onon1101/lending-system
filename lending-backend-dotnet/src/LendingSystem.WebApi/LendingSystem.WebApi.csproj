@@ -17,8 +17,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\LendingSystem.Application\LendingSystem.Application.csproj" />
     <ProjectReference Include="..\LendingSystem.Infrastructure\LendingSystem.Infrastructure.csproj" />
+    <ProjectReference Include="..\LendingSystem.Auth.Application\LendingSystem.Auth.Application.csproj" />
+    <ProjectReference Include="..\LendingSystem.Lending.Application\LendingSystem.Lending.Application.csproj" />
+    <ProjectReference Include="..\LendingSystem.SharedKernel.Application\LendingSystem.SharedKernel.Application.csproj" />
+    <ProjectReference Include="..\LendingSystem.SharedKernel.Domain\LendingSystem.SharedKernel.Domain.csproj" />
+    <ProjectReference Include="..\LendingSystem.SharedKernel.Infrastructure\LendingSystem.SharedKernel.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
