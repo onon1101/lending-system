@@ -1,16 +1,16 @@
 using System.ComponentModel.DataAnnotations;
-using Google.Apis.Auth;
 using LendingSystem.Auth.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
-using LendingSystem.Auth.Domain.Enum;
-using Microsoft.Extensions.Configuration;
+using LendingSystem.Auth.Domain.Users;
 
 namespace LendingSystem.Auth.Application.Auth;
 
-public sealed class AuthService(IUserRepository users, IPasswordHasher passwords, ITokenService tokens, IConfiguration configuration)
+public sealed class AuthService(
+    IUserRepository users,
+    IPasswordHasher passwords,
+    ITokenService tokens,
+    IGoogleOAuth2Acl googleOAuth2)
 {
-    private const string GoogleProvider = "google";
-
     public async Task<Result<AuthResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
     {
         if (!IsValidEmail(request.Email))
@@ -95,54 +95,33 @@ public sealed class AuthService(IUserRepository users, IPasswordHasher passwords
             return Result<AuthResponse>.Failure(AuthErrors.GoogleTokenRequired());
         }
 
-        var googleClientId = configuration["GOOGLE_CLIENT_ID"] ?? configuration["Google:ClientId"];
-        if (string.IsNullOrWhiteSpace(googleClientId))
+        var externalIdentity = await googleOAuth2.TranslateAsync(request.IdToken, cancellationToken);
+        if (!externalIdentity.IsSuccess)
         {
-            return Result<AuthResponse>.Failure(AuthErrors.GoogleClientIdNotConfigured());
+            return Result<AuthResponse>.Failure(externalIdentity.Error);
         }
 
-        GoogleJsonWebSignature.Payload payload;
-
-        try
-        {
-            payload = await GoogleJsonWebSignature.ValidateAsync(
-                request.IdToken,
-                new GoogleJsonWebSignature.ValidationSettings
-                {
-                    Audience = [googleClientId]
-                });
-        }
-        catch (InvalidJwtException)
-        {
-            return Result<AuthResponse>.Failure(AuthErrors.GoogleLoginFailed());
-        }
-
-        if (payload.EmailVerified != true || string.IsNullOrWhiteSpace(payload.Email) || string.IsNullOrWhiteSpace(payload.Subject))
-        {
-            return Result<AuthResponse>.Failure(AuthErrors.GoogleAccountNotVerified());
-        }
-
-        var user = await users.FindByProviderAsync(GoogleProvider, payload.Subject, cancellationToken);
+        var identity = externalIdentity.Data!;
+        var user = await users.FindByProviderAsync(identity.Provider, identity.ProviderUserId, cancellationToken);
         if (user is not null)
         {
             var existingTokenPair = tokens.Generate(user);
             return Result<AuthResponse>.Success(new AuthResponse(existingTokenPair.AccessToken, existingTokenPair.RefreshToken));
         }
 
-        user = await users.FindByEmailAsync(payload.Email, cancellationToken);
+        user = await users.FindByEmailAsync(identity.Email, cancellationToken);
         if (user is null)
         {
-            var name = payload.Name ?? payload.Email.Split('@')[0];
             user = await users.CreateExternalAsync(
-                name,
-                payload.Email,
-                GoogleProvider,
-                payload.Subject,
+                identity.DisplayName,
+                identity.Email,
+                identity.Provider,
+                identity.ProviderUserId,
                 cancellationToken);
         }
-        else if (user.AuthProvider != AuthProvider.Google || user.ProviderUserId != payload.Subject)
+        else if (user.AuthProvider != AuthProvider.Google || user.ProviderUserId != identity.ProviderUserId)
         {
-            user = await users.LinkProviderAsync(user.Id, GoogleProvider, payload.Subject, cancellationToken);
+            user = await users.LinkProviderAsync(user.Id, identity.Provider, identity.ProviderUserId, cancellationToken);
             if (user is null)
             {
                 return Result<AuthResponse>.Failure(AuthErrors.GoogleAccountLinkFailed());

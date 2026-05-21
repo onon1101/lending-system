@@ -5,6 +5,7 @@
   </Folder>
   <Folder Name="/src/Module/" />
   <Folder Name="/src/Module/Auth/">
+    <Project Path="src/LendingSystem.Auth.ACL/LendingSystem.Auth.ACL.csproj" />
     <Project Path="src/LendingSystem.Auth.Application/LendingSystem.Auth.Application.csproj" />
     <Project Path="src/LendingSystem.Auth.Domain/LendingSystem.Auth.Domain.csproj" />
     <Project Path="src/LendingSystem.Auth.Infrastructure/LendingSystem.Auth.Infrastructure.csproj" />

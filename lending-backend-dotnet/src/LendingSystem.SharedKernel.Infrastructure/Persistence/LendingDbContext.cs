@@ -34,7 +34,7 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
             entity.Property(x => x.AuthProvider)
                 .HasColumnName("auth_provider")
                 .HasMaxLength(50)
-                .HasDefaultValue("local")
+                .HasDefaultValue("LOCAL")
                 .IsRequired();
             entity.Property(x => x.ProviderUserId)
                 .HasColumnName("provider_user_id")

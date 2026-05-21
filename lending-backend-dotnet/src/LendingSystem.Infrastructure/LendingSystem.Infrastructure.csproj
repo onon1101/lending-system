@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LendingSystem.Auth.Application\LendingSystem.Auth.Application.csproj" />
+    <ProjectReference Include="..\LendingSystem.Auth.ACL\LendingSystem.Auth.ACL.csproj" />
     <ProjectReference Include="..\LendingSystem.Auth.Infrastructure\LendingSystem.Auth.Infrastructure.csproj" />
     <ProjectReference Include="..\LendingSystem.Lending.Application\LendingSystem.Lending.Application.csproj" />
     <ProjectReference Include="..\LendingSystem.Lending.Infrastructure\LendingSystem.Lending.Infrastructure.csproj" />

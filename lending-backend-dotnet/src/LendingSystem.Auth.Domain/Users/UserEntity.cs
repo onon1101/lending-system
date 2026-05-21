@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using LendingSystem.Auth.Domain.Enum;
 using LendingSystem.Auth.Domain.ValueObjects;
 
 namespace LendingSystem.Auth.Domain.Users;

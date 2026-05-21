@@ -1,3 +1,4 @@
+using LendingSystem.Auth.ACL.Google;
 using LendingSystem.Auth.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.Auth.Application.Auth;
@@ -23,45 +24,49 @@ namespace LendingSystem.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddApplication(this IServiceCollection services)
+    extension(IServiceCollection services)
     {
-        services.AddScoped<AuthService>();
-        services.AddScoped<ItemService>();
-        services.AddScoped<LoanService>();
-        services.AddScoped<MediaService>();
-        services.AddScoped<SystemStatusService>();
-        return services;
-    }
+        public IServiceCollection AddApplication()
+        {
+            services.AddScoped<AuthService>();
+            services.AddScoped<ItemService>();
+            services.AddScoped<LoanService>();
+            services.AddScoped<MediaService>();
+            services.AddScoped<SystemStatusService>();
+            return services;
+        }
 
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
-    {
-        var connectionString = BuildPostgresConnectionString(configuration);
-        services.AddDbContext<LendingDbContext>(options => options.UseNpgsql(connectionString));
-        services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IItemRepository, ItemRepository>();
-        services.AddScoped<ILoanRepository, LoanRepository>();
-        services.AddScoped<IMediaRepository, MediaRepository>();
-        services.AddScoped<IDatabaseHealthCheck, PostgresHealthCheck>();
+        public IServiceCollection AddInfrastructure(IConfiguration configuration)
+        {
+            var connectionString = BuildPostgresConnectionString(configuration);
+            services.AddDbContext<LendingDbContext>(options => options.UseNpgsql(connectionString));
+            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IItemRepository, ItemRepository>();
+            services.AddScoped<ILoanRepository, LoanRepository>();
+            services.AddScoped<IMediaRepository, MediaRepository>();
+            services.AddScoped<IDatabaseHealthCheck, PostgresHealthCheck>();
 
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
         services.AddSingleton<ITokenService, JwtTokenService>();
+        services.AddSingleton<IGoogleOAuth2Acl, GoogleOAuth2Acl>();
         services.AddSingleton<IVideoDownloadClient, GrpcVideoDownloadClient>();
 
-        services.AddSingleton<IMinioClient>(_ =>
-        {
-            var endpoint = configuration["MINIO_ENDPOINT"] ?? configuration["Minio:Endpoint"] ?? "";
-            var accessKey = configuration["MINIO_ACCESS_KEY"] ?? configuration["Minio:AccessKey"] ?? "";
-            var secretKey = configuration["MINIO_SECRET_KEY"] ?? configuration["Minio:SecretKey"] ?? "";
-            return new MinioClient()
-                .WithEndpoint(endpoint)
-                .WithCredentials(accessKey, secretKey)
-                .WithSSL(false)
-                .Build();
-        });
-        services.AddSingleton<IObjectStorage, MinioObjectStorage>();
+            services.AddSingleton<IMinioClient>(_ =>
+            {
+                var endpoint = configuration["MINIO_ENDPOINT"] ?? configuration["Minio:Endpoint"] ?? "";
+                var accessKey = configuration["MINIO_ACCESS_KEY"] ?? configuration["Minio:AccessKey"] ?? "";
+                var secretKey = configuration["MINIO_SECRET_KEY"] ?? configuration["Minio:SecretKey"] ?? "";
+                return new MinioClient()
+                    .WithEndpoint(endpoint)
+                    .WithCredentials(accessKey, secretKey)
+                    .WithSSL(false)
+                    .Build();
+            });
+            services.AddSingleton<IObjectStorage, MinioObjectStorage>();
 
-        return services;
+            return services;
+        }
     }
 
     private static string BuildPostgresConnectionString(IConfiguration configuration)

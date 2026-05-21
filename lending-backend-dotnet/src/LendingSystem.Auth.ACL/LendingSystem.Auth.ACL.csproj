@@ -1,9 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <ItemGroup>
+        <ProjectReference Include="..\LendingSystem.Auth.Application\LendingSystem.Auth.Application.csproj" />
         <ProjectReference Include="..\LendingSystem.Auth.Domain\LendingSystem.Auth.Domain.csproj" />
-        <ProjectReference Include="..\LendingSystem.SharedKernel.Application\LendingSystem.SharedKernel.Application.csproj" />
-        <ProjectReference Include="..\LendingSystem.SharedKernel.Domain\LendingSystem.SharedKernel.Domain.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Google.Apis.Auth" Version="1.74.0" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.4" />
     </ItemGroup>
 
     <PropertyGroup>

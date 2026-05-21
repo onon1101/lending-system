@@ -19,11 +19,12 @@ public sealed class UserRepository(LendingDbContext db) : IUserRepository
         return entity is null ? null : MapUser(entity);
     }
 
-    public async Task<UserEntity?> FindByProviderAsync(string authProvider, string providerUserId, CancellationToken cancellationToken)
+    public async Task<UserEntity?> FindByProviderAsync(AuthProvider authProvider, string providerUserId, CancellationToken cancellationToken)
     {
+        var provider = AuthProviderExtensions.ToString(authProvider);
         var entity = await db.Users
             .AsNoTracking()
-            .Where(x => x.AuthProvider == authProvider && x.ProviderUserId == providerUserId && !x.IsDeleted)
+            .Where(x => x.AuthProvider.ToUpper() == provider && x.ProviderUserId == providerUserId && !x.IsDeleted)
             .FirstOrDefaultAsync(cancellationToken);
 
         return entity is null ? null : MapUser(entity);
@@ -37,7 +38,7 @@ public sealed class UserRepository(LendingDbContext db) : IUserRepository
             DisplayName = name,
             Email = email,
             PasswordHash = passwordHash,
-            AuthProvider = "local"
+            AuthProvider = AuthProviderExtensions.ToString(AuthProvider.Local)
         };
 
         db.Users.Add(entity);
@@ -46,14 +47,14 @@ public sealed class UserRepository(LendingDbContext db) : IUserRepository
         return new UserProfile(entity.UserId, entity.DisplayName, entity.Email ?? "");
     }
 
-    public async Task<UserEntity> CreateExternalAsync(string name, string email, string authProvider, string providerUserId, CancellationToken cancellationToken)
+    public async Task<UserEntity> CreateExternalAsync(string name, string email, AuthProvider authProvider, string providerUserId, CancellationToken cancellationToken)
     {
         var entity = new PersistenceUserEntity
         {
             Name = await CreateUniqueNameAsync(email, cancellationToken),
             DisplayName = name,
             Email = email,
-            AuthProvider = authProvider,
+            AuthProvider = AuthProviderExtensions.ToString(authProvider),
             ProviderUserId = providerUserId
         };
 
@@ -63,7 +64,7 @@ public sealed class UserRepository(LendingDbContext db) : IUserRepository
         return MapUser(entity);
     }
 
-    public async Task<UserEntity?> LinkProviderAsync(int userId, string authProvider, string providerUserId, CancellationToken cancellationToken)
+    public async Task<UserEntity?> LinkProviderAsync(int userId, AuthProvider authProvider, string providerUserId, CancellationToken cancellationToken)
     {
         var entity = await db.Users
             .FirstOrDefaultAsync(x => x.UserId == userId && !x.IsDeleted, cancellationToken);
@@ -73,7 +74,7 @@ public sealed class UserRepository(LendingDbContext db) : IUserRepository
             return null;
         }
 
-        entity.AuthProvider = authProvider;
+        entity.AuthProvider = AuthProviderExtensions.ToString(authProvider);
         entity.ProviderUserId = providerUserId;
         entity.UpdatedAt = DateTimeOffset.UtcNow;
 
