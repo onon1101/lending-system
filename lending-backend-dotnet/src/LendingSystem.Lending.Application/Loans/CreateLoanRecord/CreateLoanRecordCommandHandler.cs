@@ -1,0 +1,52 @@
+using LendingSystem.Lending.Application.Abstractions;
+using LendingSystem.Lending.Domain.Loans;
+using LendingSystem.SharedKernel.Application.Common;
+using MediatR;
+
+namespace LendingSystem.Lending.Application.Loans;
+
+internal sealed class CreateLoanRecordCommandHandler(ILoanRepository loans) : IRequestHandler<CreateLoanRecordCommand, Result<CreateLoanRecordResult>>
+{
+    public async Task<Result<CreateLoanRecordResult>> Handle(CreateLoanRecordCommand request, CancellationToken cancellationToken)
+    {
+        var borrowerId = request.BorrowerId;
+        if (borrowerId <= 0)
+        {
+            borrowerId = null;
+        }
+
+        if (request.UserId <= 0 ||
+            request.ItemId <= 0 ||
+            request.StartDate >= request.EndDate ||
+            borrowerId is null && string.IsNullOrWhiteSpace(request.BorrowerName))
+        {
+            return Result<CreateLoanRecordResult>.Failure(LoanErrors.MissingCreateRecordFields());
+        }
+
+        var loan = await loans.CreateRecordAsync(
+            request.UserId,
+            borrowerId,
+            request.BorrowerName,
+            request.ItemId,
+            request.StartDate,
+            request.EndDate,
+            cancellationToken);
+
+        return loan.IsSuccess
+            ? Result<CreateLoanRecordResult>.Success(Map(loan.Data!))
+            : Result<CreateLoanRecordResult>.Failure(loan.Error);
+    }
+
+    private static CreateLoanRecordResult Map(UserLoan loan) => new(
+        loan.OrderId,
+        loan.UserId,
+        loan.OrderStartDate,
+        loan.OrderEndDate,
+        loan.OrderStatus,
+        loan.Items.Select(x => new CreateLoanRecordItemResult(
+            x.ObjectDetailId,
+            x.ObjectId,
+            x.ObjectName,
+            x.DetailStatus,
+            x.ActualReturnDate)).ToArray());
+}

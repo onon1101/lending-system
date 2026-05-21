@@ -30,5 +30,6 @@ public interface ILoanRepository
 
 public interface IMediaRepository
 {
-    Task<MediaAsset> CreateAsync(int? orderId, int objectId, string type, string url, string link, string description, CancellationToken cancellationToken);
+    Task<MediaAsset> CreateItemMediaAsync(int itemId, string type, string url, string link, string description, CancellationToken cancellationToken);
+    Task<MediaAsset> CreateLendingMediaAsync(int orderId, int itemId, string type, string url, string link, string description, CancellationToken cancellationToken);
 }

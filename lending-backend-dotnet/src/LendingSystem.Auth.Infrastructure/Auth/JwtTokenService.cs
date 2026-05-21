@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using LendingSystem.Auth.Application.Abstractions;
+using LendingSystem.Auth.Domain.ValueObjects;
 using LendingSystem.Auth.Domain.Users;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -21,8 +22,8 @@ public sealed class JwtTokenService(IConfiguration configuration) : ITokenServic
         {
             new Claim("id", userEntity.Id.ToString()),
             new Claim(ClaimTypes.NameIdentifier, userEntity.Id.ToString()),
-            new Claim(ClaimTypes.Email, userEntity.EmailEntity.GetEmailStr()),
-            new Claim(ClaimTypes.Role, UserRoleExtensions.ToString(userEntity.Role))
+            new Claim(ClaimTypes.Email, userEntity.Email.GetEmailStr()),
+            new Claim(ClaimTypes.Role, userEntity.Role.Value)
         };
 
         var access = new JwtSecurityToken(

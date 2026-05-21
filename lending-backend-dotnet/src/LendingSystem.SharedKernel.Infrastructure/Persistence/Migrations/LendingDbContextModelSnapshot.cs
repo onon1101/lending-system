@@ -137,7 +137,7 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
                     b.ToTable("items", (string)null);
                 });
 
-            modelBuilder.Entity("LendingSystem.SharedKernel.Infrastructure.Persistence.MediaEntity", b =>
+            modelBuilder.Entity("LendingSystem.SharedKernel.Infrastructure.Persistence.ItemMediaEntity", b =>
                 {
                     b.Property<int>("MediaId")
                         .ValueGeneratedOnAdd()
@@ -160,11 +160,54 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("link");
 
-                    b.Property<int>("ObjectId")
+                    b.Property<int>("ItemId")
                         .HasColumnType("integer")
-                        .HasColumnName("object_id");
+                        .HasColumnName("item_id");
 
-                    b.Property<int?>("OrderId")
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("type");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("url");
+
+                    b.HasKey("MediaId")
+                        .HasName("item_media_pkey");
+
+                    b.HasIndex("ItemId")
+                        .HasDatabaseName("idx_item_media_item_id");
+
+                    b.ToTable("item_media", (string)null);
+                });
+
+            modelBuilder.Entity("LendingSystem.SharedKernel.Infrastructure.Persistence.LendingMediaEntity", b =>
+                {
+                    b.Property<int>("MediaId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("media_id");
+
+                    NpgsqlPropertyBuilderExtensions.UseSerialColumn(b.Property<int>("MediaId"));
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Link")
+                        .HasColumnType("text")
+                        .HasColumnName("link");
+
+                    b.Property<int>("OrderId")
                         .HasColumnType("integer")
                         .HasColumnName("order_id");
 
@@ -180,14 +223,12 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
                         .HasColumnName("url");
 
                     b.HasKey("MediaId")
-                        .HasName("media_pkey");
-
-                    b.HasIndex("ObjectId");
+                        .HasName("lending_media_pkey");
 
                     b.HasIndex("OrderId")
-                        .HasDatabaseName("idx_media_order_id");
+                        .HasDatabaseName("idx_lending_media_order_id");
 
-                    b.ToTable("media", (string)null);
+                    b.ToTable("lending_media", (string)null);
                 });
 
             modelBuilder.Entity("LendingSystem.SharedKernel.Infrastructure.Persistence.OrderEntity", b =>
@@ -347,22 +388,26 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
                     b.Navigation("Owner");
                 });
 
-            modelBuilder.Entity("LendingSystem.SharedKernel.Infrastructure.Persistence.MediaEntity", b =>
+            modelBuilder.Entity("LendingSystem.SharedKernel.Infrastructure.Persistence.ItemMediaEntity", b =>
                 {
                     b.HasOne("LendingSystem.SharedKernel.Infrastructure.Persistence.ItemEntity", "Item")
                         .WithMany("Media")
-                        .HasForeignKey("ObjectId")
-                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_media_item");
+                        .HasConstraintName("fk_item_media_item");
 
+                    b.Navigation("Item");
+                });
+
+            modelBuilder.Entity("LendingSystem.SharedKernel.Infrastructure.Persistence.LendingMediaEntity", b =>
+                {
                     b.HasOne("LendingSystem.SharedKernel.Infrastructure.Persistence.OrderEntity", "Order")
                         .WithMany("Media")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .HasConstraintName("fk_media_order");
-
-                    b.Navigation("Item");
+                        .IsRequired()
+                        .HasConstraintName("fk_lending_media_order");
 
                     b.Navigation("Order");
                 });

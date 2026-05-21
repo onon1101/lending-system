@@ -59,7 +59,7 @@ public sealed class ItemEntity
     public string Material { get; set; } = string.Empty;
 
     public ICollection<OrderEntity> Orders { get; set; } = [];
-    public ICollection<MediaEntity> Media { get; set; } = [];
+    public ICollection<ItemMediaEntity> Media { get; set; } = [];
 }
 
 public sealed class OrderEntity
@@ -73,7 +73,7 @@ public sealed class OrderEntity
     public string Status { get; set; } = "";
     public BorrowerDetailEntity? BorrowerDetail { get; set; }
     public ItemEntity? Item { get; set; }
-    public ICollection<MediaEntity> Media { get; set; } = [];
+    public ICollection<LendingMediaEntity> Media { get; set; } = [];
 }
 
 public sealed class BorrowerDetailEntity 
@@ -96,16 +96,26 @@ public sealed class BorrowerDetailEntity
     public ICollection<OrderEntity> Orders { get; set; } = [];
 }
 
-public sealed class MediaEntity
+public sealed class ItemMediaEntity
 {
     public int MediaId { get; set; }
-    public int? OrderId { get; set; }
-    public int ObjectId { get; set; }
+    public int ItemId { get; set; }
+    public string Type { get; set; } = "";
+    public string Url { get; set; } = "";
+    public string? Link { get; set; }
+    public string? Description { get; set; }
+    public DateTime? CreatedAt { get; set; }
+    public ItemEntity? Item { get; set; }
+}
+
+public sealed class LendingMediaEntity
+{
+    public int MediaId { get; set; }
+    public int OrderId { get; set; }
     public string Type { get; set; } = "";
     public string Url { get; set; } = "";
     public string? Link { get; set; }
     public string? Description { get; set; }
     public DateTime? CreatedAt { get; set; }
     public OrderEntity? Order { get; set; }
-    public ItemEntity? Item { get; set; }
 }

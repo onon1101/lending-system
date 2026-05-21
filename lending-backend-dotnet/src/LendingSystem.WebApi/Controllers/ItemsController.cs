@@ -2,6 +2,7 @@ using LendingSystem.Lending.Application.Items;
 using LendingSystem.Lending.Application.Media;
 using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.WebApi.Models;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -9,12 +10,12 @@ using System.Security.Claims;
 namespace LendingSystem.WebApi.Controllers;
 
 [ApiController]
-public sealed class ItemsController(ItemService items) : ControllerBase
+public sealed class ItemsController(IMediator mediator) : ControllerBase
 {
     [HttpGet("/api/v1/catalog/items")]
     [AllowAnonymous]
-    public async Task<ActionResult<ApiResponse<IReadOnlyCollection<ItemSummaryResponse>>>> GetAll(CancellationToken cancellationToken) =>
-        this.ToActionResult(await items.GetAllAsync(cancellationToken));
+    public async Task<ActionResult<ApiResponse<IReadOnlyCollection<GetAllItemsResult>>>> GetAll(CancellationToken cancellationToken) =>
+        this.ToActionResult(await mediator.Send(new GetAllItemsQuery(), cancellationToken));
 
     /// <summary>
     /// 取得某個使用者所擁有的所有物品
@@ -24,9 +25,9 @@ public sealed class ItemsController(ItemService items) : ControllerBase
     /// <returns></returns>
     [HttpGet("/api/v1/catalog/items/user/{userId:int}")]
     [AllowAnonymous]
-    public async Task<ActionResult<ApiResponse<IReadOnlyCollection<ItemSummaryResponse>>>> GetItemsByUserId(
+    public async Task<ActionResult<ApiResponse<IReadOnlyCollection<GetItemsByUserIdResult>>>> GetItemsByUserId(
         [FromRoute] int userId, CancellationToken cancellationToken)
-        => this.ToActionResult(await items.GetItemsByUserId(userId, cancellationToken));
+        => this.ToActionResult(await mediator.Send(new GetItemsByUserIdQuery(userId), cancellationToken));
 
     /// <summary>
     /// 依照使用者名稱取得該使用者擁有的所有物品
@@ -36,101 +37,101 @@ public sealed class ItemsController(ItemService items) : ControllerBase
     /// <returns></returns>
     [HttpGet("/api/v1/catalog/items/user/{username}")]
     [AllowAnonymous]
-    public async Task<ActionResult<ApiResponse<IReadOnlyCollection<ItemSummaryResponse>>>> GetItemsByUserName(
+    public async Task<ActionResult<ApiResponse<IReadOnlyCollection<GetItemsByUserNameResult>>>> GetItemsByUserName(
         [FromRoute] string username, CancellationToken cancellationToken)
-        => this.ToActionResult(await items.GetItemsByUserName(username, cancellationToken));
+        => this.ToActionResult(await mediator.Send(new GetItemsByUserNameQuery(username), cancellationToken));
         
 
     [HttpPost("/api/v1/catalog/items")]
     [Authorize(Roles = "admin,user")]
-    public async Task<ActionResult<ApiResponse<ItemResponse>>> Create(
-        [FromBody] CreateItemRequest request,
+    public async Task<ActionResult<ApiResponse<CreateItemResult>>> Create(
+        [FromBody] CreateItemCommand command,
         CancellationToken cancellationToken) =>
-        await CreateForCurrentUserAsync(request, null, cancellationToken);
+        await CreateForCurrentUserAsync(command, null, cancellationToken);
 
     [HttpPost("/api/v1/catalog/items/form")]
     [Authorize(Roles = "admin,user")]
     [Consumes("multipart/form-data")]
-    public async Task<ActionResult<ApiResponse<ItemResponse>>> CreateWithForm(
-        [FromForm] CreateItemFormRequest form,
+    public async Task<ActionResult<ApiResponse<CreateItemResult>>> CreateWithForm(
+        [FromForm] CreateItemFormCommand form,
         CancellationToken cancellationToken)
     {
-        var request = new CreateItemRequest(form.ObjectName, form.Maker, form.Material, form.Description);
-        return await CreateForCurrentUserAsync(request, form.Image, cancellationToken);
+        var command = new CreateItemCommand(form.ObjectName, form.Maker, form.Material, form.Description);
+        return await CreateForCurrentUserAsync(command, form.Image, cancellationToken);
     }
 
-    private async Task<ActionResult<ApiResponse<ItemResponse>>> CreateForCurrentUserAsync(
-        CreateItemRequest request,
+    private async Task<ActionResult<ApiResponse<CreateItemResult>>> CreateForCurrentUserAsync(
+        CreateItemCommand command,
         IFormFile? image,
         CancellationToken cancellationToken)
     {
         if (!TryGetUserId(User, out var userId))
         {
-            return this.ApiFailure<ItemResponse>(ControllerApiErrors.TokenInvalid());
+            return this.ApiFailure<CreateItemResult>(ControllerApiErrors.TokenInvalid());
         }
 
         await using var stream = image?.OpenReadStream();
         var fileFormat = image is null ? null : new FileFormat(stream!, image.Length, image.FileName, image.ContentType);
-        var created = await items.CreateAsync(request, userId, fileFormat, cancellationToken);
+        var created = await mediator.Send(command with { UserId = userId, FileFormat = fileFormat }, cancellationToken);
 
         return this.ToCreatedActionResult(created.IsSuccess ? $"/api/v1/catalog/items/{created.Data!.ItemId}" : "", created);
     }
 
     [HttpGet("/api/v1/catalog/items/{objectId:int}")]
-    public async Task<ActionResult<ApiResponse<ItemResponse>>> GetById([FromRoute] int objectId, CancellationToken cancellationToken) =>
-        this.ToActionResult(await items.GetByIdAsync(objectId, cancellationToken));
+    public async Task<ActionResult<ApiResponse<GetItemByIdResult>>> GetById([FromRoute] int objectId, CancellationToken cancellationToken) =>
+        this.ToActionResult(await mediator.Send(new GetItemByIdQuery(objectId), cancellationToken));
 
     [HttpGet("/api/v1/catalog/users/{userId:int}/items/{objectName}")]
-    public async Task<ActionResult<ApiResponse<ItemResponse>>> GetByName(
+    public async Task<ActionResult<ApiResponse<GetItemByNameResult>>> GetByName(
         [FromRoute] int userId,
         [FromRoute] string objectName,
         CancellationToken cancellation) =>
-        this.ToActionResult(await items.GetByNameAsync(userId, objectName, cancellation));
+        this.ToActionResult(await mediator.Send(new GetItemByNameQuery(userId, objectName), cancellation));
 
 
     [HttpPut("/api/v1/catalog/items/{objectId:int}")]
     [Authorize(Roles = "user,admin")]
-    public async Task<ActionResult<ApiResponse<ItemResponse>>> Update([FromRoute] int objectId, [FromBody] UpdateItemRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<UpdateItemResult>>> Update([FromRoute] int objectId, [FromBody] UpdateItemCommand command, CancellationToken cancellationToken)
     {
         if (!TryGetUserId(User, out var userId))
         {
-            return this.ApiFailure<ItemResponse>(ControllerApiErrors.TokenInvalid());
+            return this.ApiFailure<UpdateItemResult>(ControllerApiErrors.TokenInvalid());
         }
 
-        return this.ToActionResult(await items.UpdateAsync(objectId, request, userId, IsAdmin(User), cancellationToken));
+        return this.ToActionResult(await mediator.Send(command with { ItemId = objectId, CurrentUserId = userId, IsAdmin = IsAdmin(User) }, cancellationToken));
     }
 
     [HttpPost("/api/v1/catalog/items/{objectId:int}/image")]
     [Authorize(Roles = "user,admin")]
-    public async Task<ActionResult<ApiResponse<ItemResponse>>> UploadImage([FromRoute] int objectId, IFormFile file, CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<UploadItemImageResult>>> UploadImage([FromRoute] int objectId, IFormFile file, CancellationToken cancellationToken)
     {
         if (!TryGetUserId(User, out var userId))
         {
-            return this.ApiFailure<ItemResponse>(ControllerApiErrors.TokenInvalid());
+            return this.ApiFailure<UploadItemImageResult>(ControllerApiErrors.TokenInvalid());
         }
 
         await using var stream = file.OpenReadStream();
-        return this.ToActionResult(await items.UploadImageAsync(objectId, new FileFormat(stream, file.Length, file.FileName, file.ContentType), userId, IsAdmin(User), cancellationToken));
+        return this.ToActionResult(await mediator.Send(new UploadItemImageCommand(objectId, new FileFormat(stream, file.Length, file.FileName, file.ContentType), userId, IsAdmin(User)), cancellationToken));
     }
 
     [HttpPost("/api/v1/catalog/items/media")]
     [Authorize(Roles = "user,admin")]
-    public async Task<ActionResult<ApiResponse<MediaResponse>>> UploadMedia(CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<UploadItemMediaResult>>> UploadMedia(CancellationToken cancellationToken)
     {
         if (!TryGetUserId(User, out var userId))
         {
-            return this.ApiFailure<MediaResponse>(ControllerApiErrors.TokenInvalid());
+            return this.ApiFailure<UploadItemMediaResult>(ControllerApiErrors.TokenInvalid());
         }
 
         var file = Request.Form.Files["file"];
         if (file is null)
         {
-            return this.ApiFailure<MediaResponse>(ControllerApiErrors.MissingFiles());
+            return this.ApiFailure<UploadItemMediaResult>(ControllerApiErrors.MissingFiles());
         }
 
         if (!int.TryParse(Request.Form["object_id"].ToString(), out var objectId))
         {
-            return this.ApiFailure<MediaResponse>(ControllerApiErrors.MissingField(missingField: "object_id"));
+            return this.ApiFailure<UploadItemMediaResult>(ControllerApiErrors.MissingField(missingField: "object_id"));
         }
 
         var orderIdValue = Request.Form["order_id"].ToString();
@@ -139,7 +140,7 @@ public sealed class ItemsController(ItemService items) : ControllerBase
         {
             if (!int.TryParse(orderIdValue, out var parsedOrderId))
             {
-                return this.ApiFailure<MediaResponse>(ControllerApiErrors.MustBeInteger(missingField: "order_id"));
+                return this.ApiFailure<UploadItemMediaResult>(ControllerApiErrors.MustBeInteger(missingField: "order_id"));
             }
 
             orderId = parsedOrderId;
@@ -147,7 +148,7 @@ public sealed class ItemsController(ItemService items) : ControllerBase
 
         await using var stream = file.OpenReadStream();
 
-        var result = await items.UploadMediaAsync(
+        var result = await mediator.Send(new UploadItemMediaCommand(
             orderId,
             objectId,
             Request.Form["description"].ToString(),
@@ -157,15 +158,15 @@ public sealed class ItemsController(ItemService items) : ControllerBase
             file.FileName,
             file.ContentType,
             userId,
-            IsAdmin(User),
+            IsAdmin(User)),
             cancellationToken);
 
         return this.ToCreatedActionResult($"/api/v1/catalog/items/{objectId}/media", result);
     }
 
     [HttpGet("/api/v1/catalog/items/{objectId:int}/media")]
-    public async Task<ActionResult<ApiResponse<IReadOnlyCollection<ItemMediaResponse>>>> GetMedia([FromRoute] int objectId, CancellationToken cancellationToken) =>
-        this.ToActionResult(await items.GetMediaAsync(objectId, cancellationToken));
+    public async Task<ActionResult<ApiResponse<IReadOnlyCollection<GetItemMediaResult>>>> GetMedia([FromRoute] int objectId, CancellationToken cancellationToken) =>
+        this.ToActionResult(await mediator.Send(new GetItemMediaQuery(objectId), cancellationToken));
 
     private static bool TryGetUserId(ClaimsPrincipal user, out int userId)
     {
@@ -176,7 +177,7 @@ public sealed class ItemsController(ItemService items) : ControllerBase
     private static bool IsAdmin(ClaimsPrincipal user) => user.IsInRole("admin");
 }
 
-public sealed class CreateItemFormRequest
+public sealed class CreateItemFormCommand
 {
     [FromForm(Name = "object_name")]
     public string ObjectName { get; init; } = "";

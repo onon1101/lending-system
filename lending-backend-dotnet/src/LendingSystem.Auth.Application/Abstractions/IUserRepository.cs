@@ -1,3 +1,4 @@
+using LendingSystem.Auth.Domain.ValueObjects;
 using LendingSystem.Auth.Domain.Users;
 
 namespace LendingSystem.Auth.Application.Abstractions;

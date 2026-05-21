@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using LendingSystem.Auth.Domain.ValueObjects;
+using LendingSystem.SharedKernel.Domain.Abstractions;
+using LendingSystem.SharedKernel.Domain.Common;
 
 namespace LendingSystem.Auth.Domain.Users;
 
@@ -14,14 +16,15 @@ namespace LendingSystem.Auth.Domain.Users;
 //     DateTimeOffset CreatedAt,
 //     DateTimeOffset UpdatedAt);
 
-public sealed class UserEntity
+public sealed class UserEntity : Entity, IAggregateRoot
 {
-    private UserEntity(int id, EmailEntity emailEntity, string passwordHash, string username, UserRole role, AuthProvider authProvider, string providerUserId, DateTimeOffset createdAt, DateTimeOffset updatedAt)
+    private UserEntity(int id, Email email, string passwordHash, string username, UserRole role, AuthProvider authProvider, string providerUserId, DateTimeOffset createdAt, DateTimeOffset updatedAt)
     {
         Id = id;
-        EmailEntity = emailEntity;
+        Email = email;
         PasswordHash = passwordHash;
         Username = username;
+        Role = role;
         AuthProvider = authProvider;
         ProviderUserId = providerUserId;
         CreatedAt = createdAt;
@@ -30,7 +33,7 @@ public sealed class UserEntity
 
     public int Id { get; init; }
 
-    public EmailEntity EmailEntity { get; init; }
+    public Email Email { get; init; }
     
     public string PasswordHash { get; init; }
     
@@ -47,6 +50,7 @@ public sealed class UserEntity
     public DateTimeOffset UpdatedAt { get; init; }
 
     public static UserEntity Create(
+        EmailAddressAttribute emailAddressAttribute,
         int id,
         string email,
         string passwordHash,
@@ -57,13 +61,12 @@ public sealed class UserEntity
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt)
     {
-        //todo: 看看能不能塞在 DI container 
-        var emailEntity = EmailEntity.Create(new EmailAddressAttribute(), email);
+        var emailEntity = Email.Create(emailAddressAttribute, email);
         
         return new UserEntity(
             id, emailEntity, passwordHash, name,
-            UserRoleExtensions.FromString(role),
-            AuthProviderExtensions.FromString(authProvider),
+            UserRole.FromString(role),
+            AuthProvider.FromString(authProvider),
             providerUserId ?? string.Empty, createdAt, updatedAt);
     }
 }

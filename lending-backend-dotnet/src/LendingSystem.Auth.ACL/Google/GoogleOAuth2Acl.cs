@@ -1,6 +1,7 @@
 using Google.Apis.Auth;
 using LendingSystem.Auth.Application.Abstractions;
 using LendingSystem.Auth.Application.Auth;
+using LendingSystem.Auth.Domain.ValueObjects;
 using LendingSystem.Auth.Domain.Users;
 using LendingSystem.SharedKernel.Application.Common;
 using Microsoft.Extensions.Configuration;

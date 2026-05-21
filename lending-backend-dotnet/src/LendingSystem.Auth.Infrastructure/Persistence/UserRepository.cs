@@ -1,13 +1,20 @@
 using System.Text;
+using System.ComponentModel.DataAnnotations;
+using Dapper;
 using LendingSystem.Auth.Application.Abstractions;
+using LendingSystem.Auth.Domain.ValueObjects;
 using LendingSystem.Auth.Domain.Users;
+using LendingSystem.SharedKernel.Application.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using LendingDbContext = LendingSystem.SharedKernel.Infrastructure.Persistence.LendingDbContext;
 using PersistenceUserEntity = LendingSystem.SharedKernel.Infrastructure.Persistence.UserEntity;
 
 namespace LendingSystem.Auth.Infrastructure.Persistence;
 
-public sealed class UserRepository(LendingDbContext db) : IUserRepository
+public sealed class UserRepository(
+    LendingDbContext db,
+    EmailAddressAttribute emailAddressAttribute,
+    IQueryConnectionFactory queryConnectionFactory) : IUserRepository
 {
     public async Task<UserEntity?> FindByEmailAsync(string email, CancellationToken cancellationToken)
     {
@@ -21,7 +28,7 @@ public sealed class UserRepository(LendingDbContext db) : IUserRepository
 
     public async Task<UserEntity?> FindByProviderAsync(AuthProvider authProvider, string providerUserId, CancellationToken cancellationToken)
     {
-        var provider = AuthProviderExtensions.ToString(authProvider);
+        var provider = authProvider.Value;
         var entity = await db.Users
             .AsNoTracking()
             .Where(x => x.AuthProvider.ToUpper() == provider && x.ProviderUserId == providerUserId && !x.IsDeleted)
@@ -38,7 +45,7 @@ public sealed class UserRepository(LendingDbContext db) : IUserRepository
             DisplayName = name,
             Email = email,
             PasswordHash = passwordHash,
-            AuthProvider = AuthProviderExtensions.ToString(AuthProvider.Local)
+            AuthProvider = AuthProvider.Local.Value
         };
 
         db.Users.Add(entity);
@@ -54,7 +61,7 @@ public sealed class UserRepository(LendingDbContext db) : IUserRepository
             Name = await CreateUniqueNameAsync(email, cancellationToken),
             DisplayName = name,
             Email = email,
-            AuthProvider = AuthProviderExtensions.ToString(authProvider),
+            AuthProvider = authProvider.Value,
             ProviderUserId = providerUserId
         };
 
@@ -74,7 +81,7 @@ public sealed class UserRepository(LendingDbContext db) : IUserRepository
             return null;
         }
 
-        entity.AuthProvider = AuthProviderExtensions.ToString(authProvider);
+        entity.AuthProvider = authProvider.Value;
         entity.ProviderUserId = providerUserId;
         entity.UpdatedAt = DateTimeOffset.UtcNow;
 
@@ -85,20 +92,38 @@ public sealed class UserRepository(LendingDbContext db) : IUserRepository
 
     public async Task<UserProfile?> GetByIdAsync(int userId, CancellationToken cancellationToken)
     {
-        return await db.Users
-            .AsNoTracking()
-            .Where(x => x.UserId == userId && !x.IsDeleted)
-            .Select(x => new UserProfile(x.UserId, x.DisplayName, x.Email ?? ""))
-            .FirstOrDefaultAsync(cancellationToken);
+        const string sql = """
+            select
+                user_id as UserId,
+                display_name as DisplayName,
+                coalesce(email, '') as Email
+            from users
+            where user_id = @UserId
+              and is_deleted = false;
+            """;
+
+        using var connection = queryConnectionFactory.CreateConnection();
+        return await connection.QuerySingleOrDefaultAsync<UserProfile>(
+            new CommandDefinition(sql, new { UserId = userId }, cancellationToken: cancellationToken));
     }
 
     public async Task<UserProfile?> SearchByNameAsync(string username, CancellationToken cancellationToken)
     {
-        return await db.Users
-            .AsNoTracking()
-            .Where(x => EF.Functions.Like(x.DisplayName, $"%{username}%") && !x.IsDeleted)
-            .Select(x => new UserProfile(x.UserId, x.DisplayName, x.Email ?? ""))
-            .FirstOrDefaultAsync(cancellationToken);
+        const string sql = """
+            select
+                user_id as UserId,
+                display_name as DisplayName,
+                coalesce(email, '') as Email
+            from users
+            where display_name ilike @Pattern
+              and is_deleted = false
+            order by user_id
+            limit 1;
+            """;
+
+        using var connection = queryConnectionFactory.CreateConnection();
+        return await connection.QuerySingleOrDefaultAsync<UserProfile>(
+            new CommandDefinition(sql, new { Pattern = $"%{username}%" }, cancellationToken: cancellationToken));
     }
 
     public async Task<bool> DeleteAsync(int userId, CancellationToken cancellationToken)
@@ -165,7 +190,8 @@ public sealed class UserRepository(LendingDbContext db) : IUserRepository
         return builder.ToString();
     }
 
-    private static UserEntity MapUser(PersistenceUserEntity entity) => UserEntity.Create(
+    private UserEntity MapUser(PersistenceUserEntity entity) => UserEntity.Create(
+        emailAddressAttribute,
         entity.UserId,
         entity.Email ?? "",
         entity.PasswordHash ?? "",

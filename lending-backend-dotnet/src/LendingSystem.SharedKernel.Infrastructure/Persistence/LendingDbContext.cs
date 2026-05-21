@@ -8,7 +8,8 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
     public DbSet<ItemEntity> Items => Set<ItemEntity>();
     public DbSet<OrderEntity> Orders => Set<OrderEntity>();
     public DbSet<BorrowerDetailEntity> BorrowerDetails => Set<BorrowerDetailEntity>();
-    public DbSet<MediaEntity> Media => Set<MediaEntity>();
+    public DbSet<ItemMediaEntity> ItemMedia => Set<ItemMediaEntity>();
+    public DbSet<LendingMediaEntity> LendingMedia => Set<LendingMediaEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -120,14 +121,36 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
-        modelBuilder.Entity<MediaEntity>(entity =>
+        modelBuilder.Entity<ItemMediaEntity>(entity =>
         {
-            entity.ToTable("media");
-            entity.HasKey(x => x.MediaId).HasName("media_pkey");
-            entity.HasIndex(x => x.OrderId).HasDatabaseName("idx_media_order_id");
+            entity.ToTable("item_media");
+            entity.HasKey(x => x.MediaId).HasName("item_media_pkey");
+            entity.HasIndex(x => x.ItemId).HasDatabaseName("idx_item_media_item_id");
             entity.Property(x => x.MediaId).HasColumnName("media_id").ValueGeneratedOnAdd();
-            entity.Property(x => x.OrderId).HasColumnName("order_id");
-            entity.Property(x => x.ObjectId).HasColumnName("object_id").IsRequired();
+            entity.Property(x => x.ItemId).HasColumnName("item_id").IsRequired();
+            entity.Property(x => x.Type).HasColumnName("type").HasMaxLength(20).IsRequired();
+            entity.Property(x => x.Url).HasColumnName("url").IsRequired();
+            entity.Property(x => x.Link).HasColumnName("link");
+            entity.Property(x => x.Description).HasColumnName("description");
+            entity.Property(x => x.CreatedAt)
+                .HasColumnName("created_at")
+                .HasColumnType("timestamp without time zone")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .ValueGeneratedOnAdd();
+            entity.HasOne(x => x.Item)
+                .WithMany(x => x.Media)
+                .HasForeignKey(x => x.ItemId)
+                .HasConstraintName("fk_item_media_item")
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<LendingMediaEntity>(entity =>
+        {
+            entity.ToTable("lending_media");
+            entity.HasKey(x => x.MediaId).HasName("lending_media_pkey");
+            entity.HasIndex(x => x.OrderId).HasDatabaseName("idx_lending_media_order_id");
+            entity.Property(x => x.MediaId).HasColumnName("media_id").ValueGeneratedOnAdd();
+            entity.Property(x => x.OrderId).HasColumnName("order_id").IsRequired();
             entity.Property(x => x.Type).HasColumnName("type").HasMaxLength(20).IsRequired();
             entity.Property(x => x.Url).HasColumnName("url").IsRequired();
             entity.Property(x => x.Link).HasColumnName("link");
@@ -140,13 +163,8 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
             entity.HasOne(x => x.Order)
                 .WithMany(x => x.Media)
                 .HasForeignKey(x => x.OrderId)
-                .HasConstraintName("fk_media_order")
+                .HasConstraintName("fk_lending_media_order")
                 .OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne(x => x.Item)
-                .WithMany(x => x.Media)
-                .HasForeignKey(x => x.ObjectId)
-                .HasConstraintName("fk_media_item")
-                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

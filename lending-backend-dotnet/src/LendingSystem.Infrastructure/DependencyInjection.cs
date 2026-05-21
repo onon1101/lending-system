@@ -1,10 +1,9 @@
+using System.ComponentModel.DataAnnotations;
 using LendingSystem.Auth.ACL.Google;
 using LendingSystem.Auth.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.Auth.Application.Auth;
 using LendingSystem.Lending.Application.Items;
-using LendingSystem.Lending.Application.Loans;
-using LendingSystem.Lending.Application.Media;
 using LendingSystem.SharedKernel.Application.System;
 using LendingSystem.Auth.Infrastructure.Auth;
 using LendingSystem.Auth.Infrastructure.Persistence;
@@ -12,8 +11,11 @@ using LendingSystem.Lending.Application.Abstractions;
 using LendingSystem.Lending.Infrastructure.Persistence;
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using LendingSystem.Lending.Infrastructure.Storage;
+using LendingSystem.Infrastructure.Messaging;
+using LendingSystem.SharedKernel.Infrastructure.Messaging;
 using LendingSystem.SharedKernel.Infrastructure.Time;
 using LendingSystem.Lending.Infrastructure.Video;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,10 +30,13 @@ public static class DependencyInjection
     {
         public IServiceCollection AddApplication()
         {
-            services.AddScoped<AuthService>();
-            services.AddScoped<ItemService>();
-            services.AddScoped<LoanService>();
-            services.AddScoped<MediaService>();
+            services.AddMediatR(configuration =>
+            {
+                configuration.RegisterServicesFromAssemblies(
+                    typeof(LoginCommand).Assembly,
+                    typeof(GetAllItemsQuery).Assembly,
+                    typeof(SystemStatusService).Assembly);
+            });
             services.AddScoped<SystemStatusService>();
             return services;
         }
@@ -44,13 +49,17 @@ public static class DependencyInjection
             services.AddScoped<IItemRepository, ItemRepository>();
             services.AddScoped<ILoanRepository, LoanRepository>();
             services.AddScoped<IMediaRepository, MediaRepository>();
+            services.AddScoped<IQueryConnectionFactory, PostgresQueryConnectionFactory>();
             services.AddScoped<IDatabaseHealthCheck, PostgresHealthCheck>();
+            services.AddSingleton<IMessageQueue, InMemoryMessageQueue>();
+            services.AddTransient(typeof(IPipelineBehavior<,>), typeof(CommandMessageQueueBehavior<,>));
 
-        services.AddSingleton<IClock, SystemClock>();
-        services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
-        services.AddSingleton<ITokenService, JwtTokenService>();
-        services.AddSingleton<IGoogleOAuth2Acl, GoogleOAuth2Acl>();
-        services.AddSingleton<IVideoDownloadClient, GrpcVideoDownloadClient>();
+            services.AddSingleton<IClock, SystemClock>();
+            services.AddSingleton<EmailAddressAttribute>();
+            services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
+            services.AddSingleton<ITokenService, JwtTokenService>();
+            services.AddSingleton<IGoogleOAuth2Acl, GoogleOAuth2Acl>();
+            services.AddSingleton<IVideoDownloadClient, GrpcVideoDownloadClient>();
 
             services.AddSingleton<IMinioClient>(_ =>
             {

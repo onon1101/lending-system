@@ -2,24 +2,41 @@ using LendingSystem.Lending.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.Lending.Domain.Items;
 using LendingSystem.Lending.Domain.Loans;
+using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
+using Dapper;
 using Microsoft.EntityFrameworkCore;
 
 namespace LendingSystem.Lending.Infrastructure.Persistence;
 
-public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
+public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory queryConnectionFactory) : ILoanRepository
 {
     public async Task<IReadOnlyCollection<UserLoan>> GetActiveLoansByUserIdAsync(int userId, CancellationToken cancellationToken)
     {
-        var orders = await db.Orders
-            .AsNoTracking()
-            .Include(x => x.Item)
-            .Include(x => x.BorrowerDetail)
-            .Where(x => x.BorrowerDetail != null && x.BorrowerDetail.UserId == userId && x.Status == LoanStatuses.OnLoan)
-            .OrderBy(x => x.OrderId)
-            .ToArrayAsync(cancellationToken);
+        const string sql = """
+            select
+                o.order_id as OrderId,
+                coalesce(bd.user_id, 0) as UserId,
+                o.start_date as OrderStartDate,
+                o.end_date as OrderEndDate,
+                o.status as OrderStatus,
+                o.order_id as ObjectDetailId,
+                o.item_id as ObjectId,
+                coalesce(i.object_name, '') as ObjectName,
+                o.status as DetailStatus,
+                o.actual_return_date as ActualReturnDate
+            from orders o
+            join borrower_details bd on bd.borrower_detail_id = o.borrower_detail_id
+            left join items i on i.item_id = o.item_id
+            where bd.user_id = @UserId
+              and o.status = @Status
+            order by o.order_id;
+            """;
 
-        return orders.Select(Map).ToArray();
+        using var connection = queryConnectionFactory.CreateConnection();
+        var rows = await connection.QueryAsync<UserLoanRow>(
+            new CommandDefinition(sql, new { UserId = userId, Status = LoanStatuses.OnLoan }, cancellationToken: cancellationToken));
+        return rows.Select(Map).ToArray();
     }
 
     public async Task<Result<UserLoan>> CreateAsync(int? borrowerId, string? borrowerName, IReadOnlyCollection<int> itemIds, int durationDays, CancellationToken cancellationToken)
@@ -225,40 +242,64 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
 
     public async Task<IReadOnlyCollection<LoanRecord>> GetHistoryByItemIdAsync(int itemId, CancellationToken cancellationToken)
     {
-        var itemExists = await db.Items
-            .AsNoTracking()
-            .AnyAsync(x => x.ItemId == itemId, cancellationToken);
+        const string existsSql = """
+            select exists (
+                select 1
+                from items
+                where item_id = @ItemId
+            );
+            """;
+        const string sql = """
+            select
+                o.order_id as OrderId,
+                o.start_date as StartDate,
+                o.end_date as EndDate,
+                bd.borrower_name as Name,
+                o.status as Status
+            from orders o
+            left join borrower_details bd on bd.borrower_detail_id = o.borrower_detail_id
+            where o.item_id = @ItemId
+            order by o.start_date desc;
+            """;
+
+        using var connection = queryConnectionFactory.CreateConnection();
+        var itemExists = await connection.ExecuteScalarAsync<bool>(
+            new CommandDefinition(existsSql, new { ItemId = itemId }, cancellationToken: cancellationToken));
         if (!itemExists)
         {
             return [];
         }
 
-        var records = await db.Orders
-            .AsNoTracking()
-            .Include(x => x.BorrowerDetail)
-            .Where(x => x.ObjectId == itemId)
-            .OrderByDescending(x => x.StartDate)
-            .Select(x => new LoanRecord(
-                x.OrderId,
-                x.StartDate,
-                x.EndDate,
-                x.BorrowerDetail == null ? null : x.BorrowerDetail.BorrowerName,
-                x.Status))
-            .ToArrayAsync(cancellationToken);
+        var records = (await connection.QueryAsync<LoanRecord>(
+            new CommandDefinition(sql, new { ItemId = itemId }, cancellationToken: cancellationToken))).ToArray();
 
         return records.Length == 0 ? [new LoanRecord(null, null, null, null, null)] : records;
     }
 
     private async Task<UserLoan?> GetByOrderIdAsync(int orderId, CancellationToken cancellationToken)
     {
-        var order = await db.Orders
-            .AsNoTracking()
-            .Include(x => x.Item)
-            .Include(x => x.BorrowerDetail)
-            .Where(x => x.OrderId == orderId)
-            .FirstOrDefaultAsync(cancellationToken);
+        const string sql = """
+            select
+                o.order_id as OrderId,
+                coalesce(bd.user_id, 0) as UserId,
+                o.start_date as OrderStartDate,
+                o.end_date as OrderEndDate,
+                o.status as OrderStatus,
+                o.order_id as ObjectDetailId,
+                o.item_id as ObjectId,
+                coalesce(i.object_name, '') as ObjectName,
+                o.status as DetailStatus,
+                o.actual_return_date as ActualReturnDate
+            from orders o
+            left join borrower_details bd on bd.borrower_detail_id = o.borrower_detail_id
+            left join items i on i.item_id = o.item_id
+            where o.order_id = @OrderId;
+            """;
 
-        return order is null ? null : Map(order);
+        using var connection = queryConnectionFactory.CreateConnection();
+        var row = await connection.QuerySingleOrDefaultAsync<UserLoanRow>(
+            new CommandDefinition(sql, new { OrderId = orderId }, cancellationToken: cancellationToken));
+        return row is null ? null : Map(row);
     }
 
     private async Task<Result<BorrowerDetailEntity>> GetOrCreateBorrowerDetailAsync(
@@ -308,20 +349,32 @@ public sealed class LoanRepository(LendingDbContext db) : ILoanRepository
         return Result<BorrowerDetailEntity>.Success(detail);
     }
 
-    private static UserLoan Map(OrderEntity order) => new(
-        order.OrderId,
-        order.BorrowerDetail?.UserId ?? 0,
-        order.StartDate,
-        order.EndDate,
-        order.Status,
+    private static UserLoan Map(UserLoanRow row) => new(
+        row.OrderId,
+        row.UserId,
+        row.OrderStartDate,
+        row.OrderEndDate,
+        row.OrderStatus,
         [
             new LoanItemDetail(
-                order.OrderId,
-                order.ObjectId,
-                order.Item?.ObjectName ?? "",
-                order.Status,
-                order.ActualReturnDate)
+                row.ObjectDetailId,
+                row.ObjectId,
+                row.ObjectName,
+                row.DetailStatus,
+                row.ActualReturnDate)
         ]);
 
     private static DateOnly Today() => DateOnly.FromDateTime(DateTimeOffset.UtcNow.UtcDateTime);
+
+    private sealed record UserLoanRow(
+        int OrderId,
+        int UserId,
+        DateOnly OrderStartDate,
+        DateOnly OrderEndDate,
+        string OrderStatus,
+        int ObjectDetailId,
+        int ObjectId,
+        string ObjectName,
+        string DetailStatus,
+        DateOnly? ActualReturnDate);
 }

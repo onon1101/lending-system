@@ -1,24 +1,25 @@
 using LendingSystem.Lending.Application.Media;
 using LendingSystem.WebApi.Models;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LendingSystem.WebApi.Controllers;
 
 [ApiController]
-public sealed class MediaController(MediaService media) : ControllerBase
+public sealed class MediaController(IMediator mediator) : ControllerBase
 {
     [HttpPost("/api/v1/media/private")]
-    public async Task<ActionResult<ApiResponse<MediaResponse>>> UploadPrivate(CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<UploadPrivateMediaResult>>> UploadPrivate(CancellationToken cancellationToken)
     {
         var file = Request.Form.Files["file"];
         if (file is null)
         {
-            return this.ApiFailure<MediaResponse>(ControllerApiErrors.MissingFiles());
+            return this.ApiFailure<UploadPrivateMediaResult>(ControllerApiErrors.MissingFiles());
         }
 
         if (!int.TryParse(Request.Form["object_id"].ToString(), out var objectId))
         {
-            return this.ApiFailure<MediaResponse>(ControllerApiErrors.MissingField("object_id"));
+            return this.ApiFailure<UploadPrivateMediaResult>(ControllerApiErrors.MissingField("object_id"));
         }
 
         var orderIdValue = Request.Form["order_id"].ToString();
@@ -27,7 +28,7 @@ public sealed class MediaController(MediaService media) : ControllerBase
         {
             if (!int.TryParse(orderIdValue, out var parsedOrderId))
             {
-                return this.ApiFailure<MediaResponse>(ControllerApiErrors.MustBeInteger("order_id"));
+                return this.ApiFailure<UploadPrivateMediaResult>(ControllerApiErrors.MustBeInteger("order_id"));
             }
 
             orderId = parsedOrderId;
@@ -35,7 +36,7 @@ public sealed class MediaController(MediaService media) : ControllerBase
 
         await using var stream = file.OpenReadStream();
 
-        var result = await media.UploadPrivateAsync(
+        var result = await mediator.Send(new UploadPrivateMediaCommand(
             orderId,
             objectId,
             Request.Form["description"].ToString(),
@@ -43,7 +44,7 @@ public sealed class MediaController(MediaService media) : ControllerBase
             stream,
             file.Length,
             file.FileName,
-            file.ContentType,
+            file.ContentType),
             cancellationToken);
 
         return this.ToCreatedActionResult("/api/v1/media/private", result);
