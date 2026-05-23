@@ -5,8 +5,8 @@ namespace LendingSystem.Lending.Domain.Aggregate.Loans;
 public sealed class Loan : Entity
 {
     private Loan(
-        int orderId,
-        int itemId,
+        long orderId,
+        long itemId,
         DateOnly startDate,
         DateOnly endDate,
         DateOnly? actualReturnDate,
@@ -20,22 +20,22 @@ public sealed class Loan : Entity
         Status = status;
     }
 
-    public int OrderId { get; }
-    public int ItemId { get; }
+    public long OrderId { get; }
+    public long ItemId { get; }
     public DateOnly StartDate { get; private set; }
     public DateOnly EndDate { get; private set; }
     public DateOnly? ActualReturnDate { get; private set; }
     public string Status { get; private set; }
 
-    public static Loan Create(int itemId, DateOnly startDate, DateOnly endDate) =>
+    public static Loan Create(long itemId, DateOnly startDate, DateOnly endDate) =>
         new(0, itemId, startDate, endDate, null, LoanStatuses.OnLoan);
 
-    public static Loan CreateRequest(int itemId, DateOnly startDate, DateOnly endDate) =>
+    public static Loan CreateRequest(long itemId, DateOnly startDate, DateOnly endDate) =>
         new(0, itemId, startDate, endDate, null, LoanStatuses.Requested);
 
     public static Loan Rehydrate(
-        int orderId,
-        int itemId,
+        long orderId,
+        long itemId,
         DateOnly startDate,
         DateOnly endDate,
         DateOnly? actualReturnDate,

@@ -10,16 +10,16 @@ public static class MediaTypes
 }
 
 public sealed record MediaAsset(
-    int MediaId,
-    int? OrderId,
-    int ObjectId,
+    long MediaId,
+    long? OrderId,
+    long ObjectId,
     string Type,
     string Description,
     string Url,
     string Link,
     DateTimeOffset CreatedAt)
 {
-    public int ItemId => ObjectId;
+    public long ItemId => ObjectId;
 
     public static MediaAsset FromItemMedia(ItemMedia media) => new(
         media.MediaId,
@@ -31,7 +31,7 @@ public sealed record MediaAsset(
         media.Link ?? "",
         media.CreatedAt);
 
-    public static MediaAsset FromLendingMedia(LoanMedia media, int itemId) => new(
+    public static MediaAsset FromLendingMedia(LoanMedia media, long itemId) => new(
         media.MediaId,
         media.OrderId,
         itemId,

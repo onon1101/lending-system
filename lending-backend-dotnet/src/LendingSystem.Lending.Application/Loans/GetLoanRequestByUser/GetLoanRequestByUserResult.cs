@@ -4,7 +4,7 @@ using LendingSystem.SharedKernel.Application.Common;
 namespace LendingSystem.Lending.Application.Loans.GetLoanRequestByUser;
 
 public sealed record GetLoanRequestByUserResult(
-    [property: JsonIgnore] int OrderId,
+    [property: JsonIgnore] long OrderId,
     [property: JsonPropertyName("item_name")] string ItemName,
     [property: JsonPropertyName("borrower_name")] string BorrowerName,
     [property: JsonPropertyName("borrower_username")] string BorrowerUsername,

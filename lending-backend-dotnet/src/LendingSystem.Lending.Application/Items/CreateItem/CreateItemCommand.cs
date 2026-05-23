@@ -14,7 +14,7 @@ public sealed record CreateItemCommand(
     [property: JsonPropertyName("description")] string Description) : ICommand<CreateItemResult>
 {
     [JsonIgnore]
-    public int UserId { get; init; }
+    public long UserId { get; init; }
 
     [JsonIgnore]
     public FileFormat? FileFormat { get; init; }

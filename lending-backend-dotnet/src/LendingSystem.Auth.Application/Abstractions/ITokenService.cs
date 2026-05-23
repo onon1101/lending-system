@@ -4,5 +4,5 @@ public sealed record TokenPair(string AccessToken, string RefreshToken);
 
 public interface ITokenService
 {
-    TokenPair Generate(int userId, string username, string email, string role);
+    TokenPair Generate(long userId, string username, string email, string role);
 }

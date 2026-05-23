@@ -4,15 +4,15 @@ using LendingSystem.SharedKernel.Application.Common;
 namespace LendingSystem.Lending.Application.Loans;
 
 public sealed record ReturnLoanItemDetailResult(
-    [property: JsonIgnore] int ObjectDetailId,
-    [property: JsonIgnore] int ObjectId,
+    [property: JsonIgnore] long ObjectDetailId,
+    [property: JsonIgnore] long ObjectId,
     [property: JsonPropertyName("object_name")] string ObjectName,
     [property: JsonPropertyName("detail_status")] string DetailStatus,
     [property: JsonPropertyName("actual_return_date")] DateOnly? ActualReturnDate);
 
 public sealed record ReturnLoanItemResult(
-    [property: JsonIgnore] int OrderId,
-    [property: JsonIgnore] int UserId,
+    [property: JsonIgnore] long OrderId,
+    [property: JsonIgnore] long UserId,
     [property: JsonPropertyName("start_date")] DateOnly OrderStartDate,
     [property: JsonPropertyName("end_date")] DateOnly OrderEndDate,
     [property: JsonPropertyName("order_status")] string OrderStatus,

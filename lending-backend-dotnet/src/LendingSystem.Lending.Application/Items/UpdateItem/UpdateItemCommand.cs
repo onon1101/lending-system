@@ -13,7 +13,7 @@ public sealed record UpdateItemCommand(
     [property: JsonPropertyName("image_url")] string? ImageUrl) : ICommand<UpdateItemResult>
 {
     [JsonIgnore]
-    public int ItemId { get; init; }
+    public long ItemId { get; init; }
 
     [JsonIgnore]
     public string OwnerUsername { get; init; } = "";
@@ -22,7 +22,7 @@ public sealed record UpdateItemCommand(
     public string OriginalObjectName { get; init; } = "";
 
     [JsonIgnore]
-    public int CurrentUserId { get; init; }
+    public long CurrentUserId { get; init; }
 
     [JsonIgnore]
     public bool IsAdmin { get; init; }

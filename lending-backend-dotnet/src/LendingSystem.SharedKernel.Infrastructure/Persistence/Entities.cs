@@ -2,17 +2,15 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence;
 
 public sealed class UserEntity
 {
-    public int UserId { get; init; }
+    public long UserId { get; init; }
     public required string Name { get; init; }
-    public string DisplayName { get; set; } = "";
-    public string? Email { get; set; }
-    public string? PasswordHash { get; set; }
+    public string? Email { get; init; }
+    public string? PasswordHash { get; init; }
     public string AuthProvider { get; set; } = "LOCAL";
     public string? ProviderUserId { get; set; }
     public bool IsDeleted { get; set; }
-    // public string? Nickname { get; set; }
-    public string Role { get; set; } = "user"; // user or admin 
-    public DateTimeOffset? CreatedAt { get; set; }
+    public string Role { get; init; } = "user"; // user or admin 
+    public DateTimeOffset? CreatedAt { get; init; }
     public DateTimeOffset? UpdatedAt { get; set; }
 }
 
@@ -27,12 +25,12 @@ public sealed class ItemEntity
     /// <summary>
     /// Pk
     /// </summary>
-    public int ItemId { get; set; }
+    public long ItemId { get; set; }
 
     /// <summary>
     /// 物品所屬者 Id
     /// </summary>
-    public int OwnerId { get; set; }
+    public long OwnerId { get; set; }
 
     /// <summary>
     /// 物品名稱
@@ -64,9 +62,9 @@ public sealed class ItemEntity
 
 public sealed class OrderEntity
 {
-    public int OrderId { get; set; }
-    public int BorrowerDetailId { get; set; }
-    public int ObjectId { get; set; }
+    public long OrderId { get; set; }
+    public long BorrowerDetailId { get; set; }
+    public long ObjectId { get; set; }
     public DateOnly StartDate { get; set; }
     public DateOnly EndDate { get; set; }
     public DateOnly? ActualReturnDate { get; set; }
@@ -78,14 +76,14 @@ public sealed class OrderEntity
 
 public sealed class BorrowerDetailEntity 
 {
-    public int BorrowerDetailId { get; set; }
+    public long BorrowerDetailId { get; set; }
     /// <summary>
     /// 借閱者的Id
     /// </summary>
     /// <remarks>
     /// 如果借閱者為系統已註冊的使用者，則此帶入 UserId，否則為空。
     /// </remarks>
-    public int? UserId { get; set; }
+    public long? UserId { get; set; }
     public string BorrowerName { get; set; } = string.Empty;
     public string Link { get; set; } = string.Empty;
     public string CreatedBy { get; set; } = string.Empty;
@@ -98,8 +96,8 @@ public sealed class BorrowerDetailEntity
 
 public sealed class ItemMediaEntity
 {
-    public int MediaId { get; set; }
-    public int ItemId { get; set; }
+    public long MediaId { get; set; }
+    public long ItemId { get; set; }
     public string Type { get; set; } = "";
     public string Url { get; set; } = "";
     public string? Link { get; set; }
@@ -110,8 +108,8 @@ public sealed class ItemMediaEntity
 
 public sealed class LendingMediaEntity
 {
-    public int MediaId { get; set; }
-    public int OrderId { get; set; }
+    public long MediaId { get; set; }
+    public long OrderId { get; set; }
     public string Type { get; set; } = "";
     public string Url { get; set; } = "";
     public string? Link { get; set; }

@@ -7,5 +7,5 @@ public sealed record UploadItemImageCommand(
     string OwnerUsername,
     string ObjectName,
     FileFormat FileFormat,
-    int CurrentUserId,
+    long CurrentUserId,
     bool IsAdmin) : ICommand<UploadItemImageResult>;

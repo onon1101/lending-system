@@ -10,7 +10,7 @@ namespace LendingSystem.Lending.Infrastructure.Persistence;
 
 public sealed class ItemRepository(LendingDbContext db, IQueryConnectionFactory queryConnectionFactory, IPublisher publisher) : IItemCommandRepository, IItemQueryRepository
 {
-    public async Task<Item> CreateAsync(int userId, string objectName, string maker, string material, string description, string imageUrl, CancellationToken cancellationToken)
+    public async Task<Item> CreateAsync(long userId, string objectName, string maker, string material, string description, string imageUrl, CancellationToken cancellationToken)
     {
         var aggregate = ItemAggregate.Create(userId, objectName, maker, material, description, imageUrl);
         var domainEvent = aggregate.DomainEvents.OfType<ItemCreatedDomainEvent>().Single();
@@ -21,7 +21,7 @@ public sealed class ItemRepository(LendingDbContext db, IQueryConnectionFactory 
             ?? throw new InvalidOperationException("Item was not persisted by domain event handlers.");
     }
 
-    public async Task<Item?> GetByIdAsync(int itemId, CancellationToken cancellationToken)
+    public async Task<Item?> GetByIdAsync(long itemId, CancellationToken cancellationToken)
     {
         const string sql = """
             select
@@ -42,7 +42,7 @@ public sealed class ItemRepository(LendingDbContext db, IQueryConnectionFactory 
             new CommandDefinition(sql, new { ItemId = itemId }, cancellationToken: cancellationToken));
     }
 
-    public async Task<Item?> GetByIdForCommandAsync(int itemId, CancellationToken cancellationToken)
+    public async Task<Item?> GetByIdForCommandAsync(long itemId, CancellationToken cancellationToken)
     {
         var entity = await db.Items
             .AsNoTracking()
@@ -51,7 +51,7 @@ public sealed class ItemRepository(LendingDbContext db, IQueryConnectionFactory 
         return entity is null ? null : Map(entity);
     }
 
-    public async Task<Item?> GetByNameAsync(int userId, string itemName, CancellationToken cancellation)
+    public async Task<Item?> GetByNameAsync(long userId, string itemName, CancellationToken cancellation)
     {
         const string sql = """
             select
@@ -109,7 +109,7 @@ public sealed class ItemRepository(LendingDbContext db, IQueryConnectionFactory 
                 coalesce(i.description, '') as Description,
                 coalesce(i.current_status, '') as CurrentStatus,
                 u.name as OwnerUsername,
-                u.display_name as OwnerName,
+                u.name as OwnerName,
                 u.email as OwnerEmail,
                 i.image_url as ImageUrl
             from items i
@@ -123,7 +123,7 @@ public sealed class ItemRepository(LendingDbContext db, IQueryConnectionFactory 
         return items.ToArray();
     }
 
-    public async Task<IReadOnlyCollection<ItemSummary>?> GetItemsByUserId(int userId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<ItemSummary>?> GetItemsByUserId(long userId, CancellationToken cancellationToken)
     {
         const string existsSql = """
             select exists (
@@ -143,7 +143,7 @@ public sealed class ItemRepository(LendingDbContext db, IQueryConnectionFactory 
                 coalesce(i.description, '') as Description,
                 coalesce(i.current_status, '') as CurrentStatus,
                 u.name as OwnerUsername,
-                u.display_name as OwnerName,
+                u.name as OwnerName,
                 u.email as OwnerEmail,
                 i.image_url as ImageUrl
             from items i
@@ -185,7 +185,7 @@ public sealed class ItemRepository(LendingDbContext db, IQueryConnectionFactory 
                 coalesce(i.description, '') as Description,
                 coalesce(i.current_status, '') as CurrentStatus,
                 u.name as OwnerUsername,
-                u.display_name as OwnerName,
+                u.name as OwnerName,
                 u.email as OwnerEmail,
                 i.image_url as ImageUrl
             from users u
@@ -209,7 +209,7 @@ public sealed class ItemRepository(LendingDbContext db, IQueryConnectionFactory 
         return rows;
     }
 
-    public async Task<Item?> UpdateAsync(int itemId, string? objectName, string? maker, string? material, string? description, string? currentStatus, string? imageUrl, CancellationToken cancellationToken)
+    public async Task<Item?> UpdateAsync(long itemId, string? objectName, string? maker, string? material, string? description, string? currentStatus, string? imageUrl, CancellationToken cancellationToken)
     {
         var entity = await db.Items
             .FirstOrDefaultAsync(x => x.ItemId == itemId, cancellationToken);
@@ -253,7 +253,7 @@ public sealed class ItemRepository(LendingDbContext db, IQueryConnectionFactory 
         return Map(entity);
     }
 
-    public async Task<IReadOnlyCollection<ItemMediaSummary>> GetMediaByItemIdAsync(int itemId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<ItemMediaSummary>> GetMediaByItemIdAsync(long itemId, CancellationToken cancellationToken)
     {
         const string sql = """
             select
@@ -270,7 +270,7 @@ public sealed class ItemRepository(LendingDbContext db, IQueryConnectionFactory 
 
             select
                 lm.type as Type,
-                coalesce(u.display_name, bd.borrower_name) as Creator,
+                coalesce(u.name, bd.borrower_name) as Creator,
                 coalesce(lm.description, '') as Description,
                 coalesce(lm.link, '') as OriginalLink,
                 lm.url as Media,
@@ -295,7 +295,7 @@ public sealed class ItemRepository(LendingDbContext db, IQueryConnectionFactory 
             ToDateTimeOffset(x.CreatedAt))).ToArray();
     }
 
-    public async Task<int?> GetUserIdByUsernameAsync(string username, CancellationToken cancellationToken)
+    public async Task<long?> GetUserIdByUsernameAsync(string username, CancellationToken cancellationToken)
     {
         const string sql = """
             select user_id

@@ -14,5 +14,5 @@ public sealed record UploadItemMediaCommand(
     long Size,
     string FileName,
     string ContentType,
-    int CurrentUserId,
+    long CurrentUserId,
     bool IsAdmin) : ICommand<UploadItemMediaResult>;

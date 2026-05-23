@@ -27,29 +27,29 @@ public static class LoanStatuses
 }
 
 public sealed record LoanItemDetail(
-    int ObjectDetailId,
-    int ObjectId,
+    long ObjectDetailId,
+    long ObjectId,
     string ObjectName,
     string DetailStatus,
     DateOnly? ActualReturnDate);
 
 public sealed record UserLoan(
-    int OrderId,
-    int UserId,
+    long OrderId,
+    long UserId,
     DateOnly OrderStartDate,
     DateOnly OrderEndDate,
     string OrderStatus,
     IReadOnlyCollection<LoanItemDetail> Items);
 
 public sealed record LoanRecord(
-    int? OrderId,
+    long? OrderId,
     DateOnly? StartDate,
     DateOnly? EndDate,
     string? Name,
     string? Status);
 
 public sealed record LoanRequestRecord(
-    int OrderId,
+    long OrderId,
     string ItemName,
     string BorrowerName,
     string BorrowerUsername,
@@ -70,7 +70,7 @@ public static class LoanDomainError
     /// <summary>
     /// 查無借閱紀錄
     /// </summary>
-    public static DomainErrors LoanRecordNotFound(int orderId) =>
+    public static DomainErrors LoanRecordNotFound(long orderId) =>
         new("LOAN_ISSUE",
             $"Loan record {orderId} was not found.",
             "Loan record was not found.");
@@ -78,7 +78,7 @@ public static class LoanDomainError
     /// <summary>
     /// 物品不屬於使用者
     /// </summary>
-    public static DomainErrors ItemDoesNotBelongToOwner(int itemId, int ownerId) =>
+    public static DomainErrors ItemDoesNotBelongToOwner(long itemId, long ownerId) =>
         new("ITEM_ISSUE",
             $"Item {itemId} doesn't belong to owner {ownerId}",
             "Some item issue");
@@ -90,8 +90,8 @@ public sealed class LoansAggregate : Entity, IAggregateRoot
     private readonly List<LoanMedia> _media;
 
     private LoansAggregate(
-        int borrowerDetailId,
-        int? borrowerUserId,
+        long borrowerDetailId,
+        long? borrowerUserId,
         string borrowerName,
         IEnumerable<Loan> loans,
         IEnumerable<LoanMedia>? media)
@@ -103,23 +103,23 @@ public sealed class LoansAggregate : Entity, IAggregateRoot
         _media = media?.ToList() ?? [];
     }
 
-    public int BorrowerDetailId { get; }
-    public int? BorrowerUserId { get; }
+    public long BorrowerDetailId { get; }
+    public long? BorrowerUserId { get; }
     public string BorrowerName { get; }
     public IReadOnlyCollection<Loan> LoanEntries => _loans.AsReadOnly();
     public IReadOnlyCollection<LoanMedia> Media => _media.AsReadOnly();
 
     public static LoansAggregate Rehydrate(
-        int borrowerDetailId,
-        int? borrowerUserId,
+        long borrowerDetailId,
+        long? borrowerUserId,
         string borrowerName,
         IEnumerable<Loan> loans,
         IEnumerable<LoanMedia>? media = null) =>
         new(borrowerDetailId, borrowerUserId, borrowerName, loans, media);
 
     public static LoansAggregate Create(
-        int borrowerDetailId,
-        int? borrowerUserId,
+        long borrowerDetailId,
+        long? borrowerUserId,
         string borrowerName,
         IEnumerable<Loan> loans)
     {
@@ -133,12 +133,12 @@ public sealed class LoansAggregate : Entity, IAggregateRoot
     }
 
     public static LoansAggregate Create(
-        int borrowerDetailId,
-        int itemOwnerId,
+        long borrowerDetailId,
+        long itemOwnerId,
         string itemOwnerName,
-        int borrowerUserId,
+        long borrowerUserId,
         string borrowerName,
-        int itemId,
+        long itemId,
         string itemName,
         DateOnly startDate,
         DateOnly endDate,
@@ -180,30 +180,30 @@ public sealed class LoansAggregate : Entity, IAggregateRoot
     }
 }
 
-public sealed class LoanCreatedDomainEvent(int borrowerDetailId, Loan loan) : IDomainEvent
+public sealed class LoanCreatedDomainEvent(long borrowerDetailId, Loan loan) : IDomainEvent
 {
     public Guid Id { get; } = Guid.NewGuid();
     public DateTime OccurredOn { get; } = DateTime.UtcNow;
-    public int BorrowerDetailId { get; } = borrowerDetailId;
+    public long BorrowerDetailId { get; } = borrowerDetailId;
     public Loan Loan { get; } = loan;
     public UserLoan? CreatedLoan { get; set; }
 }
 
 public sealed class LoanRequestCreatedDomainEvent(
-    int borrowerDetailId,
-    int itemOwnerId,
+    long borrowerDetailId,
+    long itemOwnerId,
     string itemOwnerName,
-    int borrowerUserId,
+    long borrowerUserId,
     string borrowerName,
     string itemName,
     Loan loan) : IDomainEvent
 {
     public Guid Id { get; } = Guid.NewGuid();
     public DateTime OccurredOn { get; } = DateTime.UtcNow;
-    public int BorrowerDetailId { get; } = borrowerDetailId;
-    public int ItemOwnerId { get; } = itemOwnerId;
+    public long BorrowerDetailId { get; } = borrowerDetailId;
+    public long ItemOwnerId { get; } = itemOwnerId;
     public string ItemOwnerName { get; } = itemOwnerName;
-    public int BorrowerUserId { get; } = borrowerUserId;
+    public long BorrowerUserId { get; } = borrowerUserId;
     public string BorrowerName { get; } = borrowerName;
     public string ItemName { get; } = itemName;
     public Loan Loan { get; } = loan;

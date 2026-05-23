@@ -13,8 +13,6 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.UseSerialColumns();
-
         modelBuilder.Entity<UserEntity>(entity =>
         {
             entity.ToTable("users", table =>
@@ -27,9 +25,8 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
             entity.HasIndex(x => new { x.AuthProvider, x.ProviderUserId })
                 .IsUnique()
                 .HasDatabaseName("users_auth_provider_provider_user_id_key");
-            entity.Property(x => x.UserId).HasColumnName("user_id").ValueGeneratedOnAdd();
+            entity.Property(x => x.UserId).HasColumnName("user_id").ValueGeneratedNever();
             entity.Property(x => x.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
-            entity.Property(x => x.DisplayName).HasColumnName("display_name").HasMaxLength(100).IsRequired();
             entity.Property(x => x.Email).HasColumnName("email").HasMaxLength(100);
             entity.Property(x => x.PasswordHash).HasColumnName("password_hash").HasMaxLength(255);
             entity.Property(x => x.AuthProvider)
@@ -61,7 +58,7 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
         {
             entity.ToTable("items");
             entity.HasKey(x => x.ItemId).HasName("items_pkey");
-            entity.Property(x => x.ItemId).HasColumnName("item_id").ValueGeneratedOnAdd();
+            entity.Property(x => x.ItemId).HasColumnName("item_id").ValueGeneratedNever();
             entity.Property(x => x.OwnerId).HasColumnName("owner_id").IsRequired();
             entity.Property(x => x.ObjectName).HasColumnName("object_name").HasMaxLength(100).IsRequired();
             entity.Property(x => x.Maker).HasColumnName("maker").HasMaxLength(100).IsRequired();
@@ -83,7 +80,7 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
         {
             entity.ToTable("orders");
             entity.HasKey(x => x.OrderId).HasName("orders_pkey");
-            entity.Property(x => x.OrderId).HasColumnName("order_id").ValueGeneratedOnAdd();
+            entity.Property(x => x.OrderId).HasColumnName("order_id").ValueGeneratedNever();
             entity.Property(x => x.BorrowerDetailId).HasColumnName("borrower_detail_id").IsRequired();
             entity.Property(x => x.ObjectId).HasColumnName("item_id").IsRequired();
             entity.Property(x => x.StartDate).HasColumnName("start_date").HasColumnType("date").IsRequired();
@@ -106,7 +103,7 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
         {
             entity.ToTable("borrower_details");
             entity.HasKey(x => x.BorrowerDetailId).HasName("borrower_details_pkey");
-            entity.Property(x => x.BorrowerDetailId).HasColumnName("borrower_detail_id").ValueGeneratedOnAdd();
+            entity.Property(x => x.BorrowerDetailId).HasColumnName("borrower_detail_id").ValueGeneratedNever();
             entity.Property(x => x.UserId).HasColumnName("user_id");
             entity.Property(x => x.BorrowerName).HasColumnName("borrower_name").HasMaxLength(100).IsRequired();
             entity.Property(x => x.Link).HasColumnName("link").HasDefaultValue(string.Empty).IsRequired();
@@ -126,7 +123,7 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
             entity.ToTable("item_media");
             entity.HasKey(x => x.MediaId).HasName("item_media_pkey");
             entity.HasIndex(x => x.ItemId).HasDatabaseName("idx_item_media_item_id");
-            entity.Property(x => x.MediaId).HasColumnName("media_id").ValueGeneratedOnAdd();
+            entity.Property(x => x.MediaId).HasColumnName("media_id").ValueGeneratedNever();
             entity.Property(x => x.ItemId).HasColumnName("item_id").IsRequired();
             entity.Property(x => x.Type).HasColumnName("type").HasMaxLength(20).IsRequired();
             entity.Property(x => x.Url).HasColumnName("url").IsRequired();
@@ -149,7 +146,7 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
             entity.ToTable("lending_media");
             entity.HasKey(x => x.MediaId).HasName("lending_media_pkey");
             entity.HasIndex(x => x.OrderId).HasDatabaseName("idx_lending_media_order_id");
-            entity.Property(x => x.MediaId).HasColumnName("media_id").ValueGeneratedOnAdd();
+            entity.Property(x => x.MediaId).HasColumnName("media_id").ValueGeneratedNever();
             entity.Property(x => x.OrderId).HasColumnName("order_id").IsRequired();
             entity.Property(x => x.Type).HasColumnName("type").HasMaxLength(20).IsRequired();
             entity.Property(x => x.Url).HasColumnName("url").IsRequired();

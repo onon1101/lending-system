@@ -11,8 +11,8 @@ public static class ItemStatuses
 }
 
 public sealed record Item(
-    int ItemId,
-    int OwnerId,
+    long ItemId,
+    long OwnerId,
     string ObjectName,
     string Maker,
     string Material,
@@ -21,8 +21,8 @@ public sealed record Item(
     string? ImageUrl);
 
 public sealed record ItemSummary(
-    int ItemId,
-    int OwnerId,
+    long ItemId,
+    long OwnerId,
     string ObjectName,
     string Maker,
     string Material,
@@ -46,8 +46,8 @@ public sealed class ItemAggregate : Entity, IAggregateRoot
     private readonly List<ItemMedia> _media;
 
     private ItemAggregate(
-        int itemId,
-        int ownerId,
+        long itemId,
+        long ownerId,
         string objectName,
         string maker,
         string material,
@@ -67,8 +67,8 @@ public sealed class ItemAggregate : Entity, IAggregateRoot
         _media = media?.ToList() ?? [];
     }
 
-    public int ItemId { get; }
-    public int OwnerId { get; }
+    public long ItemId { get; }
+    public long OwnerId { get; }
     public string ObjectName { get; private set; }
     public string Maker { get; private set; }
     public string Material { get; private set; }
@@ -78,7 +78,7 @@ public sealed class ItemAggregate : Entity, IAggregateRoot
     public IReadOnlyCollection<ItemMedia> Media => _media.AsReadOnly();
 
     public static ItemAggregate Create(
-        int ownerId,
+        long ownerId,
         string objectName,
         string maker,
         string material,
@@ -91,8 +91,8 @@ public sealed class ItemAggregate : Entity, IAggregateRoot
     }
 
     public static ItemAggregate Rehydrate(
-        int itemId,
-        int ownerId,
+        long itemId,
+        long ownerId,
         string objectName,
         string maker,
         string material,

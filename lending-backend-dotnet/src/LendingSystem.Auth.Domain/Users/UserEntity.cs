@@ -18,7 +18,7 @@ namespace LendingSystem.Auth.Domain.Users;
 
 public sealed class UserEntity : Entity, IAggregateRoot
 {
-    private UserEntity(int id, Email email, string passwordHash, string username, UserRole role, AuthProvider authProvider, string providerUserId, DateTimeOffset createdAt, DateTimeOffset updatedAt)
+    private UserEntity(long id, Email email, string passwordHash, string username, UserRole role, AuthProvider authProvider, string providerUserId, DateTimeOffset createdAt, DateTimeOffset updatedAt)
     {
         Id = id;
         Email = email;
@@ -31,7 +31,7 @@ public sealed class UserEntity : Entity, IAggregateRoot
         UpdatedAt = updatedAt;
     }
 
-    public int Id { get; init; }
+    public long Id { get; init; }
 
     public Email Email { get; init; }
     
@@ -51,7 +51,7 @@ public sealed class UserEntity : Entity, IAggregateRoot
 
     public static UserEntity Create(
         EmailAddressAttribute emailAddressAttribute,
-        int id,
+        long id,
         string email,
         string passwordHash,
         string name,
@@ -71,4 +71,4 @@ public sealed class UserEntity : Entity, IAggregateRoot
     }
 }
 
-public sealed record UserProfile(int UserId, string Name, string Email);
+public sealed record UserProfile(long UserId, string Name, string Email);

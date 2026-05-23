@@ -60,7 +60,7 @@ internal sealed class LoginCommandHandler(
     }
 
     private sealed record UserRow(
-        int UserId,
+        long UserId,
         string Username,
         string Email,
         string? PasswordHash,

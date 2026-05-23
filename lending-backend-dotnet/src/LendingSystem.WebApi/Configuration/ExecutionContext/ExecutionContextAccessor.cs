@@ -16,7 +16,7 @@ public sealed class ExecutionContextAccessor(
 
     public Guid UserId => GetUserId();
 
-    public int CurrentUserId => GetCurrentUserId();
+    public long CurrentUserId => GetCurrentUserId();
 
     public string Email => GetClaimValue(ClaimTypes.Email, JwtRegisteredClaimNames.Email, "email")
         ?? GetDevelopmentValue("Email", "dev.user@lending-system.local");
@@ -29,7 +29,7 @@ public sealed class ExecutionContextAccessor(
         .Concat(GetCurrentUser()?.FindAll("role") ?? [])
         .Any(x => string.Equals(x.Value, UserRole.Admin.Value, StringComparison.OrdinalIgnoreCase)) == true;
 
-    public bool CanAccessUser(int userId) =>
+    public bool CanAccessUser(long userId) =>
         IsAdmin || userId > 0 && CurrentUserId == userId;
 
     private Guid GetUserId()
@@ -55,7 +55,7 @@ public sealed class ExecutionContextAccessor(
             : DefaultDevelopmentUserId;
     }
 
-    private int GetCurrentUserId()
+    private long GetCurrentUserId()
     {
         var userKey = GetClaimValue("user_key", ClaimTypes.NameIdentifier);
         if (PublicResourceKey.TryGetInt("user", userKey, out var parsedUserId))
@@ -66,7 +66,7 @@ public sealed class ExecutionContextAccessor(
         var configuredUserId = configuration["Development:ExecutionContext:UserId"]
             ?? configuration["Dev:ExecutionContext:UserId"];
 
-        return environment.IsDevelopment() && int.TryParse(configuredUserId, out var developmentUserId)
+        return environment.IsDevelopment() && long.TryParse(configuredUserId, out var developmentUserId)
             ? developmentUserId
             : 0;
     }

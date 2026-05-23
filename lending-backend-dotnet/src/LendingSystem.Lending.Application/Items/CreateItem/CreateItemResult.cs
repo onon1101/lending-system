@@ -3,8 +3,8 @@ using System.Text.Json.Serialization;
 namespace LendingSystem.Lending.Application.Items;
 
 public sealed record CreateItemResult(
-    [property: JsonIgnore] int ItemId,
-    [property: JsonIgnore] int OwnerId,
+    [property: JsonIgnore] long ItemId,
+    [property: JsonIgnore] long OwnerId,
     [property: JsonPropertyName("object_name")] string ObjectName,
     [property: JsonPropertyName("maker")] string Maker,
     [property: JsonPropertyName("material")] string Material,

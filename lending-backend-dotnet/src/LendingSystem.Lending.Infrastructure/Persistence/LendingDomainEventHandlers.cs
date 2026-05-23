@@ -12,6 +12,7 @@ internal sealed class ItemCreatedDomainEventHandler(LendingDbContext db) : INoti
         var item = notification.Item;
         var entity = new ItemEntity
         {
+            ItemId = ApplicationGeneratedKey.NewId(),
             OwnerId = item.OwnerId,
             ObjectName = item.ObjectName,
             Maker = item.Maker,
@@ -43,6 +44,7 @@ internal sealed class ItemMediaAddedDomainEventHandler(LendingDbContext db) : IN
         var media = notification.Media;
         var entity = new ItemMediaEntity
         {
+            MediaId = ApplicationGeneratedKey.NewId(),
             ItemId = media.ItemId,
             Type = media.Type,
             Url = media.Url,
@@ -71,6 +73,7 @@ internal sealed class LoanCreatedDomainEventHandler(LendingDbContext db) : INoti
         var loan = notification.Loan;
         var entity = new OrderEntity
         {
+            OrderId = ApplicationGeneratedKey.NewId(),
             BorrowerDetailId = notification.BorrowerDetailId,
             ObjectId = loan.ItemId,
             StartDate = loan.StartDate,
@@ -106,6 +109,7 @@ internal sealed class LoanRequestCreatedDomainEventHandler(LendingDbContext db) 
         var loan = notification.Loan;
         var entity = new OrderEntity
         {
+            OrderId = ApplicationGeneratedKey.NewId(),
             BorrowerDetailId = notification.BorrowerDetailId,
             ObjectId = loan.ItemId,
             StartDate = loan.StartDate,
@@ -141,6 +145,7 @@ internal sealed class LoanMediaAddedDomainEventHandler(LendingDbContext db) : IN
         var media = notification.Media;
         var entity = new LendingMediaEntity
         {
+            MediaId = ApplicationGeneratedKey.NewId(),
             OrderId = media.OrderId,
             Type = media.Type,
             Url = media.Url,

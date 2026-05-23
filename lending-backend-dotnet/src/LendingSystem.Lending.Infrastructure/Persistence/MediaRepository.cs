@@ -8,7 +8,7 @@ namespace LendingSystem.Lending.Infrastructure.Persistence;
 
 public sealed class MediaRepository(IPublisher publisher) : IMediaCommandRepository
 {
-    public async Task<MediaAsset> CreateItemMediaAsync(int itemId, string type, string url, string link, string description, CancellationToken cancellationToken)
+    public async Task<MediaAsset> CreateItemMediaAsync(long itemId, string type, string url, string link, string description, CancellationToken cancellationToken)
     {
         var aggregate = ItemAggregate.Rehydrate(itemId, 0, "", "", "", "", ItemStatuses.Available, null);
         var media = ItemMedia.Create(itemId, type, url, link, description, DateTimeOffset.UtcNow);
@@ -21,7 +21,7 @@ public sealed class MediaRepository(IPublisher publisher) : IMediaCommandReposit
         return MediaAsset.FromItemMedia(domainEvent.CreatedMedia ?? media);
     }
 
-    public async Task<MediaAsset> CreateLendingMediaAsync(int orderId, int itemId, string type, string url, string link, string description, CancellationToken cancellationToken)
+    public async Task<MediaAsset> CreateLendingMediaAsync(long orderId, long itemId, string type, string url, string link, string description, CancellationToken cancellationToken)
     {
         var loan = Loan.Rehydrate(orderId, itemId, DateOnly.MinValue, DateOnly.MinValue, null, LoanStatuses.OnLoan);
         var aggregate = LoansAggregate.Rehydrate(0, null, "", [loan]);

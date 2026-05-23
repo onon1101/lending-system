@@ -5,8 +5,8 @@ namespace LendingSystem.Lending.Domain.Aggregate.Loans;
 public sealed class LoanMedia : Entity
 {
     private LoanMedia(
-        int mediaId,
-        int orderId,
+        long mediaId,
+        long orderId,
         string type,
         string url,
         string? link,
@@ -22,8 +22,8 @@ public sealed class LoanMedia : Entity
         CreatedAt = createdAt;
     }
 
-    public int MediaId { get; }
-    public int OrderId { get; }
+    public long MediaId { get; }
+    public long OrderId { get; }
     public string Type { get; }
     public string Url { get; }
     public string? Link { get; }
@@ -31,7 +31,7 @@ public sealed class LoanMedia : Entity
     public DateTimeOffset CreatedAt { get; }
 
     public static LoanMedia Create(
-        int orderId,
+        long orderId,
         string type,
         string url,
         string? link,
@@ -40,8 +40,8 @@ public sealed class LoanMedia : Entity
         new(0, orderId, type, url, link, description, createdAt);
 
     public static LoanMedia Rehydrate(
-        int mediaId,
-        int orderId,
+        long mediaId,
+        long orderId,
         string type,
         string url,
         string? link,

@@ -20,4 +20,8 @@
     <Project Path="src/LendingSystem.SharedKernel.Domain/LendingSystem.SharedKernel.Domain.csproj" />
     <Project Path="src/LendingSystem.SharedKernel.Infrastructure/LendingSystem.SharedKernel.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/Integration/">
+    <Project Path="tests/LendingSystem.IntegrationTests/LendingSystem.IntegrationTests.csproj" />
+  </Folder>
 </Solution>

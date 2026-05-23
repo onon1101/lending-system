@@ -10,7 +10,7 @@ namespace LendingSystem.Auth.Infrastructure.Auth;
 
 public sealed class JwtTokenService(IConfiguration configuration) : ITokenService
 {
-    public TokenPair Generate(int userId, string username, string email, string role)
+    public TokenPair Generate(long userId, string username, string email, string role)
     {
         var secret = configuration["SECRET_KEY"] ?? configuration["Jwt:SecretKey"] ?? "development-secret-key-change-before-production";
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));

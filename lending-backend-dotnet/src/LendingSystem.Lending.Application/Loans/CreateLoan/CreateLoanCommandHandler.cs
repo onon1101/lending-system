@@ -13,7 +13,7 @@ internal sealed class CreateLoanCommandHandler(
 {
     public async Task<Result<CreateLoanResult>> Handle(CreateLoanCommand request, CancellationToken cancellationToken)
     {
-        int? borrowerId = request.BorrowerId ?? request.UserId;
+        long? borrowerId = request.BorrowerId ?? request.UserId;
         if (!string.IsNullOrWhiteSpace(request.BorrowerUsername))
         {
             borrowerId = await items.GetUserIdByUsernameAsync(request.BorrowerUsername, cancellationToken);

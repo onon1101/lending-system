@@ -3,4 +3,4 @@ using MediatR;
 
 namespace LendingSystem.Lending.Application.Items;
 
-public sealed record GetItemByIdQuery(int ItemId) : IQuery<GetItemByIdResult>;
+public sealed record GetItemByIdQuery(long ItemId) : IQuery<GetItemByIdResult>;

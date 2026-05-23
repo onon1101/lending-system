@@ -13,9 +13,11 @@ internal sealed class UpdateLoanRecordTimeCommandHandler(
 {
     public async Task<Result<UpdateLoanRecordTimeResult>> Handle(UpdateLoanRecordTimeCommand request, CancellationToken cancellationToken)
     {
-        var ownerId = !string.IsNullOrWhiteSpace(request.OwnerUsername)
-            ? await items.GetUserIdByUsernameAsync(request.OwnerUsername, cancellationToken)
-            : request.UserId;
+        long? ownerId = request.UserId;
+        if (!string.IsNullOrWhiteSpace(request.OwnerUsername))
+        {
+            ownerId = await items.GetUserIdByUsernameAsync(request.OwnerUsername, cancellationToken);
+        }
         if (ownerId is null || !executionContext.CanAccessUser(ownerId.Value))
         {
             return Result<UpdateLoanRecordTimeResult>.Failure(LoanErrors.ManageOwnItemRecordsOnly());

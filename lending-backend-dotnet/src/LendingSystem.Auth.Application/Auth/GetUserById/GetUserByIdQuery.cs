@@ -3,4 +3,4 @@ using MediatR;
 
 namespace LendingSystem.Auth.Application.Auth;
 
-public sealed record GetUserByIdQuery(int UserId) : IQuery<GetUserByIdResult>;
+public sealed record GetUserByIdQuery(long UserId) : IQuery<GetUserByIdResult>;

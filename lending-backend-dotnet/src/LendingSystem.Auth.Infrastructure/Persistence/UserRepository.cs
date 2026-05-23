@@ -6,6 +6,7 @@ using LendingSystem.Auth.Domain.ValueObjects;
 using LendingSystem.Auth.Domain.Users;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using Microsoft.EntityFrameworkCore;
+using ApplicationGeneratedKey = LendingSystem.SharedKernel.Infrastructure.Persistence.ApplicationGeneratedKey;
 using LendingDbContext = LendingSystem.SharedKernel.Infrastructure.Persistence.LendingDbContext;
 using PersistenceUserEntity = LendingSystem.SharedKernel.Infrastructure.Persistence.UserEntity;
 
@@ -23,7 +24,7 @@ public sealed class UserRepository(
                 user_id as UserId,
                 email as Email,
                 password_hash as PasswordHash,
-                display_name as DisplayName,
+                name as Name,
                 role as Role,
                 auth_provider as AuthProvider,
                 provider_user_id as ProviderUserId,
@@ -48,7 +49,7 @@ public sealed class UserRepository(
                 user_id as UserId,
                 email as Email,
                 password_hash as PasswordHash,
-                display_name as DisplayName,
+                name as Name,
                 role as Role,
                 auth_provider as AuthProvider,
                 provider_user_id as ProviderUserId,
@@ -71,8 +72,8 @@ public sealed class UserRepository(
     {
         var entity = new PersistenceUserEntity
         {
+            UserId = ApplicationGeneratedKey.NewId(),
             Name = await CreateUniqueNameAsync(email, cancellationToken),
-            DisplayName = name,
             Email = email,
             PasswordHash = passwordHash,
             AuthProvider = AuthProvider.Local.Value
@@ -81,15 +82,15 @@ public sealed class UserRepository(
         db.Users.Add(entity);
         await db.SaveChangesAsync(cancellationToken);
 
-        return new UserProfile(entity.UserId, entity.DisplayName, entity.Email ?? "");
+        return new UserProfile(entity.UserId, entity.Name, entity.Email ?? "");
     }
 
     public async Task<UserEntity> CreateExternalAsync(string name, string email, AuthProvider authProvider, string providerUserId, CancellationToken cancellationToken)
     {
         var entity = new PersistenceUserEntity
         {
+            UserId = ApplicationGeneratedKey.NewId(),
             Name = await CreateUniqueNameAsync(email, cancellationToken),
-            DisplayName = name,
             Email = email,
             AuthProvider = authProvider.Value,
             ProviderUserId = providerUserId
@@ -101,7 +102,7 @@ public sealed class UserRepository(
         return MapUser(entity);
     }
 
-    public async Task<UserEntity?> LinkProviderAsync(int userId, AuthProvider authProvider, string providerUserId, CancellationToken cancellationToken)
+    public async Task<UserEntity?> LinkProviderAsync(long userId, AuthProvider authProvider, string providerUserId, CancellationToken cancellationToken)
     {
         var entity = await db.Users
             .FirstOrDefaultAsync(x => x.UserId == userId && !x.IsDeleted, cancellationToken);
@@ -120,12 +121,12 @@ public sealed class UserRepository(
         return MapUser(entity);
     }
 
-    public async Task<UserProfile?> GetByIdAsync(int userId, CancellationToken cancellationToken)
+    public async Task<UserProfile?> GetByIdAsync(long userId, CancellationToken cancellationToken)
     {
         const string sql = """
             select
                 user_id as UserId,
-                display_name as Name,
+                name as Name,
                 coalesce(email, '') as Email
             from users
             where user_id = @UserId
@@ -142,10 +143,10 @@ public sealed class UserRepository(
         const string sql = """
             select
                 user_id as UserId,
-                display_name as Name,
+                name as Name,
                 coalesce(email, '') as Email
             from users
-            where display_name ilike @Pattern
+            where name ilike @Pattern
               and is_deleted = false
             order by user_id
             limit 1;
@@ -156,7 +157,7 @@ public sealed class UserRepository(
             new CommandDefinition(sql, new { Pattern = $"%{username}%" }, cancellationToken: cancellationToken));
     }
 
-    public async Task<bool> DeleteAsync(int userId, CancellationToken cancellationToken)
+    public async Task<bool> DeleteAsync(long userId, CancellationToken cancellationToken)
     {
         var entity = await db.Users
             .FirstOrDefaultAsync(x => x.UserId == userId, cancellationToken);
@@ -236,7 +237,7 @@ public sealed class UserRepository(
         entity.UserId,
         entity.Email ?? "",
         entity.PasswordHash ?? "",
-        entity.DisplayName,
+        entity.Name,
         entity.Role ?? "",
         entity.AuthProvider,
         entity.ProviderUserId,
@@ -248,7 +249,7 @@ public sealed class UserRepository(
         row.UserId,
         row.Email ?? "",
         row.PasswordHash ?? "",
-        row.DisplayName,
+        row.Name,
         row.Role ?? "",
         row.AuthProvider,
         row.ProviderUserId,
@@ -256,10 +257,10 @@ public sealed class UserRepository(
         row.UpdatedAt ?? default);
 
     private sealed record UserRow(
-        int UserId,
+        long UserId,
         string? Email,
         string? PasswordHash,
-        string DisplayName,
+        string Name,
         string? Role,
         string AuthProvider,
         string? ProviderUserId,

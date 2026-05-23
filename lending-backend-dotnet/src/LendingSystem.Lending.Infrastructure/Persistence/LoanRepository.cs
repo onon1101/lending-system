@@ -12,7 +12,7 @@ namespace LendingSystem.Lending.Infrastructure.Persistence;
 
 public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory queryConnectionFactory, IPublisher publisher) : ILoanCommandRepository, ILoanQueryRepository
 {
-    public async Task<IReadOnlyCollection<UserLoan>> GetActiveLoansByUserIdAsync(int userId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<UserLoan>> GetActiveLoansByUserIdAsync(long userId, CancellationToken cancellationToken)
     {
         const string sql = """
             select
@@ -40,7 +40,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
         return rows.Select(Map).ToArray();
     }
 
-    public async Task<Result<UserLoan>> CreateAsync(int? borrowerId, string? borrowerName, IReadOnlyCollection<int> itemIds, int durationDays, CancellationToken cancellationToken)
+    public async Task<Result<UserLoan>> CreateAsync(long? borrowerId, string? borrowerName, IReadOnlyCollection<long> itemIds, int durationDays, CancellationToken cancellationToken)
     {
         if (itemIds.Count != itemIds.Distinct().Count())
         {
@@ -78,6 +78,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
             item.CurrentStatus = ItemStatuses.OnLoan;
             return new OrderEntity
             {
+                OrderId = ApplicationGeneratedKey.NewId(),
                 BorrowerDetailId = borrowerResult.Data!.BorrowerDetailId,
                 ObjectId = item.ItemId,
                 StartDate = startDate,
@@ -97,7 +98,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
     }
 
     public async Task<Result<UserLoan>> CreateRequestAsync(
-        int borrowerId,
+        long borrowerId,
         string itemOwnerUsername,
         string itemName,
         DateOnly startDate,
@@ -151,7 +152,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
         var endDate = startDate.AddDays(durationDays);
         var borrowerResult = await GetOrCreateBorrowerDetailAsync(
             borrower.UserId,
-            borrower.DisplayName,
+            borrower.Name,
             item.OwnerId,
             Today(),
             cancellationToken);
@@ -166,7 +167,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
             item.OwnerId,
             item.Owner.Name,
             borrower.UserId,
-            borrower.DisplayName,
+            borrower.Name,
             item.ItemId,
             item.ObjectName,
             startDate,
@@ -184,7 +185,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
             : Result<UserLoan>.Success(created);
     }
 
-    public async Task<Result<UserLoan>> CreateRecordAsync(int ownerId, int? borrowerId, string? borrowerName, int itemId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken)
+    public async Task<Result<UserLoan>> CreateRecordAsync(long ownerId, long? borrowerId, string? borrowerName, long itemId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken)
     {
         var item = await db.Items
             .AsNoTracking()
@@ -222,7 +223,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
             : Result<UserLoan>.Success(created);
     }
 
-    public async Task<Result<bool>> DeleteRecordAsync(int ownerId, int orderId, CancellationToken cancellationToken)
+    public async Task<Result<bool>> DeleteRecordAsync(long ownerId, long orderId, CancellationToken cancellationToken)
     {
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
 
@@ -253,7 +254,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
         return Result<bool>.Success(true);
     }
 
-    public async Task<Result<UserLoan>> UpdateRecordTimeAsync(int ownerId, int orderId, DateOnly? startDate, DateOnly? endDate, CancellationToken cancellationToken)
+    public async Task<Result<UserLoan>> UpdateRecordTimeAsync(long ownerId, long orderId, DateOnly? startDate, DateOnly? endDate, CancellationToken cancellationToken)
     {
         var order = await db.Orders
             .Include(x => x.Item)
@@ -292,7 +293,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
             : Result<UserLoan>.Success(updated);
     }
 
-    public async Task<Result<UserLoan>> ReturnItemAsync(int orderId, int objectId, CancellationToken cancellationToken)
+    public async Task<Result<UserLoan>> ReturnItemAsync(long orderId, long objectId, CancellationToken cancellationToken)
     {
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
 
@@ -327,7 +328,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
             : Result<UserLoan>.Success(loan);
     }
 
-    public async Task<Result<UserLoan>> ReturnItemAsync(int orderId, CancellationToken cancellationToken)
+    public async Task<Result<UserLoan>> ReturnItemAsync(long orderId, CancellationToken cancellationToken)
     {
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
 
@@ -360,7 +361,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
             : Result<UserLoan>.Success(loan);
     }
 
-    public async Task<IReadOnlyCollection<LoanRecord>> GetHistoryByItemIdAsync(int itemId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<LoanRecord>> GetHistoryByItemIdAsync(long itemId, CancellationToken cancellationToken)
     {
         const string existsSql = """
             select exists (
@@ -396,7 +397,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
         return records.Length == 0 ? [new LoanRecord(null, null, null, null, null)] : records;
     }
 
-    public async Task<IReadOnlyCollection<LoanRequestRecord>> GetRequestsByOwnerIdAsync(int ownerId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<LoanRequestRecord>> GetRequestsByOwnerIdAsync(long ownerId, CancellationToken cancellationToken)
     {
         const string sql = """
             select
@@ -421,7 +422,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
             new CommandDefinition(sql, new { OwnerId = ownerId, Status = LoanStatuses.Requested }, cancellationToken: cancellationToken))).ToArray();
     }
 
-    private async Task<UserLoan?> GetByOrderIdAsync(int orderId, CancellationToken cancellationToken)
+    private async Task<UserLoan?> GetByOrderIdAsync(long orderId, CancellationToken cancellationToken)
     {
         const string sql = """
             select
@@ -449,9 +450,9 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
     }
 
     private async Task<Result<BorrowerDetailEntity>> GetOrCreateBorrowerDetailAsync(
-        int? borrowerId,
+        long? borrowerId,
         string? borrowerName,
-        int? ownerId,
+        long? ownerId,
         DateOnly today,
         CancellationToken cancellationToken)
     {
@@ -467,7 +468,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
             }
         }
 
-        var displayName = borrower?.DisplayName ?? borrowerName?.Trim() ?? "";
+        var displayName = borrower?.Name ?? borrowerName?.Trim() ?? "";
         var existing = await db.BorrowerDetails
             .FirstOrDefaultAsync(
                 x => x.UserId == borrowerId
@@ -482,6 +483,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
 
         var detail = new BorrowerDetailEntity
         {
+            BorrowerDetailId = ApplicationGeneratedKey.NewId(),
             UserId = borrowerId,
             BorrowerName = displayName,
             CreatedAt = today,
@@ -528,13 +530,13 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
     private static DateOnly Today() => DateOnly.FromDateTime(DateTimeOffset.UtcNow.UtcDateTime);
 
     private sealed record UserLoanRow(
-        int OrderId,
-        int UserId,
+        long OrderId,
+        long UserId,
         DateOnly OrderStartDate,
         DateOnly OrderEndDate,
         string OrderStatus,
-        int ObjectDetailId,
-        int ObjectId,
+        long ObjectDetailId,
+        long ObjectId,
         string ObjectName,
         string DetailStatus,
         DateOnly? ActualReturnDate);

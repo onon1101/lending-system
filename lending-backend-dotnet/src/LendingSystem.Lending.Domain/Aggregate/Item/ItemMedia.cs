@@ -5,8 +5,8 @@ namespace LendingSystem.Lending.Domain.Aggregate.Item;
 public sealed class ItemMedia : Entity
 {
     private ItemMedia(
-        int mediaId,
-        int itemId,
+        long mediaId,
+        long itemId,
         string type,
         string url,
         string? link,
@@ -22,8 +22,8 @@ public sealed class ItemMedia : Entity
         CreatedAt = createdAt;
     }
 
-    public int MediaId { get; }
-    public int ItemId { get; }
+    public long MediaId { get; }
+    public long ItemId { get; }
     public string Type { get; }
     public string Url { get; }
     public string? Link { get; }
@@ -31,7 +31,7 @@ public sealed class ItemMedia : Entity
     public DateTimeOffset CreatedAt { get; }
 
     public static ItemMedia Create(
-        int itemId,
+        long itemId,
         string type,
         string url,
         string? link,
@@ -40,8 +40,8 @@ public sealed class ItemMedia : Entity
         new(0, itemId, type, url, link, description, createdAt);
 
     public static ItemMedia Rehydrate(
-        int mediaId,
-        int itemId,
+        long mediaId,
+        long itemId,
         string type,
         string url,
         string? link,

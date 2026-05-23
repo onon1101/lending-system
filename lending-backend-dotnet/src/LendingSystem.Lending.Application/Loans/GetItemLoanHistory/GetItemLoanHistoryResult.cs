@@ -4,7 +4,7 @@ using LendingSystem.SharedKernel.Application.Common;
 namespace LendingSystem.Lending.Application.Loans;
 
 public sealed record GetItemLoanHistoryResult(
-    [property: JsonIgnore] int? OrderId,
+    [property: JsonIgnore] long? OrderId,
     [property: JsonPropertyName("start_date")] DateOnly? StartDate,
     [property: JsonPropertyName("end_date")] DateOnly? EndDate,
     [property: JsonPropertyName("name")] string? Name,

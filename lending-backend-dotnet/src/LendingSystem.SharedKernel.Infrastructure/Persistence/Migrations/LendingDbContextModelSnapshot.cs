@@ -20,16 +20,13 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
                 .HasAnnotation("ProductVersion", "10.0.4")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            NpgsqlModelBuilderExtensions.UseSerialColumns(modelBuilder);
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("LendingSystem.SharedKernel.Infrastructure.Persistence.BorrowerDetailEntity", b =>
                 {
-                    b.Property<int>("BorrowerDetailId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
+                    b.Property<long>("BorrowerDetailId")
+                        .HasColumnType("bigint")
                         .HasColumnName("borrower_detail_id");
-
-                    NpgsqlPropertyBuilderExtensions.UseSerialColumn(b.Property<int>("BorrowerDetailId"));
 
                     b.Property<string>("BorrowerName")
                         .IsRequired()
@@ -68,8 +65,8 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
                         .HasDefaultValue("")
                         .HasColumnName("updated_by");
 
-                    b.Property<int?>("UserId")
-                        .HasColumnType("integer")
+                    b.Property<long?>("UserId")
+                        .HasColumnType("bigint")
                         .HasColumnName("user_id");
 
                     b.HasKey("BorrowerDetailId")
@@ -82,12 +79,9 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("LendingSystem.SharedKernel.Infrastructure.Persistence.ItemEntity", b =>
                 {
-                    b.Property<int>("ItemId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
+                    b.Property<long>("ItemId")
+                        .HasColumnType("bigint")
                         .HasColumnName("item_id");
-
-                    NpgsqlPropertyBuilderExtensions.UseSerialColumn(b.Property<int>("ItemId"));
 
                     b.Property<string>("CurrentStatus")
                         .IsRequired()
@@ -125,8 +119,8 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("object_name");
 
-                    b.Property<int>("OwnerId")
-                        .HasColumnType("integer")
+                    b.Property<long>("OwnerId")
+                        .HasColumnType("bigint")
                         .HasColumnName("owner_id");
 
                     b.HasKey("ItemId")
@@ -139,12 +133,9 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("LendingSystem.SharedKernel.Infrastructure.Persistence.ItemMediaEntity", b =>
                 {
-                    b.Property<int>("MediaId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
+                    b.Property<long>("MediaId")
+                        .HasColumnType("bigint")
                         .HasColumnName("media_id");
-
-                    NpgsqlPropertyBuilderExtensions.UseSerialColumn(b.Property<int>("MediaId"));
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -156,8 +147,8 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("description");
 
-                    b.Property<int>("ItemId")
-                        .HasColumnType("integer")
+                    b.Property<long>("ItemId")
+                        .HasColumnType("bigint")
                         .HasColumnName("item_id");
 
                     b.Property<string>("Link")
@@ -186,12 +177,9 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("LendingSystem.SharedKernel.Infrastructure.Persistence.LendingMediaEntity", b =>
                 {
-                    b.Property<int>("MediaId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
+                    b.Property<long>("MediaId")
+                        .HasColumnType("bigint")
                         .HasColumnName("media_id");
-
-                    NpgsqlPropertyBuilderExtensions.UseSerialColumn(b.Property<int>("MediaId"));
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -207,8 +195,8 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("link");
 
-                    b.Property<int>("OrderId")
-                        .HasColumnType("integer")
+                    b.Property<long>("OrderId")
+                        .HasColumnType("bigint")
                         .HasColumnName("order_id");
 
                     b.Property<string>("Type")
@@ -233,27 +221,24 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("LendingSystem.SharedKernel.Infrastructure.Persistence.OrderEntity", b =>
                 {
-                    b.Property<int>("OrderId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
+                    b.Property<long>("OrderId")
+                        .HasColumnType("bigint")
                         .HasColumnName("order_id");
-
-                    NpgsqlPropertyBuilderExtensions.UseSerialColumn(b.Property<int>("OrderId"));
 
                     b.Property<DateOnly?>("ActualReturnDate")
                         .HasColumnType("date")
                         .HasColumnName("actual_return_date");
 
-                    b.Property<int>("BorrowerDetailId")
-                        .HasColumnType("integer")
+                    b.Property<long>("BorrowerDetailId")
+                        .HasColumnType("bigint")
                         .HasColumnName("borrower_detail_id");
 
                     b.Property<DateOnly>("EndDate")
                         .HasColumnType("date")
                         .HasColumnName("end_date");
 
-                    b.Property<int>("ObjectId")
-                        .HasColumnType("integer")
+                    b.Property<long>("ObjectId")
+                        .HasColumnType("bigint")
                         .HasColumnName("item_id");
 
                     b.Property<DateOnly>("StartDate")
@@ -278,12 +263,9 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("LendingSystem.SharedKernel.Infrastructure.Persistence.UserEntity", b =>
                 {
-                    b.Property<int>("UserId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint")
                         .HasColumnName("user_id");
-
-                    NpgsqlPropertyBuilderExtensions.UseSerialColumn(b.Property<int>("UserId"));
 
                     b.Property<string>("AuthProvider")
                         .IsRequired()
@@ -298,12 +280,6 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("DisplayName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("display_name");
 
                     b.Property<string>("Email")
                         .HasMaxLength(100)

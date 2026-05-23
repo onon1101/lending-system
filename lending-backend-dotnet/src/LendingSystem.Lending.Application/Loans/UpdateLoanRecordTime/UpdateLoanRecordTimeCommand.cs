@@ -7,10 +7,10 @@ namespace LendingSystem.Lending.Application.Loans;
 public sealed record UpdateLoanRecordTimeCommand : ICommand<UpdateLoanRecordTimeResult>
 {
     [JsonIgnore]
-    public int OrderId { get; init; }
+    public long OrderId { get; init; }
 
     [JsonIgnore]
-    public int UserId { get; init; }
+    public long UserId { get; init; }
 
     [JsonIgnore]
     public string BorrowingKey { get; init; } = "";
