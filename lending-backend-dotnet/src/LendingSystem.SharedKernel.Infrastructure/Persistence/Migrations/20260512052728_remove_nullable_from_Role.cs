@@ -10,30 +10,20 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AlterColumn<string>(
-                name: "role",
-                table: "users",
-                type: "text",
-                nullable: false,
-                defaultValue: "user",
-                oldClrType: typeof(string),
-                oldType: "text",
-                oldNullable: true,
-                oldDefaultValue: "user");
+            migrationBuilder.Sql("""
+UPDATE "users" SET "role" = 'user' WHERE "role" IS NULL;
+ALTER TABLE "users" ALTER COLUMN "role" SET DEFAULT 'user';
+ALTER TABLE "users" ALTER COLUMN "role" SET NOT NULL;
+""");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AlterColumn<string>(
-                name: "role",
-                table: "users",
-                type: "text",
-                nullable: true,
-                defaultValue: "user",
-                oldClrType: typeof(string),
-                oldType: "text",
-                oldDefaultValue: "user");
+            migrationBuilder.Sql("""
+ALTER TABLE "users" ALTER COLUMN "role" SET DEFAULT 'user';
+ALTER TABLE "users" ALTER COLUMN "role" DROP NOT NULL;
+""");
         }
     }
 }

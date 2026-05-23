@@ -1,15 +1,24 @@
 using LendingSystem.Lending.Application.Abstractions;
-using LendingSystem.Lending.Domain.Items;
+using LendingSystem.Lending.Domain.Aggregate.Item;
 using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
 namespace LendingSystem.Lending.Application.Items;
 
-internal sealed class UpdateItemCommandHandler(IItemRepository items) : IRequestHandler<UpdateItemCommand, Result<UpdateItemResult>>
+internal sealed class UpdateItemCommandHandler(
+    IItemCommandRepository items,
+    IItemQueryRepository itemQueries) : IRequestHandler<UpdateItemCommand, Result<UpdateItemResult>>
 {
     public async Task<Result<UpdateItemResult>> Handle(UpdateItemCommand request, CancellationToken cancellationToken)
     {
-        var existingItem = await items.GetByIdAsync(request.ItemId, cancellationToken);
+        var itemId = request.ItemId;
+        if (!string.IsNullOrWhiteSpace(request.OwnerUsername) && !string.IsNullOrWhiteSpace(request.OriginalObjectName))
+        {
+            var itemByName = await itemQueries.GetByNameAsync(request.OwnerUsername, request.OriginalObjectName, cancellationToken);
+            itemId = itemByName?.ItemId ?? 0;
+        }
+
+        var existingItem = await items.GetByIdForCommandAsync(itemId, cancellationToken);
         if (existingItem is null)
         {
             return Result<UpdateItemResult>.Failure(ItemErrors.ItemNotFound());
@@ -21,7 +30,7 @@ internal sealed class UpdateItemCommandHandler(IItemRepository items) : IRequest
         }
 
         var item = await items.UpdateAsync(
-            request.ItemId,
+            itemId,
             request.ObjectName?.Trim(),
             request.Maker?.Trim(),
             request.Material?.Trim(),

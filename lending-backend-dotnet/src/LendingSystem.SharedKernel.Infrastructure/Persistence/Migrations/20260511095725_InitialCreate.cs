@@ -12,172 +12,84 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.CreateTable(
-                name: "items",
-                columns: table => new
-                {
-                    object_id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.SerialColumn),
-                    object_name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    description = table.Column<string>(type: "text", nullable: true),
-                    current_status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true, defaultValue: "Available"),
-                    owner_id = table.Column<int>(type: "integer", nullable: true),
-                    image_url = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("items_pkey", x => x.object_id);
-                });
+            migrationBuilder.Sql("""
+CREATE TABLE "items" (
+    "object_id" serial NOT NULL,
+    "object_name" character varying(100) NOT NULL,
+    "description" text NULL,
+    "current_status" character varying(50) NULL DEFAULT 'Available',
+    "owner_id" integer NULL,
+    "image_url" character varying(300) NULL,
+    CONSTRAINT "items_pkey" PRIMARY KEY ("object_id")
+);
 
-            migrationBuilder.CreateTable(
-                name: "users",
-                columns: table => new
-                {
-                    user_id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.SerialColumn),
-                    name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    email = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
-                    password_hash = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                    is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    nickname = table.Column<string>(type: "text", nullable: true),
-                    role = table.Column<string>(type: "text", nullable: true, defaultValue: "user"),
-                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("users_pkey", x => x.user_id);
-                });
+CREATE TABLE "users" (
+    "user_id" serial NOT NULL,
+    "name" character varying(100) NOT NULL,
+    "email" character varying(100) NULL,
+    "password_hash" character varying(255) NULL,
+    "is_deleted" boolean NOT NULL DEFAULT false,
+    "nickname" text NULL,
+    "role" text NULL DEFAULT 'user',
+    "created_at" timestamp with time zone NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" timestamp with time zone NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "users_pkey" PRIMARY KEY ("user_id")
+);
 
-            migrationBuilder.CreateTable(
-                name: "orders",
-                columns: table => new
-                {
-                    order_id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.SerialColumn),
-                    user_id = table.Column<int>(type: "integer", nullable: false),
-                    start_time = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    end_time = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("orders_pkey", x => x.order_id);
-                    table.ForeignKey(
-                        name: "orders_user_id_fkey",
-                        column: x => x.user_id,
-                        principalTable: "users",
-                        principalColumn: "user_id");
-                });
+CREATE TABLE "orders" (
+    "order_id" serial NOT NULL,
+    "user_id" integer NOT NULL,
+    "start_time" timestamp with time zone NOT NULL,
+    "end_time" timestamp with time zone NOT NULL,
+    "status" character varying(50) NOT NULL,
+    CONSTRAINT "orders_pkey" PRIMARY KEY ("order_id"),
+    CONSTRAINT "orders_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id")
+);
 
-            migrationBuilder.CreateTable(
-                name: "media",
-                columns: table => new
-                {
-                    media_id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.SerialColumn),
-                    order_id = table.Column<int>(type: "integer", nullable: true),
-                    object_id = table.Column<int>(type: "integer", nullable: false),
-                    type = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    url = table.Column<string>(type: "text", nullable: false),
-                    link = table.Column<string>(type: "text", nullable: true),
-                    description = table.Column<string>(type: "text", nullable: true),
-                    created_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("media_pkey", x => x.media_id);
-                    table.ForeignKey(
-                        name: "fk_media_item",
-                        column: x => x.object_id,
-                        principalTable: "items",
-                        principalColumn: "object_id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "fk_media_order",
-                        column: x => x.order_id,
-                        principalTable: "orders",
-                        principalColumn: "order_id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+CREATE TABLE "media" (
+    "media_id" serial NOT NULL,
+    "order_id" integer NULL,
+    "object_id" integer NOT NULL,
+    "type" character varying(20) NOT NULL,
+    "url" text NOT NULL,
+    "link" text NULL,
+    "description" text NULL,
+    "created_at" timestamp without time zone NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "media_pkey" PRIMARY KEY ("media_id"),
+    CONSTRAINT "fk_media_item" FOREIGN KEY ("object_id") REFERENCES "items" ("object_id") ON DELETE SET NULL,
+    CONSTRAINT "fk_media_order" FOREIGN KEY ("order_id") REFERENCES "orders" ("order_id") ON DELETE CASCADE
+);
 
-            migrationBuilder.CreateTable(
-                name: "order_details",
-                columns: table => new
-                {
-                    order_detail_id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.SerialColumn),
-                    order_id = table.Column<int>(type: "integer", nullable: false),
-                    object_id = table.Column<int>(type: "integer", nullable: false),
-                    detail_status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    actual_return_time = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("order_details_pkey", x => x.order_detail_id);
-                    table.ForeignKey(
-                        name: "order_details_object_id_fkey",
-                        column: x => x.object_id,
-                        principalTable: "items",
-                        principalColumn: "object_id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "order_details_order_id_fkey",
-                        column: x => x.order_id,
-                        principalTable: "orders",
-                        principalColumn: "order_id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+CREATE TABLE "order_details" (
+    "order_detail_id" serial NOT NULL,
+    "order_id" integer NOT NULL,
+    "object_id" integer NOT NULL,
+    "detail_status" character varying(50) NOT NULL,
+    "actual_return_time" timestamp with time zone NULL,
+    CONSTRAINT "order_details_pkey" PRIMARY KEY ("order_detail_id"),
+    CONSTRAINT "order_details_object_id_fkey" FOREIGN KEY ("object_id") REFERENCES "items" ("object_id") ON DELETE RESTRICT,
+    CONSTRAINT "order_details_order_id_fkey" FOREIGN KEY ("order_id") REFERENCES "orders" ("order_id") ON DELETE CASCADE
+);
 
-            migrationBuilder.CreateIndex(
-                name: "idx_media_order_id",
-                table: "media",
-                column: "order_id");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_media_object_id",
-                table: "media",
-                column: "object_id");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_order_details_object_id",
-                table: "order_details",
-                column: "object_id");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_order_details_order_id",
-                table: "order_details",
-                column: "order_id");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_orders_user_id",
-                table: "orders",
-                column: "user_id");
-
-            migrationBuilder.CreateIndex(
-                name: "users_email_key",
-                table: "users",
-                column: "email",
-                unique: true);
+CREATE INDEX "idx_media_order_id" ON "media" ("order_id");
+CREATE INDEX "IX_media_object_id" ON "media" ("object_id");
+CREATE INDEX "IX_order_details_object_id" ON "order_details" ("object_id");
+CREATE INDEX "IX_order_details_order_id" ON "order_details" ("order_id");
+CREATE INDEX "IX_orders_user_id" ON "orders" ("user_id");
+CREATE UNIQUE INDEX "users_email_key" ON "users" ("email");
+""");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "media");
-
-            migrationBuilder.DropTable(
-                name: "order_details");
-
-            migrationBuilder.DropTable(
-                name: "items");
-
-            migrationBuilder.DropTable(
-                name: "orders");
-
-            migrationBuilder.DropTable(
-                name: "users");
+            migrationBuilder.Sql("""
+DROP TABLE IF EXISTS "media";
+DROP TABLE IF EXISTS "order_details";
+DROP TABLE IF EXISTS "items";
+DROP TABLE IF EXISTS "orders";
+DROP TABLE IF EXISTS "users";
+""");
         }
     }
 }

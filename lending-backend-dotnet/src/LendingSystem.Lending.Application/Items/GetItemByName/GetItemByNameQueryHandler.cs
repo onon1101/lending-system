@@ -1,11 +1,11 @@
 using LendingSystem.Lending.Application.Abstractions;
-using LendingSystem.Lending.Domain.Items;
+using LendingSystem.Lending.Domain.Aggregate.Item;
 using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
 namespace LendingSystem.Lending.Application.Items;
 
-internal sealed class GetItemByNameQueryHandler(IItemRepository items) : IRequestHandler<GetItemByNameQuery, Result<GetItemByNameResult>>
+internal sealed class GetItemByNameQueryHandler(IItemQueryRepository items) : IRequestHandler<GetItemByNameQuery, Result<GetItemByNameResult>>
 {
     public async Task<Result<GetItemByNameResult>> Handle(GetItemByNameQuery request, CancellationToken cancellationToken)
     {
@@ -14,7 +14,7 @@ internal sealed class GetItemByNameQueryHandler(IItemRepository items) : IReques
             return Result<GetItemByNameResult>.Failure(ItemErrors.ItemNameRequired());
         }
 
-        var item = await items.GetByNameAsync(request.UserId, Uri.UnescapeDataString(request.ItemName.Trim()), cancellationToken);
+        var item = await items.GetByNameAsync(request.OwnerUsername, Uri.UnescapeDataString(request.ItemName.Trim()), cancellationToken);
         return item is null
             ? Result<GetItemByNameResult>.Failure(ItemErrors.ItemNotFound())
             : Result<GetItemByNameResult>.Success(Map(item));

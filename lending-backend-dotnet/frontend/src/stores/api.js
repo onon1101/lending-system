@@ -55,11 +55,11 @@ export function getCurrentUserFromToken(token = getAccessToken()) {
 
   const roleClaim = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
   const emailClaim = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress";
-  const idClaim = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier";
-  const userId = payload.id ?? payload.user_id ?? payload.sub ?? payload[idClaim];
+  const nameClaim = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name";
 
   return {
-    user_id: userId ? Number(userId) : null,
+    username: payload.username ?? payload.unique_name ?? payload[nameClaim] ?? "",
+    user_key: payload.user_key ?? payload.sub ?? "",
     email: payload.email ?? payload[emailClaim] ?? "",
     role: payload.role ?? payload[roleClaim] ?? "",
   };
@@ -117,15 +117,13 @@ function normalizeApiPayload(value) {
     Object.entries(value).map(([key, entry]) => [key, normalizeApiPayload(entry)]),
   );
 
-  if (hasOwn(normalized, "item_id") && !hasOwn(normalized, "object_id")) {
-    normalized.object_id = normalized.item_id;
-  }
-
-  if (hasOwn(normalized, "object_id") && !hasOwn(normalized, "item_id")) {
-    normalized.item_id = normalized.object_id;
-  }
-
   return normalized;
+}
+
+export function getItemKey(item) {
+  const owner = item?.owner_username || item?.ownerUsername || "";
+  const name = item?.object_name || item?.objectName || item?.name || "";
+  return `${owner}/${name}`;
 }
 
 export function getFullImageUrl(path) {
@@ -158,22 +156,16 @@ export async function getAllItems() {
     .then((items) => (Array.isArray(items) ? items : []));
 }
 
-export async function getItemsByUserId(userId) {
-  return fetch(`${API_BASE_URL}/catalog/items/user/${userId}`, {
+export async function getItemsByUserName(username) {
+  return fetch(`${API_BASE_URL}/catalog/items/user/${encodeURIComponent(username)}`, {
     headers: headers(),
   })
     .then(handleResponse)
     .then((items) => (Array.isArray(items) ? items : []));
 }
 
-export async function getItemsByUserName(username) {
-  return fetch(`${API_BASE_URL}/catalog/items/user/${encodeURIComponent(username)}`)
-    .then(handleResponse)
-    .then((items) => (Array.isArray(items) ? items : []));
-}
-
 export function getItemDetailPath(item) {
-  const itemName = item?.object_name || item?.objectName || item?.name || item?.item_id || item?.object_id || "";
+  const itemName = item?.object_name || item?.objectName || item?.name || "";
   const ownerUsername = item?.owner_username || item?.ownerUsername || item?.owner_name || item?.ownerName || "";
 
   if (ownerUsername && itemName) {
@@ -183,12 +175,8 @@ export function getItemDetailPath(item) {
   return `/items/${encodeURIComponent(String(itemName))}`;
 }
 
-export async function getItem(itemIdentifier) {
-  return fetch(`${API_BASE_URL}/catalog/items/${encodeURIComponent(itemIdentifier)}`).then(handleResponse);
-}
-
-export async function getItemByUserAndName(userId, objectName) {
-  return fetch(`${API_BASE_URL}/catalog/users/${encodeURIComponent(userId)}/items/${encodeURIComponent(objectName)}`).then(handleResponse);
+export async function getItemByUserAndName(username, objectName) {
+  return fetch(`${API_BASE_URL}/catalog/users/${encodeURIComponent(username)}/items/${encodeURIComponent(objectName)}`).then(handleResponse);
 }
 
 export async function getItemByUsernameAndItemName(username, objectName) {
@@ -223,8 +211,10 @@ export async function createItem(item) {
   }).then(handleResponse);
 }
 
-export async function updateItem(itemId, item) {
-  return fetch(`${API_BASE_URL}/catalog/items/${itemId}`, {
+export async function updateItem(itemRef, item) {
+  const ownerUsername = itemRef?.owner_username || itemRef?.ownerUsername || itemRef?.username || item.ownerUsername || "";
+  const objectName = itemRef?.object_name || itemRef?.objectName || itemRef?.name || item.originalObjectName || item.objectName || "";
+  return fetch(`${API_BASE_URL}/catalog/users/${encodeURIComponent(ownerUsername)}/items/${encodeURIComponent(objectName)}`, {
     method: "PUT",
     headers: headers({ "Content-Type": "application/json" }),
     body: JSON.stringify({
@@ -238,29 +228,37 @@ export async function updateItem(itemId, item) {
   }).then(handleResponse);
 }
 
-export async function uploadItemImage(itemId, file) {
+export async function uploadItemImage(itemRef, file) {
+  const ownerUsername = itemRef?.owner_username || itemRef?.ownerUsername || itemRef?.username || "";
+  const objectName = itemRef?.object_name || itemRef?.objectName || itemRef?.name || "";
   const formData = new FormData();
   formData.append("file", file);
 
-  return fetch(`${API_BASE_URL}/catalog/items/${itemId}/image`, {
+  return fetch(`${API_BASE_URL}/catalog/users/${encodeURIComponent(ownerUsername)}/items/${encodeURIComponent(objectName)}/image`, {
     method: "POST",
     headers: headers(),
     body: formData,
   }).then(handleResponse);
 }
 
-export async function getItemMedia(itemId) {
-  const response = await fetch(`${API_BASE_URL}/catalog/items/${itemId}/media`);
+export async function getItemMedia(itemRef) {
+  const ownerUsername = itemRef?.owner_username || itemRef?.ownerUsername || itemRef?.username || "";
+  const objectName = itemRef?.object_name || itemRef?.objectName || itemRef?.name || "";
+  const response = await fetch(`${API_BASE_URL}/catalog/users/${encodeURIComponent(ownerUsername)}/items/${encodeURIComponent(objectName)}/media`);
   if (response.status === 404) return [];
   const media = await handleResponse(response);
   return Array.isArray(media) ? media : [];
 }
 
-export function uploadItemMedia(file, objectId, description, link = "", onProgress) {
+export function uploadItemMedia(file, itemRef, borrowingKey, description, link = "", onProgress) {
   return new Promise((resolve, reject) => {
+    const ownerUsername = itemRef?.owner_username || itemRef?.ownerUsername || itemRef?.username || "";
+    const objectName = itemRef?.object_name || itemRef?.objectName || itemRef?.name || "";
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("object_id", String(objectId));
+    formData.append("owner_username", ownerUsername);
+    formData.append("object_name", objectName);
+    formData.append("borrowing_key", borrowingKey || "");
     formData.append("description", description || "");
     formData.append("link", link || "");
 
@@ -317,35 +315,40 @@ export async function createUser(user) {
   }).then(handleResponse);
 }
 
-export async function getActiveBorrowings(userId) {
-  return fetch(`${API_BASE_URL}/users/${userId}/borrowings`, {
+export async function getActiveBorrowings(username) {
+  return fetch(`${API_BASE_URL}/users/${encodeURIComponent(username)}/borrowings`, {
     headers: headers(),
   })
     .then(handleResponse)
     .then((borrowings) => (Array.isArray(borrowings) ? borrowings : []));
 }
 
-export async function createBorrowing(userId, itemIds, durationDays) {
+export async function createBorrowing(borrowerUsername, selectedItems, durationDays) {
   return fetch(`${API_BASE_URL}/borrowings`, {
     method: "POST",
     headers: headers({ "Content-Type": "application/json" }),
     body: JSON.stringify({
-      user_id: Number(userId),
-      items_id: itemIds.map(Number),
+      borrower_username: borrowerUsername,
+      items: selectedItems.map((item) => ({
+        owner_username: item.owner_username || item.ownerUsername,
+        object_name: item.object_name || item.objectName,
+      })),
       duration_days: Number(durationDays),
     }),
   }).then(handleResponse);
 }
 
-export async function returnBorrowedItem(orderId, objectId) {
-  return fetch(`${API_BASE_URL}/borrowings/${orderId}/items/${objectId}/return`, {
+export async function returnBorrowedItem(borrowingKey) {
+  return fetch(`${API_BASE_URL}/borrowings/${encodeURIComponent(borrowingKey)}/return`, {
     method: "POST",
     headers: headers(),
   }).then(handleResponse);
 }
 
-export async function getBorrowingHistory(itemId) {
-  const response = await fetch(`${API_BASE_URL}/catalog/items/${itemId}/borrowings/history`, {
+export async function getBorrowingHistory(itemRef) {
+  const ownerUsername = itemRef?.owner_username || itemRef?.ownerUsername || itemRef?.username || "";
+  const objectName = itemRef?.object_name || itemRef?.objectName || itemRef?.name || "";
+  const response = await fetch(`${API_BASE_URL}/catalog/users/${encodeURIComponent(ownerUsername)}/items/${encodeURIComponent(objectName)}/borrowings/history`, {
     headers: headers(),
   });
   if (response.status === 404) return [];
@@ -358,35 +361,34 @@ export async function createBorrowingRecord(record) {
     method: "POST",
     headers: headers({ "Content-Type": "application/json" }),
     body: JSON.stringify({
-      user_id: Number(record.userId),
+      owner_username: record.ownerUsername,
       borrower_name: record.borrowerName,
-      item_id: Number(record.itemId),
+      object_name: record.objectName,
       start_date: record.startDate,
       end_date: record.endDate,
     }),
   }).then(handleResponse);
 }
 
-export async function updateBorrowingRecordTime(orderId, record) {
-  return fetch(`${API_BASE_URL}/management/borrowings/${orderId}/time`, {
+export async function updateBorrowingRecordTime(borrowingKey, record) {
+  return fetch(`${API_BASE_URL}/management/borrowings/${encodeURIComponent(borrowingKey)}/time`, {
     method: "PATCH",
     headers: headers({ "Content-Type": "application/json" }),
     body: JSON.stringify({
-      user_id: Number(record.userId),
+      owner_username: record.ownerUsername,
       start_date: record.startDate,
       end_date: record.endDate,
     }),
   }).then(handleResponse);
 }
 
-export async function deleteBorrowingRecord(orderId, userId) {
-  return fetch(`${API_BASE_URL}/management/borrowings/${orderId}?user_id=${encodeURIComponent(userId)}`, {
+export async function deleteBorrowingRecord(borrowingKey, ownerUsername) {
+  return fetch(`${API_BASE_URL}/management/borrowings/${encodeURIComponent(borrowingKey)}?owner_username=${encodeURIComponent(ownerUsername)}`, {
     method: "DELETE",
     headers: headers(),
   }).then(handleResponse);
 }
 
-export const GetItemByID = getItem;
 export const GetItemByNameForUser = getItemByUserAndName;
-export const GetLoanHistoryByItemID = getBorrowingHistory;
+export const GetLoanHistoryByItem = getBorrowingHistory;
 export const getActiveLoans = getActiveBorrowings;

@@ -1,19 +1,20 @@
 using LendingSystem.Lending.Application.Abstractions;
 using LendingSystem.Lending.Application.Media;
-using LendingSystem.Lending.Domain.Media;
 using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
 namespace LendingSystem.Lending.Application.Items;
 
 internal sealed class UploadItemMediaCommandHandler(
-    IItemRepository items,
-    IMediaRepository media,
+    IItemCommandRepository items,
+    IItemQueryRepository itemQueries,
+    IMediaCommandRepository media,
     IObjectStorage storage) : IRequestHandler<UploadItemMediaCommand, Result<UploadItemMediaResult>>
 {
     public async Task<Result<UploadItemMediaResult>> Handle(UploadItemMediaCommand request, CancellationToken cancellationToken)
     {
-        var existingItem = await items.GetByIdAsync(request.ObjectId, cancellationToken);
+        var itemByName = await itemQueries.GetByNameAsync(request.OwnerUsername, request.ObjectName, cancellationToken);
+        var existingItem = itemByName is null ? null : await items.GetByIdForCommandAsync(itemByName.ItemId, cancellationToken);
         if (existingItem is null)
         {
             return Result<UploadItemMediaResult>.Failure(ItemErrors.ItemNotFound());
@@ -36,8 +37,14 @@ internal sealed class UploadItemMediaCommandHandler(
             return Result<UploadItemMediaResult>.Failure(upload.Error);
         }
 
-        var asset = await media.CreateItemMediaAsync(
-            request.ObjectId,
+        if (!PublicResourceKey.TryGetInt("borrowing", request.BorrowingKey, out var orderId))
+        {
+            return Result<UploadItemMediaResult>.Failure(MediaErrors.LendingOrderRequired());
+        }
+
+        var asset = await media.CreateLendingMediaAsync(
+            orderId,
+            existingItem.ItemId,
             upload.Data!.Type,
             MediaStorageHelper.RewritePublicMediaHost(upload.Data.Stored.Url),
             request.Link,

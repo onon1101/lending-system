@@ -11,35 +11,12 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "items_object_id_fkey",
-                table: "items");
-
-            migrationBuilder.AddColumn<string>(
-                name: "maker",
-                table: "items",
-                type: "character varying(100)",
-                maxLength: 100,
-                nullable: false,
-                defaultValue: "");
-
-            migrationBuilder.AddColumn<string>(
-                name: "material",
-                table: "items",
-                type: "character varying(100)",
-                maxLength: 100,
-                nullable: false,
-                defaultValue: "");
-
-            migrationBuilder.AddColumn<string>(
-                name: "object_name",
-                table: "items",
-                type: "character varying(100)",
-                maxLength: 100,
-                nullable: false,
-                defaultValue: "");
-
             migrationBuilder.Sql("""
+                ALTER TABLE "items" DROP CONSTRAINT IF EXISTS "items_object_id_fkey";
+                ALTER TABLE "items" ADD COLUMN "maker" character varying(100) NOT NULL DEFAULT '';
+                ALTER TABLE "items" ADD COLUMN "material" character varying(100) NOT NULL DEFAULT '';
+                ALTER TABLE "items" ADD COLUMN "object_name" character varying(100) NOT NULL DEFAULT '';
+
                 UPDATE "items" AS i
                 SET
                     "object_name" = COALESCE(NULLIF(o."object", ''), 'Unknown'),
@@ -51,41 +28,27 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
                 UPDATE "items"
                 SET "object_name" = 'Unknown'
                 WHERE "object_name" = '';
+
+                DROP TABLE IF EXISTS "objects";
+                DROP INDEX IF EXISTS "IX_items_object_id";
+                ALTER TABLE "items" DROP COLUMN IF EXISTS "object_id";
                 """);
-
-            migrationBuilder.DropTable(
-                name: "objects");
-
-            migrationBuilder.DropIndex(
-                name: "IX_items_object_id",
-                table: "items");
-
-            migrationBuilder.DropColumn(
-                name: "object_id",
-                table: "items");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.CreateTable(
-                name: "objects",
-                columns: table => new
-                {
-                    object_id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.SerialColumn),
-                    club = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    maker = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    material = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    @object = table.Column<string>(name: "object", type: "character varying(100)", maxLength: 100, nullable: false),
-                    price = table.Column<int>(type: "integer", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("objects_pkey", x => x.object_id);
-                });
-
             migrationBuilder.Sql("""
+                CREATE TABLE "objects" (
+                    "object_id" serial NOT NULL,
+                    "club" character varying(100) NOT NULL,
+                    "maker" character varying(100) NOT NULL,
+                    "material" character varying(100) NOT NULL,
+                    "object" character varying(100) NOT NULL,
+                    "price" integer NOT NULL,
+                    CONSTRAINT "objects_pkey" PRIMARY KEY ("object_id")
+                );
+
                 INSERT INTO "objects" ("object_id", "object", "club", "maker", "material", "price")
                 SELECT
                     "item_id",
@@ -101,44 +64,22 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
                     COALESCE((SELECT MAX("object_id") FROM "objects"), 1),
                     true
                 );
-                """);
 
-            migrationBuilder.AddColumn<int>(
-                name: "object_id",
-                table: "items",
-                type: "integer",
-                nullable: false,
-                defaultValue: 0);
+                ALTER TABLE "items" ADD COLUMN "object_id" integer NOT NULL DEFAULT 0;
 
-            migrationBuilder.Sql("""
                 UPDATE "items"
                 SET "object_id" = "item_id";
+
+                CREATE INDEX "IX_items_object_id" ON "items" ("object_id");
+
+                ALTER TABLE "items"
+                ADD CONSTRAINT "items_object_id_fkey"
+                FOREIGN KEY ("object_id") REFERENCES "objects" ("object_id") ON DELETE RESTRICT;
+
+                ALTER TABLE "items" DROP COLUMN "maker";
+                ALTER TABLE "items" DROP COLUMN "material";
+                ALTER TABLE "items" DROP COLUMN "object_name";
                 """);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_items_object_id",
-                table: "items",
-                column: "object_id");
-
-            migrationBuilder.AddForeignKey(
-                name: "items_object_id_fkey",
-                table: "items",
-                column: "object_id",
-                principalTable: "objects",
-                principalColumn: "object_id",
-                onDelete: ReferentialAction.Restrict);
-
-            migrationBuilder.DropColumn(
-                name: "maker",
-                table: "items");
-
-            migrationBuilder.DropColumn(
-                name: "material",
-                table: "items");
-
-            migrationBuilder.DropColumn(
-                name: "object_name",
-                table: "items");
         }
     }
 }

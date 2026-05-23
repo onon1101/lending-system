@@ -1,6 +1,6 @@
 <script>
   import { onMount, createEventDispatcher } from "svelte";
-  import { getAllItems, getFullImageUrl } from "../stores/api"; //
+  import { getAllItems, getFullImageUrl, getItemKey, getItemDetailPath } from "../stores/api"; //
 
   const dispatch = createEventDispatcher();
   let items = [];
@@ -18,8 +18,9 @@
     }
   });
 
-  function viewDetail(id) {
-    dispatch("navigate", { view: "item_detail", id }); //
+  function viewDetail(item) {
+    window.location.href = getItemDetailPath(item);
+    dispatch("navigate", { view: "item_detail", id: getItemKey(item) }); //
   }
 </script>
 
@@ -45,10 +46,10 @@
     </div>
   {:else}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {#each items as item (item.object_id)}
+      {#each items as item (getItemKey(item))}
         <div
           class="group bg-neutral-800 rounded-2xl overflow-hidden border border-neutral-700 hover:border-blue-500/50 transition-all cursor-pointer shadow-lg"
-          on:click={() => viewDetail(item.object_id)}
+          on:click={() => viewDetail(item)}
           aria-hidden="true"
         >
           <div class="relative h-48 bg-neutral-900">

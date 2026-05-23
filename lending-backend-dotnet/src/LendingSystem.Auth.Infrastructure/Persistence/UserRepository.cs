@@ -14,27 +14,57 @@ namespace LendingSystem.Auth.Infrastructure.Persistence;
 public sealed class UserRepository(
     LendingDbContext db,
     EmailAddressAttribute emailAddressAttribute,
-    IQueryConnectionFactory queryConnectionFactory) : IUserRepository
+    IQueryConnectionFactory queryConnectionFactory) : IUserCommandRepository, IUserQueryRepository
 {
     public async Task<UserEntity?> FindByEmailAsync(string email, CancellationToken cancellationToken)
     {
-        var entity = await db.Users
-            .AsNoTracking()
-            .Where(x => x.Email == email && !x.IsDeleted)
-            .FirstOrDefaultAsync(cancellationToken);
+        const string sql = """
+            select
+                user_id as UserId,
+                email as Email,
+                password_hash as PasswordHash,
+                display_name as DisplayName,
+                role as Role,
+                auth_provider as AuthProvider,
+                provider_user_id as ProviderUserId,
+                created_at as CreatedAt,
+                updated_at as UpdatedAt
+            from users
+            where email = @Email
+              and is_deleted = false;
+            """;
 
-        return entity is null ? null : MapUser(entity);
+        using var connection = queryConnectionFactory.CreateConnection();
+        var row = await connection.QuerySingleOrDefaultAsync<UserRow>(
+            new CommandDefinition(sql, new { Email = email }, cancellationToken: cancellationToken));
+
+        return row is null ? null : MapUser(row);
     }
 
     public async Task<UserEntity?> FindByProviderAsync(AuthProvider authProvider, string providerUserId, CancellationToken cancellationToken)
     {
-        var provider = authProvider.Value;
-        var entity = await db.Users
-            .AsNoTracking()
-            .Where(x => x.AuthProvider.ToUpper() == provider && x.ProviderUserId == providerUserId && !x.IsDeleted)
-            .FirstOrDefaultAsync(cancellationToken);
+        const string sql = """
+            select
+                user_id as UserId,
+                email as Email,
+                password_hash as PasswordHash,
+                display_name as DisplayName,
+                role as Role,
+                auth_provider as AuthProvider,
+                provider_user_id as ProviderUserId,
+                created_at as CreatedAt,
+                updated_at as UpdatedAt
+            from users
+            where upper(auth_provider) = @Provider
+              and provider_user_id = @ProviderUserId
+              and is_deleted = false;
+            """;
 
-        return entity is null ? null : MapUser(entity);
+        using var connection = queryConnectionFactory.CreateConnection();
+        var row = await connection.QuerySingleOrDefaultAsync<UserRow>(
+            new CommandDefinition(sql, new { Provider = authProvider.Value, ProviderUserId = providerUserId }, cancellationToken: cancellationToken));
+
+        return row is null ? null : MapUser(row);
     }
 
     public async Task<UserProfile> CreateAsync(string name, string email, string passwordHash, CancellationToken cancellationToken)
@@ -95,7 +125,7 @@ public sealed class UserRepository(
         const string sql = """
             select
                 user_id as UserId,
-                display_name as DisplayName,
+                display_name as Name,
                 coalesce(email, '') as Email
             from users
             where user_id = @UserId
@@ -112,7 +142,7 @@ public sealed class UserRepository(
         const string sql = """
             select
                 user_id as UserId,
-                display_name as DisplayName,
+                display_name as Name,
                 coalesce(email, '') as Email
             from users
             where display_name ilike @Pattern
@@ -148,7 +178,18 @@ public sealed class UserRepository(
         for (var attempt = 0; ; attempt++)
         {
             var name = $"{candidate}{suffix}";
-            if (!await db.Users.AnyAsync(x => x.Name == name, cancellationToken))
+            const string sql = """
+                select exists (
+                    select 1
+                    from users
+                    where name = @Name
+                );
+                """;
+
+            using var connection = queryConnectionFactory.CreateConnection();
+            var exists = await connection.ExecuteScalarAsync<bool>(
+                new CommandDefinition(sql, new { Name = name }, cancellationToken: cancellationToken));
+            if (!exists)
             {
                 return name;
             }
@@ -201,4 +242,27 @@ public sealed class UserRepository(
         entity.ProviderUserId,
         entity.CreatedAt ?? default,
         entity.UpdatedAt ?? default);
+
+    private UserEntity MapUser(UserRow row) => UserEntity.Create(
+        emailAddressAttribute,
+        row.UserId,
+        row.Email ?? "",
+        row.PasswordHash ?? "",
+        row.DisplayName,
+        row.Role ?? "",
+        row.AuthProvider,
+        row.ProviderUserId,
+        row.CreatedAt ?? default,
+        row.UpdatedAt ?? default);
+
+    private sealed record UserRow(
+        int UserId,
+        string? Email,
+        string? PasswordHash,
+        string DisplayName,
+        string? Role,
+        string AuthProvider,
+        string? ProviderUserId,
+        DateTimeOffset? CreatedAt,
+        DateTimeOffset? UpdatedAt);
 }

@@ -3,4 +3,4 @@ using MediatR;
 
 namespace LendingSystem.Lending.Application.Loans;
 
-public sealed record ReturnLoanItemCommand(int OrderId, int ObjectId) : ICommand<ReturnLoanItemResult>;
+public sealed record ReturnLoanItemCommand(string BorrowingKey) : ICommand<ReturnLoanItemResult>;

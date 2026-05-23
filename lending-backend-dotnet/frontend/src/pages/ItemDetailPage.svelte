@@ -3,8 +3,7 @@
   import MediaGallery from "../components/MediaGallery.svelte";
   import UploadMediaModal from "../components/UploadMediaModal.svelte";
   import {
-    GetItemByID,
-    GetLoanHistoryByItemID,
+    GetLoanHistoryByItem,
     createBorrowingRecord,
     deleteBorrowingRecord,
     getCurrentUserFromToken,
@@ -14,7 +13,7 @@
     getItemsByUserName,
   } from "../stores/api";
 
-  export let itemId;
+  export let objectName;
   export let username = "";
 
   let productData = null;
@@ -40,17 +39,16 @@
   };
 
   $: visibleHistory = history.filter(hasLoanRecord);
-  $: resolvedItemId = productData?.item_id || productData?.object_id || null;
+  $: resolvedItemRef = productData;
   $: isAdmin = String(currentUser?.role || "").toLowerCase() === "admin";
-  $: isOwner = Number(productData?.owner_id || productData?.ownerId || 0) === Number(currentUser?.user_id || 0);
-  $: canMutateData = Boolean(currentUser?.user_id && productData && (isAdmin || isOwner));
-  $: canViewHistory = Boolean(currentUser?.user_id && ["admin", "user"].includes(String(currentUser?.role || "").toLowerCase()));
+  $: isOwner = String(productData?.owner_username || productData?.ownerUsername || "") === String(currentUser?.username || "");
+  $: canMutateData = Boolean(currentUser?.username && productData && (isAdmin || isOwner));
+  $: canViewHistory = Boolean(currentUser?.username && ["admin", "user"].includes(String(currentUser?.role || "").toLowerCase()));
 
   onMount(async () => {
     currentUser = getCurrentUserFromToken();
-    itemId = itemId || new URLSearchParams(window.location.search).get("id");
-    if (!itemId) {
-      error = "缺少物品 ID。";
+    if (!objectName) {
+      error = "缺少物品名稱。";
       loading = false;
       return;
     }
@@ -58,9 +56,9 @@
     try {
       const item = username
         ? (await getItemsByUserName(username)).find(
-            (entry) => entry.object_name === decodeURIComponent(itemId),
+            (entry) => entry.object_name === decodeURIComponent(objectName),
           )
-        : await GetItemByID(itemId);
+        : null;
 
       if (!item) {
         throw new Error("找不到這個物品。");
@@ -69,7 +67,7 @@
       productData = item;
       replaceIdUrlWithScopedName(item);
       if (canViewHistory) {
-        const loanHistory = await GetLoanHistoryByItemID(item.item_id || item.object_id);
+        const loanHistory = await GetLoanHistoryByItem(item);
         history = loanHistory || [];
       }
     } catch (err) {
@@ -81,12 +79,14 @@
 
   async function handleCoverUpload() {
     if (!canMutateData) return;
-    if (!resolvedItemId || !imageFile) return;
+    if (!resolvedItemRef || !imageFile) return;
 
     coverUploading = true;
     try {
-      await uploadItemImage(resolvedItemId, imageFile);
-      productData = await GetItemByID(resolvedItemId);
+      await uploadItemImage(resolvedItemRef, imageFile);
+      productData = (await getItemsByUserName(username)).find(
+        (entry) => entry.object_name === decodeURIComponent(objectName),
+      );
       imageFile = null;
     } catch (err) {
       error = err.message || "封面圖片更新失敗。";
@@ -96,13 +96,9 @@
   }
 
   async function reloadHistory() {
-    if (!resolvedItemId) return;
+    if (!resolvedItemRef) return;
     if (!canViewHistory) return;
-    history = await GetLoanHistoryByItemID(resolvedItemId);
-  }
-
-  function getCurrentUserId() {
-    return getCurrentUserFromToken()?.user_id || 0;
+    history = await GetLoanHistoryByItem(resolvedItemRef);
   }
 
   function setDefaultNewRecordTime() {
@@ -124,8 +120,7 @@
   }
 
   async function handleCreateRecord() {
-    const userId = getCurrentUserId();
-    if (!userId) {
+    if (!currentUser?.username) {
       recordError = "請先登入，才能新增借閱紀錄。";
       return;
     }
@@ -144,8 +139,8 @@
     recordError = "";
     try {
       await createBorrowingRecord({
-        userId,
-        itemId: resolvedItemId,
+        ownerUsername: productData.owner_username || productData.ownerUsername || username,
+        objectName: productData.object_name,
         borrowerName: newRecord.borrowerName.trim(),
         startDate: toDateOnly(newRecord.startTime),
         endDate: toDateOnly(newRecord.endTime),
@@ -171,9 +166,9 @@
 
     recordEdits = Object.fromEntries(
       visibleHistory
-        .filter((record) => record.order_id)
+        .filter((record) => record.borrowing_key)
         .map((record) => [
-          record.order_id,
+          record.borrowing_key,
           {
             startTime: toDateInput(record.start_date),
             endTime: toDateInput(record.end_date),
@@ -184,38 +179,37 @@
     isEditingRecords = true;
   }
 
-  function updateRecordEdit(orderId, field, value) {
+  function updateRecordEdit(borrowingKey, field, value) {
     recordEdits = {
       ...recordEdits,
-      [orderId]: {
-        ...recordEdits[orderId],
+      [borrowingKey]: {
+        ...recordEdits[borrowingKey],
         [field]: value,
       },
     };
   }
 
-  function toggleDeleteRecord(orderId) {
+  function toggleDeleteRecord(borrowingKey) {
     const next = new Set(deletedRecordIds);
-    if (next.has(orderId)) {
-      next.delete(orderId);
+    if (next.has(borrowingKey)) {
+      next.delete(borrowingKey);
     } else {
-      next.add(orderId);
+      next.add(borrowingKey);
     }
     deletedRecordIds = next;
   }
 
   async function handleSubmitRecordChanges() {
-    const userId = getCurrentUserId();
-    if (!userId) {
+    if (!currentUser?.username) {
       recordError = "請先登入，才能修改借閱紀錄。";
       return;
     }
 
-    const editableRecords = visibleHistory.filter((record) => record.order_id);
+    const editableRecords = visibleHistory.filter((record) => record.borrowing_key);
     for (const record of editableRecords) {
-      if (deletedRecordIds.has(record.order_id)) continue;
+      if (deletedRecordIds.has(record.borrowing_key)) continue;
 
-      const edit = recordEdits[record.order_id];
+      const edit = recordEdits[record.borrowing_key];
       if (!edit?.startTime || !edit?.endTime) {
         recordError = "每筆紀錄都需要開始與結束日期。";
         return;
@@ -230,20 +224,21 @@
     recordSaving = true;
     recordError = "";
     try {
-      for (const orderId of deletedRecordIds) {
-        await deleteBorrowingRecord(orderId, userId);
+      const ownerUsername = productData.owner_username || productData.ownerUsername || username;
+      for (const borrowingKey of deletedRecordIds) {
+        await deleteBorrowingRecord(borrowingKey, ownerUsername);
       }
 
       for (const record of editableRecords) {
-        if (deletedRecordIds.has(record.order_id)) continue;
+        if (deletedRecordIds.has(record.borrowing_key)) continue;
 
-        const edit = recordEdits[record.order_id];
+        const edit = recordEdits[record.borrowing_key];
         const startChanged = edit.startTime !== toDateInput(record.start_date);
         const endChanged = edit.endTime !== toDateInput(record.end_date);
         if (!startChanged && !endChanged) continue;
 
-        await updateBorrowingRecordTime(record.order_id, {
-          userId,
+        await updateBorrowingRecordTime(record.borrowing_key, {
+          ownerUsername,
           startDate: edit.startTime,
           endDate: edit.endTime,
         });
@@ -270,7 +265,7 @@
   }
 
   function hasLoanRecord(record) {
-    return Boolean(record?.order_id || record?.name || record?.status || record?.start_date || record?.end_date);
+    return Boolean(record?.borrowing_key || record?.name || record?.status || record?.start_date || record?.end_date);
   }
 
   function toDateInput(value) {
@@ -387,27 +382,27 @@
       {#if visibleHistory.length > 0}
         <div class:editing={isEditingRecords} class="timeline">
           {#each visibleHistory as record}
-            <div class:marked-delete={deletedRecordIds.has(record.order_id)} class="record-row">
+            <div class:marked-delete={deletedRecordIds.has(record.borrowing_key)} class="record-row">
               <div class="record-main">
                 <strong>{record.name || "使用者"}</strong>
-                {#if canMutateData && isEditingRecords && record.order_id}
+                {#if canMutateData && isEditingRecords && record.borrowing_key}
                   <div class="record-time-editor">
                     <label>
                       <span>開始</span>
                       <input
                         type="date"
-                        value={recordEdits[record.order_id]?.startTime || ""}
-                        disabled={deletedRecordIds.has(record.order_id)}
-                        on:input={(event) => updateRecordEdit(record.order_id, "startTime", event.currentTarget.value)}
+                        value={recordEdits[record.borrowing_key]?.startTime || ""}
+                        disabled={deletedRecordIds.has(record.borrowing_key)}
+                        on:input={(event) => updateRecordEdit(record.borrowing_key, "startTime", event.currentTarget.value)}
                       />
                     </label>
                     <label>
                       <span>結束</span>
                       <input
                         type="date"
-                        value={recordEdits[record.order_id]?.endTime || ""}
-                        disabled={deletedRecordIds.has(record.order_id)}
-                        on:input={(event) => updateRecordEdit(record.order_id, "endTime", event.currentTarget.value)}
+                        value={recordEdits[record.borrowing_key]?.endTime || ""}
+                        disabled={deletedRecordIds.has(record.borrowing_key)}
+                        on:input={(event) => updateRecordEdit(record.borrowing_key, "endTime", event.currentTarget.value)}
                       />
                     </label>
                   </div>
@@ -415,9 +410,9 @@
                   <span>{record.status || "N/A"} · {formatDate(record.start_date)} - {formatDate(record.end_date)}</span>
                 {/if}
               </div>
-              {#if canMutateData && isEditingRecords && record.order_id}
-                <button class="delete-record-button" type="button" on:click={() => toggleDeleteRecord(record.order_id)}>
-                  {deletedRecordIds.has(record.order_id) ? "復原" : "刪除"}
+              {#if canMutateData && isEditingRecords && record.borrowing_key}
+                <button class="delete-record-button" type="button" on:click={() => toggleDeleteRecord(record.borrowing_key)}>
+                  {deletedRecordIds.has(record.borrowing_key) ? "復原" : "刪除"}
                 </button>
               {/if}
             </div>
@@ -434,13 +429,13 @@
     </section>
 
     <section class="detail-section media-section">
-      <MediaGallery itemId={resolvedItemId} />
+      <MediaGallery item={resolvedItemRef} />
     </section>
   </main>
 
   {#if canMutateData && isUploadModalOpen}
     <UploadMediaModal
-      objectId={resolvedItemId}
+      item={resolvedItemRef}
       on:close={() => (isUploadModalOpen = false)}
       on:success={() => {
         isUploadModalOpen = false;

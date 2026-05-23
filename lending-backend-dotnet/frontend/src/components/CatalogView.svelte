@@ -1,6 +1,6 @@
 <script>
   import { onMount } from "svelte";
-  import { getFullImageUrl, getItemDetailPath } from "../stores/api";
+  import { getFullImageUrl, getItemDetailPath, getItemKey } from "../stores/api";
 
   export let title = "物品總覽";
   export let eyebrow = "Item Catalog";
@@ -111,7 +111,7 @@
       <div class="empty-state">{emptyPrefix}{activeStatusLabel}物品</div>
     {:else}
       <div class="overview-grid">
-        {#each filteredItems as item (item.object_id)}
+        {#each filteredItems as item (getItemKey(item))}
           <a class="overview-card" href={getItemDetailPath(item)}>
             <div class="overview-image">
               {#if item.image_url}

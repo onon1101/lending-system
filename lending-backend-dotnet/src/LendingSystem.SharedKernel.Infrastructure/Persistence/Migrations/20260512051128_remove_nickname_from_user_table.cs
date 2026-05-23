@@ -10,19 +10,17 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "nickname",
-                table: "users");
+            migrationBuilder.Sql("""
+ALTER TABLE "users" DROP COLUMN IF EXISTS "nickname";
+""");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "nickname",
-                table: "users",
-                type: "text",
-                nullable: true);
+            migrationBuilder.Sql("""
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "nickname" text NULL;
+""");
         }
     }
 }

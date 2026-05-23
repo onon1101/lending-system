@@ -1,11 +1,11 @@
 using LendingSystem.Lending.Application.Abstractions;
-using LendingSystem.Lending.Domain.Items;
+using LendingSystem.Lending.Domain.Aggregate.Item;
 using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
 namespace LendingSystem.Lending.Application.Items;
 
-internal sealed class GetItemsByUserNameQueryHandler(IItemRepository items) : IRequestHandler<GetItemsByUserNameQuery, Result<IReadOnlyCollection<GetItemsByUserNameResult>>>
+internal sealed class GetItemsByUserNameQueryHandler(IItemQueryRepository items) : IRequestHandler<GetItemsByUserNameQuery, Result<IReadOnlyCollection<GetItemsByUserNameResult>>>
 {
     public async Task<Result<IReadOnlyCollection<GetItemsByUserNameResult>>> Handle(GetItemsByUserNameQuery request, CancellationToken cancellationToken)
     {

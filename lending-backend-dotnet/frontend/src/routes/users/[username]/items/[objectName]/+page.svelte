@@ -7,4 +7,4 @@
   <title>物品細節 | Lending System</title>
 </svelte:head>
 
-<ItemDetailPage username={$page.params.username} itemId={$page.params.objectName} />
+<ItemDetailPage username={$page.params.username} objectName={$page.params.objectName} />

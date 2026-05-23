@@ -13,20 +13,13 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "display_name",
-                table: "users",
-                type: "character varying(100)",
-                maxLength: 100,
-                nullable: false,
-                defaultValue: "");
-
             migrationBuilder.Sql("""
+                ALTER TABLE "users"
+                ADD COLUMN IF NOT EXISTS "display_name" character varying(100) NOT NULL DEFAULT '';
+
                 UPDATE "users"
                 SET "display_name" = COALESCE(NULLIF("name", ''), NULLIF("email", ''), 'User');
-                """);
 
-            migrationBuilder.Sql("""
                 WITH RECURSIVE encoded AS (
                     SELECT
                         "user_id",
@@ -62,39 +55,26 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
                 FROM normalized AS n
                 JOIN suffixes AS s ON s."user_id" = n."user_id"
                 WHERE u."user_id" = n."user_id";
+
+                CREATE UNIQUE INDEX IF NOT EXISTS "users_name_key" ON "users" ("name");
+
+                ALTER TABLE "users"
+                ADD CONSTRAINT "ck_users_name_english_letters" CHECK ("name" ~ '^[A-Za-z]+$');
                 """);
-
-            migrationBuilder.CreateIndex(
-                name: "users_name_key",
-                table: "users",
-                column: "name",
-                unique: true);
-
-            migrationBuilder.AddCheckConstraint(
-                name: "ck_users_name_english_letters",
-                table: "users",
-                sql: "name ~ '^[A-Za-z]+$'");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropCheckConstraint(
-                name: "ck_users_name_english_letters",
-                table: "users");
-
-            migrationBuilder.DropIndex(
-                name: "users_name_key",
-                table: "users");
-
             migrationBuilder.Sql("""
+                ALTER TABLE "users" DROP CONSTRAINT IF EXISTS "ck_users_name_english_letters";
+                DROP INDEX IF EXISTS "users_name_key";
+
                 UPDATE "users"
                 SET "name" = COALESCE(NULLIF("display_name", ''), "name");
-                """);
 
-            migrationBuilder.DropColumn(
-                name: "display_name",
-                table: "users");
+                ALTER TABLE "users" DROP COLUMN IF EXISTS "display_name";
+                """);
         }
     }
 }

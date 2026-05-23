@@ -156,13 +156,13 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("description");
 
-                    b.Property<string>("Link")
-                        .HasColumnType("text")
-                        .HasColumnName("link");
-
                     b.Property<int>("ItemId")
                         .HasColumnType("integer")
                         .HasColumnName("item_id");
+
+                    b.Property<string>("Link")
+                        .HasColumnType("text")
+                        .HasColumnName("link");
 
                     b.Property<string>("Type")
                         .IsRequired()
@@ -290,7 +290,7 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
-                        .HasDefaultValue("local")
+                        .HasDefaultValue("LOCAL")
                         .HasColumnName("auth_provider");
 
                     b.Property<DateTimeOffset?>("CreatedAt")
@@ -449,7 +449,6 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
                 {
                     b.Navigation("Media");
                 });
-
 #pragma warning restore 612, 618
         }
     }

@@ -1,0 +1,61 @@
+using LendingSystem.SharedKernel.Domain.Common;
+
+namespace LendingSystem.Lending.Domain.Aggregate.Loans;
+
+public sealed class Loan : Entity
+{
+    private Loan(
+        int orderId,
+        int itemId,
+        DateOnly startDate,
+        DateOnly endDate,
+        DateOnly? actualReturnDate,
+        string status)
+    {
+        OrderId = orderId;
+        ItemId = itemId;
+        StartDate = startDate;
+        EndDate = endDate;
+        ActualReturnDate = actualReturnDate;
+        Status = status;
+    }
+
+    public int OrderId { get; }
+    public int ItemId { get; }
+    public DateOnly StartDate { get; private set; }
+    public DateOnly EndDate { get; private set; }
+    public DateOnly? ActualReturnDate { get; private set; }
+    public string Status { get; private set; }
+
+    public static Loan Create(int itemId, DateOnly startDate, DateOnly endDate) =>
+        new(0, itemId, startDate, endDate, null, LoanStatuses.OnLoan);
+
+    public static Loan CreateRequest(int itemId, DateOnly startDate, DateOnly endDate) =>
+        new(0, itemId, startDate, endDate, null, LoanStatuses.Requested);
+
+    public static Loan Rehydrate(
+        int orderId,
+        int itemId,
+        DateOnly startDate,
+        DateOnly endDate,
+        DateOnly? actualReturnDate,
+        string status) =>
+        new(orderId, itemId, startDate, endDate, actualReturnDate, status);
+
+    public void Return(DateOnly actualReturnDate)
+    {
+        Status = LoanStatuses.Returned;
+        ActualReturnDate = actualReturnDate;
+    }
+
+    public void ChangePeriod(DateOnly startDate, DateOnly endDate)
+    {
+        if (startDate >= endDate)
+        {
+            throw new InvalidOperationException("Loan start date must be earlier than end date.");
+        }
+
+        StartDate = startDate;
+        EndDate = endDate;
+    }
+}

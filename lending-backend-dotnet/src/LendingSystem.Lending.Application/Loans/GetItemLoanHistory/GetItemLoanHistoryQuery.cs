@@ -3,4 +3,4 @@ using MediatR;
 
 namespace LendingSystem.Lending.Application.Loans;
 
-public sealed record GetItemLoanHistoryQuery(int ItemId) : IQuery<IReadOnlyCollection<GetItemLoanHistoryResult>>;
+public sealed record GetItemLoanHistoryQuery(string OwnerUsername, string ObjectName) : IQuery<IReadOnlyCollection<GetItemLoanHistoryResult>>;

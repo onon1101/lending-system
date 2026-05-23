@@ -7,7 +7,7 @@ using MediatR;
 namespace LendingSystem.Auth.Application.Auth;
 
 internal sealed class GoogleLoginCommandHandler(
-    IUserRepository users,
+    IUserCommandRepository users,
     ITokenService tokens,
     IGoogleOAuth2Acl googleOAuth2) : IRequestHandler<GoogleLoginCommand, Result<GoogleLoginResult>>
 {
@@ -28,7 +28,7 @@ internal sealed class GoogleLoginCommandHandler(
         var user = await users.FindByProviderAsync(identity.Provider, identity.ProviderUserId, cancellationToken);
         if (user is not null)
         {
-            var existingTokenPair = tokens.Generate(user);
+            var existingTokenPair = tokens.Generate(user.Id, user.Username, user.Email.GetEmailStr(), user.Role.Value);
             return Result<GoogleLoginResult>.Success(new GoogleLoginResult(existingTokenPair.AccessToken, existingTokenPair.RefreshToken));
         }
 
@@ -51,7 +51,7 @@ internal sealed class GoogleLoginCommandHandler(
             }
         }
 
-        var tokenPair = tokens.Generate(user);
+        var tokenPair = tokens.Generate(user.Id, user.Username, user.Email.GetEmailStr(), user.Role.Value);
         return Result<GoogleLoginResult>.Success(new GoogleLoginResult(tokenPair.AccessToken, tokenPair.RefreshToken));
     }
 }

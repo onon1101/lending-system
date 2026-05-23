@@ -4,7 +4,8 @@
 
   const dispatch = createEventDispatcher();
 
-  export let objectId;
+  export let item;
+  export let borrowingKey = "";
   let fileInput;
   let description = "";
   let isUploading = false;
@@ -24,7 +25,7 @@
 
     try {
       // 呼叫封裝後的 API，並傳入進度處理回呼
-      await uploadItemMedia(file, objectId, description, "", (percent) => {
+      await uploadItemMedia(file, item, borrowingKey, description, "", (percent) => {
         uploadProgress = percent;
         statusMessage = `上傳中: ${percent}%`;
       });

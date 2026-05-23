@@ -1,10 +1,8 @@
-using LendingSystem.Auth.Domain.Users;
-
 namespace LendingSystem.Auth.Application.Abstractions;
 
 public sealed record TokenPair(string AccessToken, string RefreshToken);
 
 public interface ITokenService
 {
-    TokenPair Generate(UserEntity userEntity);
+    TokenPair Generate(int userId, string username, string email, string role);
 }

@@ -4,7 +4,7 @@ using MediatR;
 
 namespace LendingSystem.Auth.Application.Auth;
 
-internal sealed class DeleteUserCommandHandler(IUserRepository users) : IRequestHandler<DeleteUserCommand, Result<DeleteUserResult>>
+internal sealed class DeleteUserCommandHandler(IUserCommandRepository users) : IRequestHandler<DeleteUserCommand, Result<DeleteUserResult>>
 {
     public async Task<Result<DeleteUserResult>> Handle(DeleteUserCommand request, CancellationToken cancellationToken)
     {

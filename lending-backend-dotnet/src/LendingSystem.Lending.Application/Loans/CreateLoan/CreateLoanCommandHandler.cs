@@ -1,31 +1,57 @@
 using LendingSystem.Lending.Application.Abstractions;
-using LendingSystem.Lending.Domain.Loans;
+using LendingSystem.Lending.Domain.Aggregate.Loans;
+using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
 namespace LendingSystem.Lending.Application.Loans;
 
-internal sealed class CreateLoanCommandHandler(ILoanRepository loans) : IRequestHandler<CreateLoanCommand, Result<CreateLoanResult>>
+internal sealed class CreateLoanCommandHandler(
+    ILoanCommandRepository loans,
+    IItemQueryRepository items,
+    IExecutionContextAccessor executionContext) : IRequestHandler<CreateLoanCommand, Result<CreateLoanResult>>
 {
     public async Task<Result<CreateLoanResult>> Handle(CreateLoanCommand request, CancellationToken cancellationToken)
     {
         int? borrowerId = request.BorrowerId ?? request.UserId;
+        if (!string.IsNullOrWhiteSpace(request.BorrowerUsername))
+        {
+            borrowerId = await items.GetUserIdByUsernameAsync(request.BorrowerUsername, cancellationToken);
+        }
+
+        if (!executionContext.CanAccessUser(borrowerId ?? 0))
+        {
+            return Result<CreateLoanResult>.Failure(LoanErrors.CreateBorrowingsForSelfOnly());
+        }
+
         if (borrowerId <= 0)
         {
             borrowerId = null;
         }
 
         if ((borrowerId is null && string.IsNullOrWhiteSpace(request.BorrowerName)) ||
-            request.ItemsId.Length == 0 ||
+            request.Items.Length == 0 && request.ItemsId.Length == 0 ||
             request.DurationDays <= 0)
         {
             return Result<CreateLoanResult>.Failure(LoanErrors.MissingCreateFields());
         }
 
+        var itemIds = request.ItemsId.ToList();
+        foreach (var itemRequest in request.Items)
+        {
+            var item = await items.GetByNameAsync(itemRequest.OwnerUsername, itemRequest.ObjectName, cancellationToken);
+            if (item is null)
+            {
+                return Result<CreateLoanResult>.Failure(LoanErrors.MissingCreateFields());
+            }
+
+            itemIds.Add(item.ItemId);
+        }
+
         var loan = await loans.CreateAsync(
             borrowerId,
             request.BorrowerName,
-            request.ItemsId,
+            itemIds,
             request.DurationDays,
             cancellationToken);
 

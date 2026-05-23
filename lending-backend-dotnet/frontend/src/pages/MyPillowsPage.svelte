@@ -5,8 +5,9 @@
     getBorrowingHistory,
     getCurrentUserFromToken,
     getFullImageUrl,
+    getItemKey,
     getItemDetailPath,
-    getItemsByUserId,
+    getItemsByUserName,
   } from "../stores/api";
 
   let currentUser = null;
@@ -21,14 +22,14 @@
 
   onMount(async () => {
     currentUser = getCurrentUserFromToken();
-    if (!currentUser?.user_id) {
+    if (!currentUser?.username) {
       loading = false;
       error = "請先登入後再查看我的抱枕總覽。";
       return;
     }
 
     try {
-      items = await getItemsByUserId(currentUser.user_id);
+      items = await getItemsByUserName(currentUser.username);
     } catch (err) {
       error = err.message || "載入抱枕總覽失敗。";
     } finally {
@@ -36,16 +37,17 @@
     }
   });
 
-  async function toggleItem(itemId) {
-    expandedItemId = expandedItemId === itemId ? null : itemId;
-    if (!expandedItemId || histories[itemId]) return;
+  async function toggleItem(item) {
+    const itemKey = getItemKey(item);
+    expandedItemId = expandedItemId === itemKey ? null : itemKey;
+    if (!expandedItemId || histories[itemKey]) return;
 
-    historyLoadingId = itemId;
+    historyLoadingId = itemKey;
     error = "";
     try {
       histories = {
         ...histories,
-        [itemId]: (await getBorrowingHistory(itemId)).filter(hasLoanRecord),
+        [itemKey]: (await getBorrowingHistory(item)).filter(hasLoanRecord),
       };
     } catch (err) {
       error = err.message || "載入借閱歷史失敗。";
@@ -60,7 +62,7 @@
   }
 
   function hasLoanRecord(record) {
-    return Boolean(record?.order_id || record?.name || record?.status || record?.start_date || record?.end_date);
+    return Boolean(record?.borrowing_key || record?.name || record?.status || record?.start_date || record?.end_date);
   }
 
   function getStatusGroup(status) {
@@ -132,9 +134,9 @@
         <div class="grid min-h-44 place-items-center rounded-lg border-2 border-dashed border-gray-500 bg-gray-50 font-extrabold text-gray-700">目前沒有持有中的抱枕。</div>
       {:else}
         <div class="grid gap-4">
-          {#each items as item (item.object_id)}
-            <article class={`overflow-hidden rounded-lg border-2 border-gray-900 ${expandedItemId === item.object_id ? "bg-white" : "bg-gray-50"}`}>
-              <button class="grid w-full grid-cols-[172px_minmax(0,1fr)_56px] items-stretch gap-4 border-0 bg-transparent p-0 text-left text-inherit max-md:grid-cols-1" type="button" on:click={() => toggleItem(item.object_id)}>
+          {#each items as item (getItemKey(item))}
+            <article class={`overflow-hidden rounded-lg border-2 border-gray-900 ${expandedItemId === getItemKey(item) ? "bg-white" : "bg-gray-50"}`}>
+              <button class="grid w-full grid-cols-[172px_minmax(0,1fr)_56px] items-stretch gap-4 border-0 bg-transparent p-0 text-left text-inherit max-md:grid-cols-1" type="button" on:click={() => toggleItem(item)}>
                 <div class="grid min-h-[172px] place-items-center overflow-hidden bg-gray-300 text-3xl font-black text-gray-900">
                   {#if item.image_url}
                     <img class="h-full w-full object-cover" src={getFullImageUrl(item.image_url)} alt={item.object_name} />
@@ -159,22 +161,22 @@
                     </div>
                   </dl>
                 </div>
-                <span class="grid place-items-center border-l-2 border-gray-900 text-2xl font-black max-md:min-h-10 max-md:border-l-0 max-md:border-t-2" aria-hidden="true">{expandedItemId === item.object_id ? "−" : "+"}</span>
+                <span class="grid place-items-center border-l-2 border-gray-900 text-2xl font-black max-md:min-h-10 max-md:border-l-0 max-md:border-t-2" aria-hidden="true">{expandedItemId === getItemKey(item) ? "−" : "+"}</span>
               </button>
 
-              {#if expandedItemId === item.object_id}
+              {#if expandedItemId === getItemKey(item)}
                 <div class="border-t-2 border-gray-900 p-4">
                   <div class="mb-3 flex items-center justify-between gap-4">
                     <h4 class="m-0 text-base font-black text-gray-900">借閱歷史</h4>
                     <a class="font-black text-gray-900" href={getItemDetailPath(item)}>查看細節</a>
                   </div>
-                  {#if historyLoadingId === item.object_id}
+                  {#if historyLoadingId === getItemKey(item)}
                     <p class="font-bold text-gray-600">載入借閱歷史中</p>
-                  {:else if (histories[item.object_id] || []).length === 0}
+                  {:else if (histories[getItemKey(item)] || []).length === 0}
                     <p class="font-bold text-gray-600">此抱枕尚無借閱紀錄。</p>
                   {:else}
                     <div class="grid gap-3">
-                      {#each histories[item.object_id] as record}
+                      {#each histories[getItemKey(item)] as record}
                         <div class="border-l-4 border-gray-900 pl-3">
                           <strong class="block text-gray-900">{record.name || "使用者"}</strong>
                           <span class="block text-sm font-bold text-gray-600">{record.status || "N/A"} · {formatDate(record.start_date)} - {formatDate(record.end_date)}</span>

@@ -1,31 +1,24 @@
 using LendingSystem.Lending.Application.Abstractions;
-using LendingSystem.Lending.Domain.Items;
+using LendingSystem.Lending.Domain.Aggregate.Item;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using Dapper;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LendingSystem.Lending.Infrastructure.Persistence;
 
-public sealed class ItemRepository(LendingDbContext db, IQueryConnectionFactory queryConnectionFactory) : IItemRepository
+public sealed class ItemRepository(LendingDbContext db, IQueryConnectionFactory queryConnectionFactory, IPublisher publisher) : IItemCommandRepository, IItemQueryRepository
 {
     public async Task<Item> CreateAsync(int userId, string objectName, string maker, string material, string description, string imageUrl, CancellationToken cancellationToken)
     {
-        var entity = new ItemEntity
-        {
-            OwnerId = userId,
-            ObjectName = objectName,
-            Maker = maker,
-            Material = material,
-            Description = description,
-            CurrentStatus = ItemStatuses.Available,
-            ImageUrl = imageUrl
-        };
+        var aggregate = ItemAggregate.Create(userId, objectName, maker, material, description, imageUrl);
+        var domainEvent = aggregate.DomainEvents.OfType<ItemCreatedDomainEvent>().Single();
+        await publisher.Publish(domainEvent, cancellationToken);
+        aggregate.ClearDomainEvents();
 
-        db.Items.Add(entity);
-        await db.SaveChangesAsync(cancellationToken);
-
-        return Map(entity);
+        return domainEvent.CreatedItem
+            ?? throw new InvalidOperationException("Item was not persisted by domain event handlers.");
     }
 
     public async Task<Item?> GetByIdAsync(int itemId, CancellationToken cancellationToken)
@@ -49,6 +42,15 @@ public sealed class ItemRepository(LendingDbContext db, IQueryConnectionFactory 
             new CommandDefinition(sql, new { ItemId = itemId }, cancellationToken: cancellationToken));
     }
 
+    public async Task<Item?> GetByIdForCommandAsync(int itemId, CancellationToken cancellationToken)
+    {
+        var entity = await db.Items
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.ItemId == itemId, cancellationToken);
+
+        return entity is null ? null : Map(entity);
+    }
+
     public async Task<Item?> GetByNameAsync(int userId, string itemName, CancellationToken cancellation)
     {
         const string sql = """
@@ -69,6 +71,30 @@ public sealed class ItemRepository(LendingDbContext db, IQueryConnectionFactory 
         using var connection = queryConnectionFactory.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<Item>(
             new CommandDefinition(sql, new { UserId = userId, ItemName = itemName }, cancellationToken: cancellation));
+    }
+
+    public async Task<Item?> GetByNameAsync(string ownerUsername, string itemName, CancellationToken cancellation)
+    {
+        const string sql = """
+            select
+                i.item_id as ItemId,
+                i.owner_id as OwnerId,
+                i.object_name as ObjectName,
+                i.maker as Maker,
+                i.material as Material,
+                coalesce(i.description, '') as Description,
+                coalesce(i.current_status, '') as CurrentStatus,
+                i.image_url as ImageUrl
+            from users u
+            join items i on i.owner_id = u.user_id
+            where u.name = @OwnerUsername
+              and u.is_deleted = false
+              and i.object_name = @ItemName;
+            """;
+
+        using var connection = queryConnectionFactory.CreateConnection();
+        return await connection.QuerySingleOrDefaultAsync<Item>(
+            new CommandDefinition(sql, new { OwnerUsername = ownerUsername, ItemName = itemName }, cancellationToken: cancellation));
     }
 
     public async Task<IReadOnlyCollection<ItemSummary>> GetAllAsync(CancellationToken cancellationToken)
@@ -267,6 +293,38 @@ public sealed class ItemRepository(LendingDbContext db, IQueryConnectionFactory 
             x.OriginalLink,
             x.Media,
             ToDateTimeOffset(x.CreatedAt))).ToArray();
+    }
+
+    public async Task<int?> GetUserIdByUsernameAsync(string username, CancellationToken cancellationToken)
+    {
+        const string sql = """
+            select user_id
+            from users
+            where name = @Username
+              and is_deleted = false;
+            """;
+
+        using var connection = queryConnectionFactory.CreateConnection();
+        return await connection.QuerySingleOrDefaultAsync<int?>(
+            new CommandDefinition(sql, new { Username = username }, cancellationToken: cancellationToken));
+    }
+
+    public async Task<bool> GetItemExistsAsync(string username, string itemName, CancellationToken cancellationToken)
+    {
+        const string sql = """
+            select exists (
+                select 1
+                from users u
+                join items i on i.owner_id = u.user_id
+                where u.name = @Username
+                  and u.is_deleted = false
+                  and i.object_name = @ItemName
+            );
+            """;
+
+        using var connection = queryConnectionFactory.CreateConnection();
+        return await connection.ExecuteScalarAsync<bool>(
+            new CommandDefinition(sql, new { Username = username, ItemName = itemName }, cancellationToken: cancellationToken));
     }
 
     private static Item Map(ItemEntity entity) => new(

@@ -14,8 +14,9 @@
     getAllItems,
     getCurrentUserFromToken,
     getFullImageUrl,
+    getItemKey,
     getItemDetailPath,
-    getItemsByUserId,
+    getItemsByUserName,
     googleLogin,
     login,
     returnBorrowedItem,
@@ -122,8 +123,8 @@
 
   async function initializeWorkspace() {
     currentUser = getCurrentUserFromToken(token);
-    if (!currentUser?.user_id) {
-      error = "無法從登入資訊取得使用者 ID，請重新登入。";
+    if (!currentUser?.username) {
+      error = "無法從登入資訊取得使用者名稱，請重新登入。";
       return;
     }
 
@@ -136,10 +137,10 @@
   }
 
   async function loadOwnedItems() {
-    if (!currentUser?.user_id) return;
+    if (!currentUser?.username) return;
     ownedLoading = true;
     await run(async () => {
-      ownedItems = await getItemsByUserId(currentUser.user_id);
+      ownedItems = await getItemsByUserName(currentUser.username);
     }).catch(() => {});
     ownedLoading = false;
   }
@@ -189,7 +190,7 @@
     if (!userQuery.trim()) return;
     await run(async () => {
       selectedUser = await searchUserByName(userQuery.trim());
-      activeBorrowings = await getActiveBorrowings(selectedUser.user_id);
+      activeBorrowings = await getActiveBorrowings(selectedUser.name);
       activeTab = "active";
     }, "已載入使用者借閱資料。");
   }
@@ -243,7 +244,7 @@
 
     updatingItem = true;
     await run(async () => {
-      await updateItem(editingItem.object_id, {
+      await updateItem(editingItem, {
         objectName: trimmedName,
         maker: editItemForm.maker.trim(),
         material: editItemForm.material.trim(),
@@ -297,10 +298,11 @@
     itemForm = { ...itemForm, cover: event.currentTarget.files?.[0] || null };
   }
 
-  function toggleBorrowItem(itemId) {
-    selectedItemIds = selectedItemIds.includes(itemId)
-      ? selectedItemIds.filter((id) => id !== itemId)
-      : [...selectedItemIds, itemId];
+  function toggleBorrowItem(item) {
+    const itemKey = getItemKey(item);
+    selectedItemIds = selectedItemIds.includes(itemKey)
+      ? selectedItemIds.filter((id) => id !== itemKey)
+      : [...selectedItemIds, itemKey];
   }
 
   async function handleCreateBorrowing() {
@@ -316,18 +318,22 @@
     }
 
     await run(async () => {
-      await createBorrowing(selectedUser.user_id, selectedItemIds, durationDays);
+      await createBorrowing(
+        selectedUser.name,
+        availableItems.filter((item) => selectedItemIds.includes(getItemKey(item))),
+        durationDays,
+      );
       selectedItemIds = [];
-      activeBorrowings = await getActiveBorrowings(selectedUser.user_id);
+      activeBorrowings = await getActiveBorrowings(selectedUser.name);
       await Promise.all([loadItems(), loadOwnedItems()]);
       activeTab = "active";
     }, "借閱已建立。");
   }
 
-  async function handleReturn(orderId, objectId) {
+  async function handleReturn(borrowingKey) {
     await run(async () => {
-      await returnBorrowedItem(orderId, objectId);
-      activeBorrowings = selectedUser ? await getActiveBorrowings(selectedUser.user_id) : [];
+      await returnBorrowedItem(borrowingKey);
+      activeBorrowings = selectedUser ? await getActiveBorrowings(selectedUser.name) : [];
       await Promise.all([loadItems(), loadOwnedItems()]);
     }, "物品已歸還。");
   }
@@ -456,7 +462,7 @@
             <div class="empty-state">目前沒有持有中的抱枕。</div>
           {:else}
             <div class="owned-grid">
-              {#each ownedItems as item (item.object_id)}
+              {#each ownedItems as item (getItemKey(item))}
                 <article class="owned-card">
                   <a class="owned-card-link" href={getItemDetailPath(item)} aria-label={`查看 ${item.object_name}`}>
                     <div class="owned-image">
@@ -531,12 +537,12 @@
             <p class="muted">載入物品中</p>
           {:else}
             <div class="borrow-list">
-              {#each availableItems as item (item.object_id)}
+              {#each availableItems as item (getItemKey(item))}
                 <label>
                   <input
                     type="checkbox"
-                    checked={selectedItemIds.includes(item.object_id)}
-                    on:change={() => toggleBorrowItem(item.object_id)}
+                    checked={selectedItemIds.includes(getItemKey(item))}
+                    on:change={() => toggleBorrowItem(item)}
                   />
                   <span>{item.object_name}</span>
                 </label>
@@ -563,7 +569,7 @@
             <div class="empty-state">載入物品中</div>
           {:else}
             <div class="admin-item-list">
-              {#each items as item (item.object_id)}
+              {#each items as item (getItemKey(item))}
                 <article class="admin-item-row">
                   <div class="admin-item-thumb">
                     {#if item.image_url}
@@ -605,11 +611,11 @@
           </div>
           {#each activeBorrowings as loan}
             <div class="loan-card">
-              <strong>#{loan.order_id} · {formatDate(loan.end_date)}</strong>
+              <strong>{formatDate(loan.end_date)}</strong>
               {#each loan.items as item}
                 <div class="loan-row">
                   <span>{item.object_name}</span>
-                  <button class="secondary-button" type="button" on:click={() => handleReturn(loan.order_id, item.object_id)}>
+                  <button class="secondary-button" type="button" on:click={() => handleReturn(loan.borrowing_key)}>
                     歸還
                   </button>
                 </div>

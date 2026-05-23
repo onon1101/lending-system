@@ -4,7 +4,7 @@ using MediatR;
 
 namespace LendingSystem.Auth.Application.Auth;
 
-internal sealed class GetUserByIdQueryHandler(IUserRepository users) : IRequestHandler<GetUserByIdQuery, Result<GetUserByIdResult>>
+internal sealed class GetUserByIdQueryHandler(IUserQueryRepository users) : IRequestHandler<GetUserByIdQuery, Result<GetUserByIdResult>>
 {
     public async Task<Result<GetUserByIdResult>> Handle(GetUserByIdQuery request, CancellationToken cancellationToken)
     {

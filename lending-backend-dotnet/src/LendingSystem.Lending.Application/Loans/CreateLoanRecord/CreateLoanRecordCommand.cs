@@ -6,17 +6,26 @@ namespace LendingSystem.Lending.Application.Loans;
 
 public sealed record CreateLoanRecordCommand : ICommand<CreateLoanRecordResult>
 {
-    [JsonPropertyName("user_id")]
+    [JsonIgnore]
     public int UserId { get; init; }
 
-    [JsonPropertyName("borrower_id")]
+    [JsonPropertyName("owner_username")]
+    public string? OwnerUsername { get; init; }
+
+    [JsonIgnore]
     public int? BorrowerId { get; init; }
+
+    [JsonPropertyName("borrower_username")]
+    public string? BorrowerUsername { get; init; }
 
     [JsonPropertyName("borrower_name")]
     public string? BorrowerName { get; init; }
 
-    [JsonPropertyName("item_id")]
+    [JsonIgnore]
     public int ItemId { get; init; }
+
+    [JsonPropertyName("object_name")]
+    public string? ObjectName { get; init; }
 
     [JsonPropertyName("start_date")]
     public DateOnly StartDate { get; init; }

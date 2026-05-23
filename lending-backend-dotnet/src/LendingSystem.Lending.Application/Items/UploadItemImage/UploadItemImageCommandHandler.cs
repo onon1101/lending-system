@@ -1,19 +1,20 @@
 using LendingSystem.Lending.Application.Abstractions;
 using LendingSystem.Lending.Application.Media;
-using LendingSystem.Lending.Domain.Items;
-using LendingSystem.Lending.Domain.Media;
+using LendingSystem.Lending.Domain.Aggregate.Item;
 using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
 namespace LendingSystem.Lending.Application.Items;
 
 internal sealed class UploadItemImageCommandHandler(
-    IItemRepository items,
+    IItemCommandRepository items,
+    IItemQueryRepository itemQueries,
     IObjectStorage storage) : IRequestHandler<UploadItemImageCommand, Result<UploadItemImageResult>>
 {
     public async Task<Result<UploadItemImageResult>> Handle(UploadItemImageCommand request, CancellationToken cancellationToken)
     {
-        var existingItem = await items.GetByIdAsync(request.ItemId, cancellationToken);
+        var itemByName = await itemQueries.GetByNameAsync(request.OwnerUsername, request.ObjectName, cancellationToken);
+        var existingItem = itemByName is null ? null : await items.GetByIdForCommandAsync(itemByName.ItemId, cancellationToken);
         if (existingItem is null)
         {
             return Result<UploadItemImageResult>.Failure(ItemErrors.ItemNotFound());
@@ -31,7 +32,7 @@ internal sealed class UploadItemImageCommandHandler(
         }
 
         var item = await items.UpdateAsync(
-            request.ItemId,
+            existingItem.ItemId,
             null,
             null,
             null,

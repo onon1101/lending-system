@@ -1,17 +1,24 @@
 using LendingSystem.Lending.Application.Abstractions;
-using LendingSystem.Lending.Domain.Media;
+using LendingSystem.Lending.Application.Media;
 using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
 namespace LendingSystem.Lending.Application.Media;
 
 internal sealed class UploadPrivateMediaCommandHandler(
-    IMediaRepository media,
+    IItemQueryRepository items,
+    IMediaCommandRepository media,
     IObjectStorage storage) : IRequestHandler<UploadPrivateMediaCommand, Result<UploadPrivateMediaResult>>
 {
     public async Task<Result<UploadPrivateMediaResult>> Handle(UploadPrivateMediaCommand request, CancellationToken cancellationToken)
     {
-        if (request.OrderId is null)
+        if (!PublicResourceKey.TryGetInt("borrowing", request.BorrowingKey, out var orderId))
+        {
+            return Result<UploadPrivateMediaResult>.Failure(MediaErrors.LendingOrderRequired());
+        }
+
+        var item = await items.GetByNameAsync(request.OwnerUsername, request.ObjectName, cancellationToken);
+        if (item is null)
         {
             return Result<UploadPrivateMediaResult>.Failure(MediaErrors.LendingOrderRequired());
         }
@@ -29,8 +36,8 @@ internal sealed class UploadPrivateMediaCommandHandler(
         }
 
         var asset = await media.CreateLendingMediaAsync(
-            request.OrderId.Value,
-            request.ObjectId,
+            orderId,
+            item.ItemId,
             upload.Data!.Type,
             MediaStorageHelper.RewritePublicMediaHost(upload.Data.Stored.Url),
             request.Link,

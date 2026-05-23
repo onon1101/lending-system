@@ -3,4 +3,4 @@ using MediatR;
 
 namespace LendingSystem.Lending.Application.Loans;
 
-public sealed record GetUserActiveLoansQuery(int UserId) : IQuery<IReadOnlyCollection<GetUserActiveLoansResult>>;
+public sealed record GetUserActiveLoansQuery(string Username) : IQuery<IReadOnlyCollection<GetUserActiveLoansResult>>;

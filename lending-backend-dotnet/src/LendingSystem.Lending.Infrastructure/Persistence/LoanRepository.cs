@@ -1,15 +1,16 @@
 using LendingSystem.Lending.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
-using LendingSystem.Lending.Domain.Items;
-using LendingSystem.Lending.Domain.Loans;
+using LendingSystem.Lending.Domain.Aggregate.Item;
+using LendingSystem.Lending.Domain.Aggregate.Loans;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using Dapper;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LendingSystem.Lending.Infrastructure.Persistence;
 
-public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory queryConnectionFactory) : ILoanRepository
+public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory queryConnectionFactory, IPublisher publisher) : ILoanCommandRepository, ILoanQueryRepository
 {
     public async Task<IReadOnlyCollection<UserLoan>> GetActiveLoansByUserIdAsync(int userId, CancellationToken cancellationToken)
     {
@@ -95,6 +96,94 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
             : Result<UserLoan>.Success(created);
     }
 
+    public async Task<Result<UserLoan>> CreateRequestAsync(
+        int borrowerId,
+        string itemOwnerUsername,
+        string itemName,
+        DateOnly startDate,
+        int durationDays,
+        CancellationToken cancellationToken)
+    {
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+
+        if (borrowerId <= 0)
+        {
+            await tx.RollbackAsync(cancellationToken);
+            return Result<UserLoan>.Failure(LoanRepositoryErrors.BorrowerNotFound(borrowerId));
+        }
+
+        if (durationDays <= 0)
+        {
+            await tx.RollbackAsync(cancellationToken);
+            return Result<UserLoan>.Failure(LoanDomainError.StartDateMustBeEarlierThanEndDate());
+        }
+
+        var borrower = await db.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.UserId == borrowerId && !x.IsDeleted, cancellationToken);
+        if (borrower is null)
+        {
+            await tx.RollbackAsync(cancellationToken);
+            return Result<UserLoan>.Failure(LoanRepositoryErrors.BorrowerNotFound(borrowerId));
+        }
+
+        var item = await db.Items
+            .Include(x => x.Owner)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                x => x.ObjectName == itemName
+                    && x.Owner != null
+                    && x.Owner.Name == itemOwnerUsername
+                    && !x.Owner.IsDeleted,
+                cancellationToken);
+        if (item is null || item.Owner is null)
+        {
+            await tx.RollbackAsync(cancellationToken);
+            return Result<UserLoan>.Failure(LoanRepositoryErrors.ItemOwnerOrItemNotFound(itemOwnerUsername, itemName));
+        }
+
+        if (item.CurrentStatus != ItemStatuses.Available)
+        {
+            await tx.RollbackAsync(cancellationToken);
+            return Result<UserLoan>.Failure(LoanRepositoryErrors.ItemUnavailableOrNotFound(item.ItemId));
+        }
+
+        var endDate = startDate.AddDays(durationDays);
+        var borrowerResult = await GetOrCreateBorrowerDetailAsync(
+            borrower.UserId,
+            borrower.DisplayName,
+            item.OwnerId,
+            Today(),
+            cancellationToken);
+        if (!borrowerResult.IsSuccess)
+        {
+            await tx.RollbackAsync(cancellationToken);
+            return Result<UserLoan>.Failure(borrowerResult.Error);
+        }
+
+        var aggregate = LoansAggregate.Create(
+            borrowerResult.Data!.BorrowerDetailId,
+            item.OwnerId,
+            item.Owner.Name,
+            borrower.UserId,
+            borrower.DisplayName,
+            item.ItemId,
+            item.ObjectName,
+            startDate,
+            endDate,
+            isBorrowingRequest: true);
+        var domainEvent = aggregate.DomainEvents.OfType<LoanRequestCreatedDomainEvent>().Single();
+        await publisher.Publish(domainEvent, cancellationToken);
+        aggregate.ClearDomainEvents();
+        await tx.CommitAsync(cancellationToken);
+
+        var createdOrderId = domainEvent.CreatedLoan?.OrderId ?? 0;
+        var created = createdOrderId <= 0 ? null : await GetByOrderIdAsync(createdOrderId, cancellationToken);
+        return created is null
+            ? Result<UserLoan>.Failure(LoanRepositoryErrors.LoanNotFound())
+            : Result<UserLoan>.Success(created);
+    }
+
     public async Task<Result<UserLoan>> CreateRecordAsync(int ownerId, int? borrowerId, string? borrowerName, int itemId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken)
     {
         var item = await db.Items
@@ -116,20 +205,18 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
             return Result<UserLoan>.Failure(borrowerResult.Error);
         }
 
-        var record = new OrderEntity
-        {
-            BorrowerDetailId = borrowerResult.Data!.BorrowerDetailId,
-            ObjectId = itemId,
-            StartDate = startDate,
-            EndDate = endDate,
-            ActualReturnDate = endDate,
-            Status = LoanStatuses.Returned,
-        };
+        var record = Loan.Rehydrate(0, itemId, startDate, endDate, endDate, LoanStatuses.Returned);
+        var aggregate = LoansAggregate.Create(
+            borrowerResult.Data!.BorrowerDetailId,
+            borrowerResult.Data.UserId,
+            borrowerResult.Data.BorrowerName,
+            [record]);
+        var domainEvent = aggregate.DomainEvents.OfType<LoanCreatedDomainEvent>().Single();
+        await publisher.Publish(domainEvent, cancellationToken);
+        aggregate.ClearDomainEvents();
 
-        db.Orders.Add(record);
-        await db.SaveChangesAsync(cancellationToken);
-
-        var created = await GetByOrderIdAsync(record.OrderId, cancellationToken);
+        var createdOrderId = domainEvent.CreatedLoan?.OrderId ?? 0;
+        var created = createdOrderId <= 0 ? null : await GetByOrderIdAsync(createdOrderId, cancellationToken);
         return created is null
             ? Result<UserLoan>.Failure(LoanRepositoryErrors.LoanRecordNotFound())
             : Result<UserLoan>.Success(created);
@@ -240,6 +327,39 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
             : Result<UserLoan>.Success(loan);
     }
 
+    public async Task<Result<UserLoan>> ReturnItemAsync(int orderId, CancellationToken cancellationToken)
+    {
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+
+        var order = await db.Orders
+            .Include(x => x.Item)
+            .FirstOrDefaultAsync(
+                x => x.OrderId == orderId && x.Status == LoanStatuses.OnLoan,
+                cancellationToken);
+
+        if (order is null)
+        {
+            await tx.RollbackAsync(cancellationToken);
+            return Result<UserLoan>.Failure(LoanRepositoryErrors.LoanNotFound());
+        }
+
+        order.Status = LoanStatuses.Returned;
+        order.ActualReturnDate = Today();
+
+        if (order.Item is not null)
+        {
+            order.Item.CurrentStatus = ItemStatuses.Available;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+
+        var loan = await GetByOrderIdAsync(orderId, cancellationToken);
+        return loan is null
+            ? Result<UserLoan>.Failure(LoanRepositoryErrors.LoanNotFound())
+            : Result<UserLoan>.Success(loan);
+    }
+
     public async Task<IReadOnlyCollection<LoanRecord>> GetHistoryByItemIdAsync(int itemId, CancellationToken cancellationToken)
     {
         const string existsSql = """
@@ -276,6 +396,31 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
         return records.Length == 0 ? [new LoanRecord(null, null, null, null, null)] : records;
     }
 
+    public async Task<IReadOnlyCollection<LoanRequestRecord>> GetRequestsByOwnerIdAsync(int ownerId, CancellationToken cancellationToken)
+    {
+        const string sql = """
+            select
+                o.order_id as OrderId,
+                coalesce(i.object_name, '') as ItemName,
+                coalesce(bd.borrower_name, '') as BorrowerName,
+                coalesce(u.name, '') as BorrowerUsername,
+                o.start_date as StartDate,
+                o.end_date as EndDate,
+                o.status as Status
+            from orders o
+            join borrower_details bd on bd.borrower_detail_id = o.borrower_detail_id
+            left join users u on u.user_id = bd.user_id and u.is_deleted = false
+            join items i on i.item_id = o.item_id
+            where i.owner_id = @OwnerId
+              and o.status = @Status
+            order by o.start_date desc, o.order_id desc;
+            """;
+
+        using var connection = queryConnectionFactory.CreateConnection();
+        return (await connection.QueryAsync<LoanRequestRecord>(
+            new CommandDefinition(sql, new { OwnerId = ownerId, Status = LoanStatuses.Requested }, cancellationToken: cancellationToken))).ToArray();
+    }
+
     private async Task<UserLoan?> GetByOrderIdAsync(int orderId, CancellationToken cancellationToken)
     {
         const string sql = """
@@ -299,6 +444,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
         using var connection = queryConnectionFactory.CreateConnection();
         var row = await connection.QuerySingleOrDefaultAsync<UserLoanRow>(
             new CommandDefinition(sql, new { OrderId = orderId }, cancellationToken: cancellationToken));
+
         return row is null ? null : Map(row);
     }
 
@@ -362,6 +508,21 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
                 row.ObjectName,
                 row.DetailStatus,
                 row.ActualReturnDate)
+        ]);
+
+    private static UserLoan Map(OrderEntity order) => new(
+        order.OrderId,
+        order.BorrowerDetail?.UserId ?? 0,
+        order.StartDate,
+        order.EndDate,
+        order.Status,
+        [
+            new LoanItemDetail(
+                order.OrderId,
+                order.ObjectId,
+                order.Item?.ObjectName ?? "",
+                order.Status,
+                order.ActualReturnDate)
         ]);
 
     private static DateOnly Today() => DateOnly.FromDateTime(DateTimeOffset.UtcNow.UtcDateTime);

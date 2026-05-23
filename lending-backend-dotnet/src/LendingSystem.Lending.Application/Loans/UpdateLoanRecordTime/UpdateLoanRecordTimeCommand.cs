@@ -9,8 +9,14 @@ public sealed record UpdateLoanRecordTimeCommand : ICommand<UpdateLoanRecordTime
     [JsonIgnore]
     public int OrderId { get; init; }
 
-    [JsonPropertyName("user_id")]
+    [JsonIgnore]
     public int UserId { get; init; }
+
+    [JsonIgnore]
+    public string BorrowingKey { get; init; } = "";
+
+    [JsonPropertyName("owner_username")]
+    public string? OwnerUsername { get; init; }
 
     [JsonPropertyName("start_date")]
     public DateOnly? StartDate { get; init; }

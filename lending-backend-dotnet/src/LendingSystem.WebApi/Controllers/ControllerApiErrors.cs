@@ -38,7 +38,7 @@ public static class ControllerApiErrors
     /// <summary>
     /// Client's 請求中，某欄位要求要為整數值
     /// </summary>
-    /// <param name="Field"></param>
+    /// <param name="missingField"></param>
     /// <returns></returns>
     public static ControllerErrors MustBeInteger(string missingField) =>
         new("Must_Be_Integer",

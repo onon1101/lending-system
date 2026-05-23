@@ -1,14 +1,13 @@
 using LendingSystem.Lending.Application.Abstractions;
 using LendingSystem.Lending.Application.Media;
-using LendingSystem.Lending.Domain.Items;
-using LendingSystem.Lending.Domain.Media;
+using LendingSystem.Lending.Domain.Aggregate.Item;
 using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
 namespace LendingSystem.Lending.Application.Items;
 
 internal sealed class CreateItemCommandHandler(
-    IItemRepository items,
+    IItemCommandRepository items,
     IObjectStorage storage) : IRequestHandler<CreateItemCommand, Result<CreateItemResult>>
 {
     public async Task<Result<CreateItemResult>> Handle(CreateItemCommand request, CancellationToken cancellationToken)

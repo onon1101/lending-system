@@ -3,9 +3,9 @@ using System.Text.Json.Serialization;
 namespace LendingSystem.Lending.Application.Items;
 
 public sealed record UploadItemMediaResult(
-    [property: JsonPropertyName("media_id")] int MediaId,
-    [property: JsonPropertyName("order_id")] int? OrderId,
-    [property: JsonPropertyName("object_id")] int ObjectId,
+    [property: JsonIgnore] int MediaId,
+    [property: JsonIgnore] int? OrderId,
+    [property: JsonIgnore] int ObjectId,
     [property: JsonPropertyName("type")] string Type,
     [property: JsonPropertyName("description")] string Description,
     [property: JsonPropertyName("url")] string Url,

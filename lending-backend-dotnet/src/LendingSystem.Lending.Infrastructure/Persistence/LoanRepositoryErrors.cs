@@ -33,4 +33,7 @@ public static class LoanRepositoryErrors
 
     public static RepositoryErrors BorrowerNotFound(int borrowerId) =>
         new("LOAN_BORROWER_NOT_FOUND", $"使用者 ID {borrowerId} 不存在", "Borrower not found", ErrorType.NotFound);
+
+    public static RepositoryErrors ItemOwnerOrItemNotFound(string ownerUsername, string itemName) =>
+        new("LOAN_ITEM_OWNER_OR_ITEM_NOT_FOUND", $"使用者 {ownerUsername} 或物品 {itemName} 不存在", "Item owner or item not found", ErrorType.NotFound);
 }

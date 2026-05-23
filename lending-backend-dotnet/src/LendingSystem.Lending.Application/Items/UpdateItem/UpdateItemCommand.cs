@@ -16,6 +16,12 @@ public sealed record UpdateItemCommand(
     public int ItemId { get; init; }
 
     [JsonIgnore]
+    public string OwnerUsername { get; init; } = "";
+
+    [JsonIgnore]
+    public string OriginalObjectName { get; init; } = "";
+
+    [JsonIgnore]
     public int CurrentUserId { get; init; }
 
     [JsonIgnore]

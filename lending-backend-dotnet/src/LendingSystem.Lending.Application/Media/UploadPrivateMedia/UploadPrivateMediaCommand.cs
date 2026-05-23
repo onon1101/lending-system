@@ -4,8 +4,9 @@ using MediatR;
 namespace LendingSystem.Lending.Application.Media;
 
 public sealed record UploadPrivateMediaCommand(
-    int? OrderId,
-    int ObjectId,
+    string BorrowingKey,
+    string OwnerUsername,
+    string ObjectName,
     string Description,
     string Link,
     Stream Stream,

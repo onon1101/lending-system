@@ -3,14 +3,14 @@
   import { getItemMedia } from "../stores/api";
   import MediaModal from "./MediaModal.svelte";
 
-  export let itemId;
+  export let item;
   let mediaList = [];
   let selectedMedia = null;
   let loading = true;
 
   onMount(async () => {
     try {
-      mediaList = (await getItemMedia(itemId)) ?? [];
+      mediaList = (await getItemMedia(item)) ?? [];
     } catch (e) {
       console.error("媒體加載失敗", e);
     } finally {

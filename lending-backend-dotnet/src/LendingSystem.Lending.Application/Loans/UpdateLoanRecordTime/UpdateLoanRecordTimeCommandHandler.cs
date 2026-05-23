@@ -1,16 +1,35 @@
 using LendingSystem.Lending.Application.Abstractions;
-using LendingSystem.Lending.Domain.Loans;
+using LendingSystem.Lending.Domain.Aggregate.Loans;
+using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
 namespace LendingSystem.Lending.Application.Loans;
 
-internal sealed class UpdateLoanRecordTimeCommandHandler(ILoanRepository loans) : IRequestHandler<UpdateLoanRecordTimeCommand, Result<UpdateLoanRecordTimeResult>>
+internal sealed class UpdateLoanRecordTimeCommandHandler(
+    ILoanCommandRepository loans,
+    IItemQueryRepository items,
+    IExecutionContextAccessor executionContext) : IRequestHandler<UpdateLoanRecordTimeCommand, Result<UpdateLoanRecordTimeResult>>
 {
     public async Task<Result<UpdateLoanRecordTimeResult>> Handle(UpdateLoanRecordTimeCommand request, CancellationToken cancellationToken)
     {
-        if (request.UserId <= 0 ||
-            request.OrderId <= 0 ||
+        var ownerId = !string.IsNullOrWhiteSpace(request.OwnerUsername)
+            ? await items.GetUserIdByUsernameAsync(request.OwnerUsername, cancellationToken)
+            : request.UserId;
+        if (ownerId is null || !executionContext.CanAccessUser(ownerId.Value))
+        {
+            return Result<UpdateLoanRecordTimeResult>.Failure(LoanErrors.ManageOwnItemRecordsOnly());
+        }
+
+        var orderId = request.OrderId;
+        if (!string.IsNullOrWhiteSpace(request.BorrowingKey) &&
+            !PublicResourceKey.TryGetInt("borrowing", request.BorrowingKey, out orderId))
+        {
+            return Result<UpdateLoanRecordTimeResult>.Failure(LoanErrors.MissingUpdateRecordTimeFields());
+        }
+
+        if (ownerId <= 0 ||
+            orderId <= 0 ||
             request.StartDate is null && request.EndDate is null)
         {
             return Result<UpdateLoanRecordTimeResult>.Failure(LoanErrors.MissingUpdateRecordTimeFields());
@@ -24,8 +43,8 @@ internal sealed class UpdateLoanRecordTimeCommandHandler(ILoanRepository loans) 
         }
 
         var loan = await loans.UpdateRecordTimeAsync(
-            request.UserId,
-            request.OrderId,
+            ownerId.Value,
+            orderId,
             request.StartDate,
             request.EndDate,
             cancellationToken);

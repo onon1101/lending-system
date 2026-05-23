@@ -3,4 +3,9 @@ using MediatR;
 
 namespace LendingSystem.Lending.Application.Items;
 
-public sealed record UploadItemImageCommand(int ItemId, FileFormat FileFormat, int CurrentUserId, bool IsAdmin) : ICommand<UploadItemImageResult>;
+public sealed record UploadItemImageCommand(
+    string OwnerUsername,
+    string ObjectName,
+    FileFormat FileFormat,
+    int CurrentUserId,
+    bool IsAdmin) : ICommand<UploadItemImageResult>;

@@ -10,100 +10,43 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_items_users_owner_id",
-                table: "items");
-
-            migrationBuilder.Sql("UPDATE items SET description = '' WHERE description IS NULL;");
             migrationBuilder.Sql("""
-                UPDATE items
-                SET owner_id = (SELECT user_id FROM users ORDER BY user_id LIMIT 1)
-                WHERE owner_id IS NULL AND EXISTS (SELECT 1 FROM users);
-                """);
+ALTER TABLE "items" DROP CONSTRAINT IF EXISTS "FK_items_users_owner_id";
 
-            migrationBuilder.AlterColumn<int>(
-                name: "owner_id",
-                table: "items",
-                type: "integer",
-                nullable: false,
-                oldClrType: typeof(int),
-                oldType: "integer",
-                oldNullable: true);
+UPDATE "items" SET "description" = '' WHERE "description" IS NULL;
+UPDATE "items"
+SET "owner_id" = (SELECT "user_id" FROM "users" ORDER BY "user_id" LIMIT 1)
+WHERE "owner_id" IS NULL AND EXISTS (SELECT 1 FROM "users");
+UPDATE "items" SET "current_status" = 'Available' WHERE "current_status" IS NULL;
 
-            migrationBuilder.AlterColumn<string>(
-                name: "description",
-                table: "items",
-                type: "text",
-                nullable: false,
-                defaultValue: "",
-                oldClrType: typeof(string),
-                oldType: "text",
-                oldNullable: true);
+ALTER TABLE "items" ALTER COLUMN "owner_id" SET NOT NULL;
+ALTER TABLE "items" ALTER COLUMN "description" SET DEFAULT '';
+ALTER TABLE "items" ALTER COLUMN "description" SET NOT NULL;
+ALTER TABLE "items" ALTER COLUMN "current_status" SET DEFAULT 'Available';
+ALTER TABLE "items" ALTER COLUMN "current_status" SET NOT NULL;
 
-            migrationBuilder.AlterColumn<string>(
-                name: "current_status",
-                table: "items",
-                type: "character varying(50)",
-                maxLength: 50,
-                nullable: false,
-                defaultValue: "Available",
-                oldClrType: typeof(string),
-                oldType: "character varying(50)",
-                oldMaxLength: 50,
-                oldNullable: true,
-                oldDefaultValue: "Available");
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_items_users_owner_id",
-                table: "items",
-                column: "owner_id",
-                principalTable: "users",
-                principalColumn: "user_id",
-                onDelete: ReferentialAction.Restrict);
+ALTER TABLE "items"
+ADD CONSTRAINT "FK_items_users_owner_id"
+FOREIGN KEY ("owner_id") REFERENCES "users" ("user_id") ON DELETE RESTRICT;
+""");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_items_users_owner_id",
-                table: "items");
+            migrationBuilder.Sql("""
+ALTER TABLE "items" DROP CONSTRAINT IF EXISTS "FK_items_users_owner_id";
 
-            migrationBuilder.AlterColumn<int>(
-                name: "owner_id",
-                table: "items",
-                type: "integer",
-                nullable: true,
-                oldClrType: typeof(int),
-                oldType: "integer");
+ALTER TABLE "items" ALTER COLUMN "owner_id" DROP NOT NULL;
+ALTER TABLE "items" ALTER COLUMN "description" DROP DEFAULT;
+ALTER TABLE "items" ALTER COLUMN "description" DROP NOT NULL;
+ALTER TABLE "items" ALTER COLUMN "current_status" SET DEFAULT 'Available';
+ALTER TABLE "items" ALTER COLUMN "current_status" DROP NOT NULL;
 
-            migrationBuilder.AlterColumn<string>(
-                name: "description",
-                table: "items",
-                type: "text",
-                nullable: true,
-                oldClrType: typeof(string),
-                oldType: "text");
-
-            migrationBuilder.AlterColumn<string>(
-                name: "current_status",
-                table: "items",
-                type: "character varying(50)",
-                maxLength: 50,
-                nullable: true,
-                defaultValue: "Available",
-                oldClrType: typeof(string),
-                oldType: "character varying(50)",
-                oldMaxLength: 50,
-                oldDefaultValue: "Available");
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_items_users_owner_id",
-                table: "items",
-                column: "owner_id",
-                principalTable: "users",
-                principalColumn: "user_id",
-                onDelete: ReferentialAction.SetNull);
+ALTER TABLE "items"
+ADD CONSTRAINT "FK_items_users_owner_id"
+FOREIGN KEY ("owner_id") REFERENCES "users" ("user_id") ON DELETE SET NULL;
+""");
         }
     }
 }

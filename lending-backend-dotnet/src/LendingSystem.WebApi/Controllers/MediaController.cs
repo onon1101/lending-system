@@ -1,4 +1,5 @@
 using LendingSystem.Lending.Application.Media;
+using LendingSystem.WebApi.Configuration.Authorization;
 using LendingSystem.WebApi.Models;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +9,16 @@ namespace LendingSystem.WebApi.Controllers;
 [ApiController]
 public sealed class MediaController(IMediator mediator) : ControllerBase
 {
+    /// <summary>
+    /// 上傳借閱相關的私人媒體
+    /// </summary>
+    /// <param name="cancellationToken">取消作業的通知權杖</param>
+    /// <returns>新增的借閱媒體資訊</returns>
+    /// <remarks>
+    /// 表單欄位包含 file、owner_username、object_name、borrowing_key、description、link。
+    /// </remarks>
     [HttpPost("/api/v1/media/private")]
+    [HasPermission(Permissions.UploadItemMedia)]
     public async Task<ActionResult<ApiResponse<UploadPrivateMediaResult>>> UploadPrivate(CancellationToken cancellationToken)
     {
         var file = Request.Form.Files["file"];
@@ -17,28 +27,20 @@ public sealed class MediaController(IMediator mediator) : ControllerBase
             return this.ApiFailure<UploadPrivateMediaResult>(ControllerApiErrors.MissingFiles());
         }
 
-        if (!int.TryParse(Request.Form["object_id"].ToString(), out var objectId))
+        var ownerUsername = Request.Form["owner_username"].ToString();
+        var objectName = Request.Form["object_name"].ToString();
+        var borrowingKey = Request.Form["borrowing_key"].ToString();
+        if (string.IsNullOrWhiteSpace(ownerUsername) || string.IsNullOrWhiteSpace(objectName))
         {
-            return this.ApiFailure<UploadPrivateMediaResult>(ControllerApiErrors.MissingField("object_id"));
-        }
-
-        var orderIdValue = Request.Form["order_id"].ToString();
-        int? orderId = null;
-        if (!string.IsNullOrWhiteSpace(orderIdValue) && orderIdValue != "0")
-        {
-            if (!int.TryParse(orderIdValue, out var parsedOrderId))
-            {
-                return this.ApiFailure<UploadPrivateMediaResult>(ControllerApiErrors.MustBeInteger("order_id"));
-            }
-
-            orderId = parsedOrderId;
+            return this.ApiFailure<UploadPrivateMediaResult>(ControllerApiErrors.MissingField("owner_username/object_name"));
         }
 
         await using var stream = file.OpenReadStream();
 
         var result = await mediator.Send(new UploadPrivateMediaCommand(
-            orderId,
-            objectId,
+            borrowingKey,
+            ownerUsername,
+            objectName,
             Request.Form["description"].ToString(),
             Request.Form["link"].ToString(),
             stream,

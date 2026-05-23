@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Reflection;
 using LendingSystem.Auth.ACL.Google;
 using LendingSystem.Auth.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Abstractions;
@@ -15,6 +16,7 @@ using LendingSystem.Infrastructure.Messaging;
 using LendingSystem.SharedKernel.Infrastructure.Messaging;
 using LendingSystem.SharedKernel.Infrastructure.Time;
 using LendingSystem.Lending.Infrastructure.Video;
+using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -35,8 +37,13 @@ public static class DependencyInjection
                 configuration.RegisterServicesFromAssemblies(
                     typeof(LoginCommand).Assembly,
                     typeof(GetAllItemsQuery).Assembly,
+                    typeof(ItemRepository).Assembly,
                     typeof(SystemStatusService).Assembly);
             });
+            services.AddValidatorsFromAssemblies(
+                typeof(LoginCommand).Assembly,
+                typeof(GetAllItemsQuery).Assembly,
+                typeof(SystemStatusService).Assembly);
             services.AddScoped<SystemStatusService>();
             return services;
         }
@@ -45,10 +52,13 @@ public static class DependencyInjection
         {
             var connectionString = BuildPostgresConnectionString(configuration);
             services.AddDbContext<LendingDbContext>(options => options.UseNpgsql(connectionString));
-            services.AddScoped<IUserRepository, UserRepository>();
-            services.AddScoped<IItemRepository, ItemRepository>();
-            services.AddScoped<ILoanRepository, LoanRepository>();
-            services.AddScoped<IMediaRepository, MediaRepository>();
+            services.AddScoped<IUserCommandRepository, UserRepository>();
+            services.AddScoped<IUserQueryRepository, UserRepository>();
+            services.AddScoped<IItemCommandRepository, ItemRepository>();
+            services.AddScoped<IItemQueryRepository, ItemRepository>();
+            services.AddScoped<ILoanCommandRepository, LoanRepository>();
+            services.AddScoped<ILoanQueryRepository, LoanRepository>();
+            services.AddScoped<IMediaCommandRepository, MediaRepository>();
             services.AddScoped<IQueryConnectionFactory, PostgresQueryConnectionFactory>();
             services.AddScoped<IDatabaseHealthCheck, PostgresHealthCheck>();
             services.AddSingleton<IMessageQueue, InMemoryMessageQueue>();
@@ -76,6 +86,36 @@ public static class DependencyInjection
 
             return services;
         }
+    }
+
+    private static IServiceCollection AddValidatorsFromAssemblies(
+        this IServiceCollection services,
+        params Assembly[] assemblies)
+    {
+        var validatorTypes = assemblies
+            .SelectMany(assembly => assembly.DefinedTypes)
+            .Where(type => type is { IsAbstract: false, IsInterface: false })
+            .Select(type => new
+            {
+                ImplementationType = type.AsType(),
+                ServiceTypes = type
+                    .GetInterfaces()
+                    .Where(interfaceType =>
+                        interfaceType.IsGenericType &&
+                        interfaceType.GetGenericTypeDefinition() == typeof(IValidator<>))
+                    .ToArray()
+            })
+            .Where(registration => registration.ServiceTypes.Length > 0);
+
+        foreach (var validatorType in validatorTypes)
+        {
+            foreach (var serviceType in validatorType.ServiceTypes)
+            {
+                services.AddScoped(serviceType, validatorType.ImplementationType);
+            }
+        }
+
+        return services;
     }
 
     private static string BuildPostgresConnectionString(IConfiguration configuration)

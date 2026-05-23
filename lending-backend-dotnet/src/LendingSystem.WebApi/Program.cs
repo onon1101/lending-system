@@ -1,11 +1,15 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Reflection;
 using LendingSystem.SharedKernel.Domain.Common;
 using LendingSystem.Infrastructure;
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using LendingSystem.WebApi.Controllers;
+using LendingSystem.WebApi.Configuration.Authorization;
+using LendingSystem.WebApi.Configuration.ExecutionContext;
 using LendingSystem.WebApi.Middleware;
 using LendingSystem.WebApi.Models;
+using LendingSystem.SharedKernel.Application.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
@@ -42,11 +46,17 @@ builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new() { Title = "物品借閱系統 API", Version = "1.0" });
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    options.IncludeXmlComments(xmlPath);
 });
 
 builder.Services
     .AddApplication()
     .AddInfrastructure(builder.Configuration);
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IExecutionContextAccessor, ExecutionContextAccessor>();
 
 var secretKey = builder.Configuration["SECRET_KEY"] ?? builder.Configuration["Jwt:SecretKey"] ?? "development-secret-key-change-before-production";
 builder.Services
@@ -78,7 +88,7 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddPermissionAuthorization();
 
 var app = builder.Build();
 

@@ -10,27 +10,19 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropCheckConstraint(
-                name: "ck_users_name_english_letters",
-                table: "users");
-
-            migrationBuilder.AddCheckConstraint(
-                name: "ck_users_name_english_letters",
-                table: "users",
-                sql: "name ~ '^[A-Za-z0-9]+$'");
+            migrationBuilder.Sql("""
+ALTER TABLE "users" DROP CONSTRAINT IF EXISTS "ck_users_name_english_letters";
+ALTER TABLE "users" ADD CONSTRAINT "ck_users_name_english_letters" CHECK ("name" ~ '^[A-Za-z0-9]+$');
+""");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropCheckConstraint(
-                name: "ck_users_name_english_letters",
-                table: "users");
-
-            migrationBuilder.AddCheckConstraint(
-                name: "ck_users_name_english_letters",
-                table: "users",
-                sql: "name ~ '^[A-Za-z]+$'");
+            migrationBuilder.Sql("""
+ALTER TABLE "users" DROP CONSTRAINT IF EXISTS "ck_users_name_english_letters";
+ALTER TABLE "users" ADD CONSTRAINT "ck_users_name_english_letters" CHECK ("name" ~ '^[A-Za-z]+$');
+""");
         }
     }
 }

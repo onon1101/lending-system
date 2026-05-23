@@ -4,11 +4,19 @@ using MediatR;
 
 namespace LendingSystem.Lending.Application.Loans;
 
-internal sealed class GetItemLoanHistoryQueryHandler(ILoanRepository loans) : IRequestHandler<GetItemLoanHistoryQuery, Result<IReadOnlyCollection<GetItemLoanHistoryResult>>>
+internal sealed class GetItemLoanHistoryQueryHandler(
+    ILoanQueryRepository loans,
+    IItemQueryRepository items) : IRequestHandler<GetItemLoanHistoryQuery, Result<IReadOnlyCollection<GetItemLoanHistoryResult>>>
 {
     public async Task<Result<IReadOnlyCollection<GetItemLoanHistoryResult>>> Handle(GetItemLoanHistoryQuery request, CancellationToken cancellationToken)
     {
-        var result = await loans.GetHistoryByItemIdAsync(request.ItemId, cancellationToken);
+        var item = await items.GetByNameAsync(request.OwnerUsername, Uri.UnescapeDataString(request.ObjectName.Trim()), cancellationToken);
+        if (item is null)
+        {
+            return Result<IReadOnlyCollection<GetItemLoanHistoryResult>>.Success([]);
+        }
+
+        var result = await loans.GetHistoryByItemIdAsync(item.ItemId, cancellationToken);
         return Result<IReadOnlyCollection<GetItemLoanHistoryResult>>.Success(result.Select(x => new GetItemLoanHistoryResult(
             x.OrderId,
             x.StartDate,
