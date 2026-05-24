@@ -17,6 +17,11 @@ internal static class IntegrationTestDatabase
 
     public static LendingDbContext CreateDbContext()
     {
+        if (IntegrationTestTransaction.HasCurrent)
+        {
+            return IntegrationTestTransaction.CreateCurrentDbContext();
+        }
+
         var options = new DbContextOptionsBuilder<LendingDbContext>()
             .UseNpgsql(ConnectionString)
             .Options;

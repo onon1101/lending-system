@@ -3,9 +3,10 @@ using Xunit;
 
 namespace LendingSystem.IntegrationTests.Infrastructure;
 
-public sealed class DatabaseSchemaTests(DatabaseSchemaFixture fixture) : IClassFixture<DatabaseSchemaFixture>
+[Collection(IntegrationTestCollection.Name)]
+public sealed class DatabaseSchemaTests(IntegrationTestCollectionFixture fixture)
 {
-    private readonly DatabaseSchemaFixture _fixture = fixture;
+    private readonly IntegrationTestCollectionFixture _fixture = fixture;
 
     [Fact]
     public async Task Can_apply_database_schema()

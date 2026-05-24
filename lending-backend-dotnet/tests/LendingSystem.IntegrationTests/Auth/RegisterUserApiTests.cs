@@ -1,35 +1,23 @@
-using System.Text.Json;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using LendingSystem.Auth.Application.Auth;
 using LendingSystem.IntegrationTests.Infrastructure;
-using LendingSystem.WebApi.Models;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace LendingSystem.IntegrationTests.Auth;
 
-public sealed class RegisterUserApiTests(
-    DatabaseSchemaFixture database,
-    LendingWebApplicationFactory factory) : IClassFixture<DatabaseSchemaFixture>, IClassFixture<LendingWebApplicationFactory>
+[Collection(IntegrationTestCollection.Name)]
+public sealed class RegisterUserApiTests(IntegrationTestCollectionFixture fixture) : IntegrationTestBase(fixture)
 {
-    private readonly DatabaseSchemaFixture _database = database;
-    private readonly LendingWebApplicationFactory _factory = factory;
-
     [Fact]
     public async Task Register_creates_user_through_api()
     {
         const string email = "register.api.test@example.com";
         const string password = "plain-text-password";
 
-        await using (var db = IntegrationTestDatabase.CreateDbContext())
-        {
-            await db.Users
-                .Where(x => x.Email == email)
-                .ExecuteDeleteAsync();
-        }
-
-        using var client = _factory.CreateClient();
+        using var client = Factory.CreateClient();
 
         var response = await client.PostAsJsonAsync(
             "/api/v1/users",
@@ -61,7 +49,7 @@ public sealed class RegisterUserApiTests(
         const string email = "register.exist.api.test@example.com";
         const string password = "plain-text-password";
 
-        using var client = _factory.CreateClient();
+        using var client = Factory.CreateClient();
 
         var response = await client.PostAsJsonAsync(
             "/api/v1/users",
