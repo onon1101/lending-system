@@ -116,3 +116,5 @@ app.Run();
 
 static ApiResponse<object> ToFailureResponse(Errors error, bool isDevelopment) =>
     ApiResponse<object>.Failure(error.Code, error.GetClientMessage(isDevelopment));
+
+public partial class Program;

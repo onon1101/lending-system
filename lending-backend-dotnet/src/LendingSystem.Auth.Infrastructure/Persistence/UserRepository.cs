@@ -41,7 +41,6 @@ public sealed class UserRepository(
 
         return row is null ? null : MapUser(row);
     }
-
     public async Task<UserEntity?> FindByProviderAsync(AuthProvider authProvider, string providerUserId, CancellationToken cancellationToken)
     {
         const string sql = """
@@ -119,6 +118,16 @@ public sealed class UserRepository(
         await db.SaveChangesAsync(cancellationToken);
 
         return MapUser(entity);
+    }
+
+    public async Task<bool> GetExistsAsync(string name, string email, CancellationToken cancellationToken)
+    {
+        const string sql = """
+                           SELECT COUNT(1) FROM users WHERE name = @Name AND email = @Email;
+                           """;
+        
+        using var connection = queryConnectionFactory.CreateConnection();
+        return await connection.ExecuteScalarAsync<int>(new CommandDefinition(sql, new { Name = name, Email = email }, cancellationToken: cancellationToken)) > 0;
     }
 
     public async Task<UserProfile?> GetByIdAsync(long userId, CancellationToken cancellationToken)

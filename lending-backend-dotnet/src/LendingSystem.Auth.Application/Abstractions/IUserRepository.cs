@@ -15,6 +15,7 @@ public interface IUserCommandRepository
 
 public interface IUserQueryRepository
 {
+    Task<bool> GetExistsAsync(string name, string email, CancellationToken cancellationToken);
     Task<UserProfile?> GetByIdAsync(long userId, CancellationToken cancellationToken);
     Task<UserProfile?> SearchByNameAsync(string username, CancellationToken cancellationToken);
 }

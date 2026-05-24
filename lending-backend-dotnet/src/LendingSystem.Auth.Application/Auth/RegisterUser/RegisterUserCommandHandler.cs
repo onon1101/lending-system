@@ -6,6 +6,7 @@ namespace LendingSystem.Auth.Application.Auth;
 
 internal sealed class RegisterUserCommandHandler(
     IUserCommandRepository users,
+    IUserQueryRepository userQueries, 
     IPasswordHasher passwords) : IRequestHandler<RegisterUserCommand, Result<RegisterUserResult>>
 {
     public async Task<Result<RegisterUserResult>> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
@@ -13,6 +14,12 @@ internal sealed class RegisterUserCommandHandler(
         if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Email))
         {
             return Result<RegisterUserResult>.Failure(AuthErrors.InvalidRequestBody());
+        }
+
+        var isExists = await userQueries.GetExistsAsync(request.Name, request.Email,cancellationToken);
+        if (isExists)
+        {
+            return Result<RegisterUserResult>.Failure(AuthErrors.UserIsExists());
         }
 
         var passwordHash = request.PasswordHash.StartsWith("$2", StringComparison.Ordinal)

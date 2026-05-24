@@ -4,6 +4,8 @@ namespace LendingSystem.Auth.Application.Auth;
 
 public static class AuthErrors
 {
+    public static ApplicationErrors UserIsExists() =>
+        new("AUTH_EXISTS", "User is exists", "User is exists", ErrorType.Validation);
     public static ApplicationErrors InvalidEmail() =>
         new("AUTH_INVALID_EMAIL", "錯誤的 Email 格式", "Invalid email", ErrorType.Validation);
 
