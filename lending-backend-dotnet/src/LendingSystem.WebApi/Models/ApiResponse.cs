@@ -16,10 +16,11 @@ public sealed record ApiResponse<T>
     [JsonPropertyName("errorMessage")]
     public string? ErrorMessage { get; init; }
 
-    private ApiResponse(T? data, bool isSuccess, string? errorCode, string? errorMessage)
+    [JsonConstructor]
+    public ApiResponse(T? data, bool issuccess, string? errorCode, string? errorMessage)
     {
         Data = data;
-        Issuccess = isSuccess;
+        Issuccess = issuccess;
         ErrorCode = errorCode;
         ErrorMessage = errorMessage;
     }

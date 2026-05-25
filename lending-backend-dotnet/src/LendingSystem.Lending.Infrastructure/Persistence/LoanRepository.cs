@@ -7,6 +7,7 @@ using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using Dapper;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace LendingSystem.Lending.Infrastructure.Persistence;
 
@@ -47,7 +48,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
             return Result<UserLoan>.Failure(LoanRepositoryErrors.DuplicateBorrowingItems());
         }
 
-        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        await using var tx = await BeginTransactionIfNeededAsync(cancellationToken);
 
         var startDate = Today();
         var endDate = startDate.AddDays(durationDays);
@@ -105,7 +106,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
         int durationDays,
         CancellationToken cancellationToken)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        await using var tx = await BeginTransactionIfNeededAsync(cancellationToken);
 
         if (borrowerId <= 0)
         {
@@ -225,7 +226,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
 
     public async Task<Result<bool>> DeleteRecordAsync(long ownerId, long orderId, CancellationToken cancellationToken)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        await using var tx = await BeginTransactionIfNeededAsync(cancellationToken);
 
         var order = await db.Orders
             .Include(x => x.Item)
@@ -295,7 +296,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
 
     public async Task<Result<UserLoan>> ReturnItemAsync(long orderId, long objectId, CancellationToken cancellationToken)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        await using var tx = await BeginTransactionIfNeededAsync(cancellationToken);
 
         var order = await db.Orders
             .Include(x => x.Item)
@@ -330,7 +331,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
 
     public async Task<Result<UserLoan>> ReturnItemAsync(long orderId, CancellationToken cancellationToken)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        await using var tx = await BeginTransactionIfNeededAsync(cancellationToken);
 
         var order = await db.Orders
             .Include(x => x.Item)
@@ -497,6 +498,16 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
         return Result<BorrowerDetailEntity>.Success(detail);
     }
 
+    private async Task<RepositoryTransaction> BeginTransactionIfNeededAsync(CancellationToken cancellationToken)
+    {
+        if (db.Database.CurrentTransaction is not null)
+        {
+            return new RepositoryTransaction(null);
+        }
+
+        return new RepositoryTransaction(await db.Database.BeginTransactionAsync(cancellationToken));
+    }
+
     private static UserLoan Map(UserLoanRow row) => new(
         row.OrderId,
         row.UserId,
@@ -528,6 +539,17 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
         ]);
 
     private static DateOnly Today() => DateOnly.FromDateTime(DateTimeOffset.UtcNow.UtcDateTime);
+
+    private sealed class RepositoryTransaction(IDbContextTransaction? transaction) : IAsyncDisposable
+    {
+        public Task CommitAsync(CancellationToken cancellationToken) =>
+            transaction?.CommitAsync(cancellationToken) ?? Task.CompletedTask;
+
+        public Task RollbackAsync(CancellationToken cancellationToken) =>
+            transaction?.RollbackAsync(cancellationToken) ?? Task.CompletedTask;
+
+        public ValueTask DisposeAsync() => transaction?.DisposeAsync() ?? ValueTask.CompletedTask;
+    }
 
     private sealed record UserLoanRow(
         long OrderId,

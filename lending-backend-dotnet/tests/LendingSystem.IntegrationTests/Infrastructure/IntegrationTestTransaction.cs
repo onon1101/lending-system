@@ -10,7 +10,8 @@ namespace LendingSystem.IntegrationTests.Infrastructure;
 
 internal sealed class IntegrationTestTransaction : IAsyncDisposable
 {
-    private static readonly AsyncLocal<IntegrationTestTransaction?> Current = new();
+    private static readonly object Sync = new();
+    private static IntegrationTestTransaction? current;
 
     private readonly NpgsqlConnection _connection;
     private readonly NpgsqlTransaction _transaction;
@@ -21,62 +22,89 @@ internal sealed class IntegrationTestTransaction : IAsyncDisposable
         _transaction = transaction;
     }
 
-    public static bool HasCurrent => Current.Value is not null;
+    public static bool HasCurrent
+    {
+        get
+        {
+            lock (Sync)
+            {
+                return current is not null;
+            }
+        }
+    }
 
     public static async Task<IntegrationTestTransaction> BeginAsync(CancellationToken cancellationToken = default)
     {
-        if (Current.Value is not null)
+        lock (Sync)
         {
-            throw new InvalidOperationException("An integration test transaction is already active.");
+            if (current is not null)
+            {
+                throw new InvalidOperationException("An integration test transaction is already active.");
+            }
         }
 
         var connection = new NpgsqlConnection(IntegrationTestDatabase.ConnectionString);
         await connection.OpenAsync(cancellationToken);
         var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
-        var current = new IntegrationTestTransaction(connection, transaction);
-        Current.Value = current;
-        return current;
+        var integrationTestTransaction = new IntegrationTestTransaction(connection, transaction);
+        lock (Sync)
+        {
+            current = integrationTestTransaction;
+        }
+
+        return integrationTestTransaction;
     }
 
     public static LendingDbContext CreateCurrentDbContext()
     {
-        var current = Current.Value;
-        if (current is null)
+        var currentTransaction = GetCurrent();
+        if (currentTransaction is null)
         {
             throw new InvalidOperationException("No integration test transaction is active.");
         }
 
         var options = new DbContextOptionsBuilder<LendingDbContext>()
-            .UseNpgsql(current._connection)
+            .UseNpgsql(currentTransaction._connection)
             .Options;
 
         var db = new LendingDbContext(options);
-        db.Database.UseTransaction(current._transaction);
+        db.Database.UseTransaction(currentTransaction._transaction);
         return db;
     }
 
     public static IDbConnection CreateCurrentQueryConnection()
     {
-        var current = Current.Value;
-        if (current is null)
+        var currentTransaction = GetCurrent();
+        if (currentTransaction is null)
         {
             throw new InvalidOperationException("No integration test transaction is active.");
         }
 
-        return new NonDisposingDbConnection(current._connection);
+        return new NonDisposingDbConnection(currentTransaction._connection);
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (ReferenceEquals(Current.Value, this))
+        lock (Sync)
         {
-            Current.Value = null;
+            if (ReferenceEquals(current, this))
+            {
+                current = null;
+            }
         }
 
         await _transaction.RollbackAsync();
         await _transaction.DisposeAsync();
         await _connection.DisposeAsync();
+    }
+
+    private static IntegrationTestTransaction? GetCurrent()
+    {
+        lock (Sync)
+        {
+            return current;
+        }
     }
 
     private sealed class NonDisposingDbConnection(DbConnection inner) : DbConnection

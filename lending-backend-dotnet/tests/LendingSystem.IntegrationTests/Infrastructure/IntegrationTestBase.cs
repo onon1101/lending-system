@@ -1,3 +1,5 @@
+using System.Text.Json;
+using LendingSystem.WebApi.Models;
 using Xunit;
 
 namespace LendingSystem.IntegrationTests.Infrastructure;
@@ -12,6 +14,13 @@ public abstract class IntegrationTestBase : IAsyncLifetime
     }
 
     protected LendingWebApplicationFactory Factory { get; }
+
+    protected async Task<ApiResponse<T>> ParseJsonAsync<T>(HttpResponseMessage response)
+    {
+        var stream = await response.Content.ReadAsStreamAsync();
+        var body = JsonSerializer.Deserialize<ApiResponse<T>>(stream)!;
+        return body;
+    }
 
     public async Task InitializeAsync()
     {
