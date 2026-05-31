@@ -2,14 +2,14 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using LendingSystem.Auth.Application.Auth;
-using LendingSystem.IntegrationTests.Infrastructure;
+using LendingSystem.IntegrationTest.Framework.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
-namespace LendingSystem.IntegrationTests.Auth;
+namespace LendingSystem.IntegrationTest.Auth;
 
-[Collection(IntegrationTestCollection.Name)]
-public sealed class RegisterUserApiTests(IntegrationTestCollectionFixture fixture) : IntegrationTestBase(fixture)
+[WriteTest]
+public sealed class RegisterUserApiTests : IntegrationTestBase
 {
     [Fact]
     public async Task Register_creates_user_through_api()
@@ -33,7 +33,7 @@ public sealed class RegisterUserApiTests(IntegrationTestCollectionFixture fixtur
         Assert.Equal("registerapitest", data.GetProperty("name").GetString());
         Assert.Equal(email, data.GetProperty("email").GetString());
 
-        await using var verifyDb = IntegrationTestDatabase.CreateDbContext();
+        await using var verifyDb = CreateDbContext();
         var user = await verifyDb.Users.SingleAsync(x => x.Email == email);
 
         Assert.True(user.UserId > int.MaxValue);
@@ -64,7 +64,7 @@ public sealed class RegisterUserApiTests(IntegrationTestCollectionFixture fixtur
         Assert.Equal(username, data.GetProperty("name").GetString());
         Assert.Equal(email, data.GetProperty("email").GetString());
         
-        await using var verifyDb = IntegrationTestDatabase.CreateDbContext();
+        await using var verifyDb = CreateDbContext();
         var user = await verifyDb.Users.SingleAsync(x => x.Email == email);
 
         Assert.True(user.UserId > int.MaxValue);

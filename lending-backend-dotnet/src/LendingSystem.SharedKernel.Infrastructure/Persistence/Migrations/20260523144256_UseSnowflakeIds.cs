@@ -11,6 +11,29 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.Sql("""
+CREATE TABLE IF NOT EXISTS "item_media" (
+    "media_id" bigint NOT NULL PRIMARY KEY,
+    "item_id" bigint NOT NULL,
+    "type" character varying(20) NOT NULL,
+    "url" text NOT NULL,
+    "link" text NULL,
+    "description" text NULL,
+    "created_at" timestamp without time zone NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS "lending_media" (
+    "media_id" bigint NOT NULL PRIMARY KEY,
+    "order_id" bigint NOT NULL,
+    "type" character varying(20) NOT NULL,
+    "url" text NOT NULL,
+    "link" text NULL,
+    "description" text NULL,
+    "created_at" timestamp without time zone NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS "idx_item_media_item_id" ON "item_media" ("item_id");
+CREATE INDEX IF NOT EXISTS "idx_lending_media_order_id" ON "lending_media" ("order_id");
+
 DROP SEQUENCE IF EXISTS "users_user_id_seq" CASCADE;
 DROP SEQUENCE IF EXISTS "items_item_id_seq" CASCADE;
 DROP SEQUENCE IF EXISTS "orders_order_id_seq" CASCADE;

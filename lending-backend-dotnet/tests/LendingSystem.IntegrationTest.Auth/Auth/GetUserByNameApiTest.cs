@@ -1,14 +1,13 @@
 using System.Net;
 using LendingSystem.Auth.Application.Auth.GetUserByName;
-using LendingSystem.IntegrationTests.Infrastructure;
+using LendingSystem.IntegrationTest.Framework.Infrastructure;
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using Xunit;
 
-namespace LendingSystem.IntegrationTests.Auth;
+namespace LendingSystem.IntegrationTest.Auth;
 
-[Collection(IntegrationTestCollection.Name)]
-public sealed class GetUserByNameApiTest(IntegrationTestCollectionFixture fixture)
-: IntegrationTestBase(fixture) 
+[WriteTest]
+public sealed class GetUserByNameApiTest : IntegrationTestBase 
 {
     [Fact]
     public async Task GetUserByName_WithFullEmailAndPassword_ShouldReturnOk()
@@ -18,7 +17,7 @@ public sealed class GetUserByNameApiTest(IntegrationTestCollectionFixture fixtur
         const string email = "getuserbyname@example.com";
         const string password = "password";
 
-        await using var db = IntegrationTestDatabase.CreateDbContext();
+        await using var db = CreateDbContext();
         await db.Users.AddRangeAsync(new UserEntity
         {
             UserId = 1000,

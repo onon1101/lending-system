@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LendingSystem.SharedKernel.Infrastructure.Persistence;
@@ -22,8 +23,13 @@ public static class DatabaseMigrationExtensions
             await BaselineExistingSchemaAsync(db, migrations[0]);
         }
 
+        await db.Database.EnsureMediaSchemaAsync();
         await db.Database.MigrateAsync();
+        await db.Database.EnsureMediaSchemaAsync();
     }
+
+    public static Task EnsureCurrentSchemaAsync(this LendingDbContext db, CancellationToken cancellationToken = default) =>
+        db.Database.EnsureMediaSchemaAsync(cancellationToken);
 
     private static async Task<IReadOnlyCollection<string>> GetAppliedMigrationsAsync(LendingDbContext db)
     {
@@ -74,4 +80,73 @@ public static class DatabaseMigrationExtensions
             ON CONFLICT ("MigrationId") DO NOTHING;
             """);
     }
+
+    private static Task EnsureMediaSchemaAsync(
+        this DatabaseFacade database,
+        CancellationToken cancellationToken = default) =>
+        database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE IF NOT EXISTS "item_media" (
+                "media_id" bigint NOT NULL PRIMARY KEY,
+                "item_id" bigint NOT NULL,
+                "type" character varying(20) NOT NULL,
+                "url" text NOT NULL,
+                "link" text NULL,
+                "description" text NULL,
+                "created_at" timestamp without time zone NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS "lending_media" (
+                "media_id" bigint NOT NULL PRIMARY KEY,
+                "order_id" bigint NOT NULL,
+                "type" character varying(20) NOT NULL,
+                "url" text NOT NULL,
+                "link" text NULL,
+                "description" text NULL,
+                "created_at" timestamp without time zone NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE INDEX IF NOT EXISTS "idx_item_media_item_id" ON "item_media" ("item_id");
+            CREATE INDEX IF NOT EXISTS "idx_lending_media_order_id" ON "lending_media" ("order_id");
+
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.tables
+                    WHERE table_schema = current_schema()
+                      AND table_name = 'items'
+                )
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM information_schema.table_constraints
+                    WHERE constraint_schema = current_schema()
+                      AND table_name = 'item_media'
+                      AND constraint_name = 'fk_item_media_item'
+                ) THEN
+                    ALTER TABLE "item_media"
+                    ADD CONSTRAINT "fk_item_media_item"
+                    FOREIGN KEY ("item_id") REFERENCES "items" ("item_id")
+                    ON DELETE CASCADE;
+                END IF;
+
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.tables
+                    WHERE table_schema = current_schema()
+                      AND table_name = 'orders'
+                )
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM information_schema.table_constraints
+                    WHERE constraint_schema = current_schema()
+                      AND table_name = 'lending_media'
+                      AND constraint_name = 'fk_lending_media_order'
+                ) THEN
+                    ALTER TABLE "lending_media"
+                    ADD CONSTRAINT "fk_lending_media_order"
+                    FOREIGN KEY ("order_id") REFERENCES "orders" ("order_id")
+                    ON DELETE CASCADE;
+                END IF;
+            END $$;
+            """,
+            cancellationToken);
 }

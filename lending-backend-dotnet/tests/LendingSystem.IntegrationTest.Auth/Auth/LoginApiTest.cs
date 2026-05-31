@@ -2,13 +2,13 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using LendingSystem.Auth.Application.Auth;
-using LendingSystem.IntegrationTests.Infrastructure;
+using LendingSystem.IntegrationTest.Framework.Infrastructure;
 using Xunit;
 
-namespace LendingSystem.IntegrationTests.Auth;
+namespace LendingSystem.IntegrationTest.Auth;
 
-[Collection(IntegrationTestCollection.Name)]
-public sealed class LoginApiTest(IntegrationTestCollectionFixture fixture) : IntegrationTestBase(fixture)
+[WriteTest]
+public sealed class LoginApiTest : IntegrationTestBase
 {
     [Fact]
     public async Task Login_WithEmailAndPassword_ShouldReturnOk()

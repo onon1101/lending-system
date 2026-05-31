@@ -1,4 +1,4 @@
-namespace LendingSystem.IntegrationTests.Abstractions;
+namespace LendingSystem.IntegrationTest.Framework.Abstractions;
 
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
 

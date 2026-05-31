@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using LendingSystem.IntegrationTests.Infrastructure;
+using LendingSystem.IntegrationTest.Framework.Infrastructure;
 using LendingSystem.Lending.Application.Loans;
 using LendingSystem.Lending.Application.Loans.CreateLoanRequest;
 using LendingSystem.Lending.Application.Loans.GetLoanRequestByUser;
@@ -8,10 +8,10 @@ using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using Xunit;
 
-namespace LendingSystem.IntegrationTests.Loans;
+namespace LendingSystem.IntegrationTest.Lending.Loans;
 
-[Collection(IntegrationTestCollection.Name)]
-public sealed class LoansApiTests(IntegrationTestCollectionFixture fixture) : IntegrationTestBase(fixture)
+[WriteTest]
+public sealed class LoansApiTests : IntegrationTestBase
 {
     [Fact]
     public async Task GetUserActiveLoans_WithExistingLoan_ShouldReturnOk()
@@ -181,9 +181,9 @@ public sealed class LoansApiTests(IntegrationTestCollectionFixture fixture) : In
         Assert.Contains(result.Data!, history => history.Status == "Returned");
     }
 
-    private static async Task SeedUsersAndItemAsync(long ownerId, string ownerName)
+    private async Task SeedUsersAndItemAsync(long ownerId, string ownerName)
     {
-        await using var db = IntegrationTestDatabase.CreateDbContext();
+        await using var db = CreateDbContext();
         await db.Users.AddRangeAsync(
             new UserEntity
             {
@@ -214,10 +214,10 @@ public sealed class LoansApiTests(IntegrationTestCollectionFixture fixture) : In
         await db.SaveChangesAsync();
     }
 
-    private static async Task<string> SeedUsersItemAndOrderAsync(string status, long borrowerId)
+    private async Task<string> SeedUsersItemAndOrderAsync(string status, long borrowerId)
     {
         await SeedUsersAndItemAsync(ownerId: 1000, ownerName: "owneruser");
-        await using var db = IntegrationTestDatabase.CreateDbContext();
+        await using var db = CreateDbContext();
         await db.BorrowerDetails.AddAsync(new BorrowerDetailEntity
         {
             BorrowerDetailId = 3000,

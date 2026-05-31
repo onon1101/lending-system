@@ -1,13 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
 using LendingSystem.Auth.Application.Auth;
-using LendingSystem.IntegrationTests.Infrastructure;
+using LendingSystem.IntegrationTest.Framework.Infrastructure;
 using Xunit;
 
-namespace LendingSystem.IntegrationTests.Auth;
+namespace LendingSystem.IntegrationTest.Auth;
 
-[Collection(IntegrationTestCollection.Name)]
-public sealed class GoogleLoginApiTests(IntegrationTestCollectionFixture fixture) : IntegrationTestBase(fixture)
+[WriteTest]
+public sealed class GoogleLoginApiTests : IntegrationTestBase
 {
     [Fact]
     public async Task GoogleLogin_WithValidToken_ShouldReturnOk()

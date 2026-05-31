@@ -1,20 +1,20 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using LendingSystem.IntegrationTests.Infrastructure;
+using LendingSystem.IntegrationTest.Framework.Infrastructure;
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using Xunit;
 
-namespace LendingSystem.IntegrationTests.Auth;
+namespace LendingSystem.IntegrationTest.Auth;
 
-[Collection(IntegrationTestCollection.Name)]
-public sealed class SearchUserByNameApiTest(IntegrationTestCollectionFixture fixture) : IntegrationTestBase(fixture)
+[WriteTest]
+public sealed class SearchUserByNameApiTest : IntegrationTestBase
 {
     [Fact]
     public async Task SearchUser_WithIncompleteWordsInUsername_ShouldReturnOk()
     {
         // Arrange
-        await using var db = IntegrationTestDatabase.CreateDbContext();
+        await using var db = CreateDbContext();
         await db.Users.AddRangeAsync(new UserEntity
         {
             UserId = 1000,

@@ -8,7 +8,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LendingSystem.Lending.Infrastructure.Persistence;
 
-public sealed class ItemRepository(LendingDbContext db, IQueryConnectionFactory queryConnectionFactory, IPublisher publisher) : IItemCommandRepository, IItemQueryRepository
+public sealed class ItemRepository(
+    LendingDbContext db,
+    IQueryConnectionFactory queryConnectionFactory,
+    IPublisher publisher) : IItemCommandRepository, IItemQueryRepository
 {
     public async Task<Item> CreateAsync(long userId, string objectName, string maker, string material, string description, string imageUrl, CancellationToken cancellationToken)
     {

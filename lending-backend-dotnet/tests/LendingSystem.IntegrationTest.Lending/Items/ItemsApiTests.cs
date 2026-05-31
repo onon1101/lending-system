@@ -1,16 +1,16 @@
 using System.Net;
 using System.Net.Http.Json;
-using LendingSystem.IntegrationTests.Infrastructure;
+using LendingSystem.IntegrationTest.Framework.Infrastructure;
 using LendingSystem.Lending.Application.Items;
 using LendingSystem.Lending.Application.Media;
 using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using Xunit;
 
-namespace LendingSystem.IntegrationTests.Items;
+namespace LendingSystem.IntegrationTest.Lending.Items;
 
-[Collection(IntegrationTestCollection.Name)]
-public sealed class ItemsApiTests(IntegrationTestCollectionFixture fixture) : IntegrationTestBase(fixture)
+[WriteTest]
+public sealed class ItemsApiTests : IntegrationTestBase
 {
     [Fact]
     public async Task GetAllItems_WithExistingItem_ShouldReturnOk()
@@ -228,9 +228,9 @@ public sealed class ItemsApiTests(IntegrationTestCollectionFixture fixture) : In
         Assert.Contains(result.Data!, media => media.Type == "image");
     }
 
-    private static async Task SeedUserAsync()
+    private async Task SeedUserAsync()
     {
-        await using var db = IntegrationTestDatabase.CreateDbContext();
+        await using var db = CreateDbContext();
         await db.Users.AddAsync(new UserEntity
         {
             UserId = 1000,
@@ -242,10 +242,10 @@ public sealed class ItemsApiTests(IntegrationTestCollectionFixture fixture) : In
         await db.SaveChangesAsync();
     }
 
-    private static async Task SeedUserAndItemAsync()
+    private async Task SeedUserAndItemAsync()
     {
         await SeedUserAsync();
-        await using var db = IntegrationTestDatabase.CreateDbContext();
+        await using var db = CreateDbContext();
         await db.Items.AddAsync(new ItemEntity
         {
             ItemId = 2000,
@@ -259,10 +259,10 @@ public sealed class ItemsApiTests(IntegrationTestCollectionFixture fixture) : In
         await db.SaveChangesAsync();
     }
 
-    private static async Task<string> SeedUserItemAndOrderAsync(string status)
+    private async Task<string> SeedUserItemAndOrderAsync(string status)
     {
         await SeedUserAndItemAsync();
-        await using var db = IntegrationTestDatabase.CreateDbContext();
+        await using var db = CreateDbContext();
         await db.BorrowerDetails.AddAsync(new BorrowerDetailEntity
         {
             BorrowerDetailId = 3000,
@@ -284,10 +284,10 @@ public sealed class ItemsApiTests(IntegrationTestCollectionFixture fixture) : In
         return PublicResourceKey.FromInt("borrowing", 4000);
     }
 
-    private static async Task SeedUserItemAndMediaAsync()
+    private async Task SeedUserItemAndMediaAsync()
     {
         await SeedUserAndItemAsync();
-        await using var db = IntegrationTestDatabase.CreateDbContext();
+        await using var db = CreateDbContext();
         await db.ItemMedia.AddAsync(new ItemMediaEntity
         {
             MediaId = 5000,

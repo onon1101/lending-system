@@ -22,6 +22,8 @@
   </Folder>
   <Folder Name="/tests/" />
   <Folder Name="/tests/Integration/">
-    <Project Path="tests/LendingSystem.IntegrationTests/LendingSystem.IntegrationTests.csproj" />
+    <Project Path="tests/LendingSystem.IntegrationTest.Auth/LendingSystem.IntegrationTest.Auth.csproj" />
+    <Project Path="tests/LendingSystem.IntegrationTest.Framework/LendingSystem.IntegrationTest.Framework.csproj" />
+    <Project Path="tests/LendingSystem.IntegrationTest.Lending/LendingSystem.IntegrationTest.Lending.csproj" />
   </Folder>
 </Solution>
