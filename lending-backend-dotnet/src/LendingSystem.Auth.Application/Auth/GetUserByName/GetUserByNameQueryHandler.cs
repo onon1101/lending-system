@@ -29,11 +29,18 @@ internal sealed class GetUserByNameQueryHandler(
     {
         const string sql = $"""
                            SELECT
-                           	name as {nameof(UserRow.Username)},
-                           	email as {nameof(UserRow.Email)} 
-                           FROM users
-                           WHERE name = @Username
-                             AND is_deleted = false;
+                           	u.name as {nameof(UserRow.Username)},
+                           	coalesce(auth.email, '') as {nameof(UserRow.Email)}
+                           FROM users u
+                           LEFT JOIN LATERAL (
+                               SELECT coalesce(a.metadata_json ->> 'email', a.identifier) as email
+                               FROM user_auth_identities a
+                               WHERE a.user_id = u.user_id
+                               ORDER BY CASE WHEN a.type = 'LOCAL' THEN 0 ELSE 1 END, a.id
+                               LIMIT 1
+                           ) auth ON true
+                           WHERE u.name = @Username
+                             AND u.status = 'ACTIVE';
                            """;
 
         var queryParams = new DynamicParameters();

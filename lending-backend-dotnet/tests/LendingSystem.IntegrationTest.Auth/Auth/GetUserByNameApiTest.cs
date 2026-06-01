@@ -22,9 +22,18 @@ public sealed class GetUserByNameApiTest : IntegrationTestBase
         {
             UserId = 1000,
             Name = username,
-            Email = email,
-            PasswordHash = password,
-            IsDeleted = false,
+            Status = "ACTIVE",
+            AuthIdentities =
+            [
+                new UserAuthIdentityEntity
+                {
+                    Id = 10000,
+                    UserId = 1000,
+                    Type = "LOCAL",
+                    Identifier = email,
+                    MetadataJson = $$"""{"email":"{{email}}","passwordHash":"{{password}}"}"""
+                }
+            ]
         });
 
         await db.SaveChangesAsync();

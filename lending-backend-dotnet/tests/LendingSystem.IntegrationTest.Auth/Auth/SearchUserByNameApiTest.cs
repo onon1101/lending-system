@@ -19,9 +19,18 @@ public sealed class SearchUserByNameApiTest : IntegrationTestBase
         {
             UserId = 1000,
             Name = "searchuser",
-            Email = "search-user-email",
-            PasswordHash = "",
-            IsDeleted = false,
+            Status = "ACTIVE",
+            AuthIdentities =
+            [
+                new UserAuthIdentityEntity
+                {
+                    Id = 10000,
+                    UserId = 1000,
+                    Type = "LOCAL",
+                    Identifier = "search-user-email",
+                    MetadataJson = """{"email":"search-user-email","passwordHash":""}"""
+                }
+            ]
         });
 
         await db.SaveChangesAsync();

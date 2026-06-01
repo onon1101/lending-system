@@ -235,9 +235,18 @@ public sealed class ItemsApiTests : IntegrationTestBase
         {
             UserId = 1000,
             Name = "owneruser",
-            Email = "owner@example.com",
-            PasswordHash = "password",
-            IsDeleted = false
+            Status = "ACTIVE",
+            AuthIdentities =
+            [
+                new UserAuthIdentityEntity
+                {
+                    Id = 10000,
+                    UserId = 1000,
+                    Type = "LOCAL",
+                    Identifier = "owner@example.com",
+                    MetadataJson = """{"email":"owner@example.com","passwordHash":"password"}"""
+                }
+            ]
         });
         await db.SaveChangesAsync();
     }

@@ -23,12 +23,19 @@ internal sealed class SearchUserByNameQueryHandler(
     {
         const string sql = $"""
                            select
-                               name as {nameof(UserRow.Username)},
-                               coalesce(email, '') as {nameof(UserRow.Email)} 
-                           from users
-                           where name ilike @Username
-                             and is_deleted = false
-                           order by user_id
+                               u.name as {nameof(UserRow.Username)},
+                               coalesce(auth.email, '') as {nameof(UserRow.Email)}
+                           from users u
+                           left join lateral (
+                               select coalesce(a.metadata_json ->> 'email', a.identifier) as email
+                               from user_auth_identities a
+                               where a.user_id = u.user_id
+                               order by case when a.type = 'LOCAL' then 0 else 1 end, a.id
+                               limit 1
+                           ) auth on true
+                           where u.name ilike @Username
+                             and u.status = 'ACTIVE'
+                           order by u.user_id
                            limit 1;
                            """;
 

@@ -189,17 +189,35 @@ public sealed class LoansApiTests : IntegrationTestBase
             {
                 UserId = ownerId,
                 Name = ownerName,
-                Email = $"{ownerName}@example.com",
-                PasswordHash = "password",
-                IsDeleted = false
+                Status = "ACTIVE",
+                AuthIdentities =
+                [
+                    new UserAuthIdentityEntity
+                    {
+                        Id = 10000 + ownerId,
+                        UserId = ownerId,
+                        Type = "LOCAL",
+                        Identifier = $"{ownerName}@example.com",
+                        MetadataJson = $$"""{"email":"{{ownerName}}@example.com","passwordHash":"password"}"""
+                    }
+                ]
             },
             new UserEntity
             {
                 UserId = ownerId == 1000 ? 1001 : 1000,
                 Name = "borroweruser",
-                Email = "borrower@example.com",
-                PasswordHash = "password",
-                IsDeleted = false
+                Status = "ACTIVE",
+                AuthIdentities =
+                [
+                    new UserAuthIdentityEntity
+                    {
+                        Id = 11000 + (ownerId == 1000 ? 1001 : 1000),
+                        UserId = ownerId == 1000 ? 1001 : 1000,
+                        Type = "LOCAL",
+                        Identifier = "borrower@example.com",
+                        MetadataJson = """{"email":"borrower@example.com","passwordHash":"password"}"""
+                    }
+                ]
             });
         await db.Items.AddAsync(new ItemEntity
         {

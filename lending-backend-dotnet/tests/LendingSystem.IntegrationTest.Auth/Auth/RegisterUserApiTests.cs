@@ -34,12 +34,17 @@ public sealed class RegisterUserApiTests : IntegrationTestBase
         Assert.Equal(email, data.GetProperty("email").GetString());
 
         await using var verifyDb = CreateDbContext();
-        var user = await verifyDb.Users.SingleAsync(x => x.Email == email);
+        var identity = await verifyDb.UserAuthIdentities
+            .Include(x => x.User)
+            .SingleAsync(x => x.Type == "LOCAL" && x.Identifier == email);
+        var user = identity.User!;
 
         Assert.True(user.UserId > int.MaxValue);
         Assert.Equal("registerapitest", user.Name);
-        Assert.NotEqual(password, user.PasswordHash);
-        Assert.StartsWith("$2", user.PasswordHash);
+        using var metadata = JsonDocument.Parse(identity.MetadataJson);
+        var passwordHash = metadata.RootElement.GetProperty("passwordHash").GetString();
+        Assert.NotEqual(password, passwordHash);
+        Assert.StartsWith("$2", passwordHash);
     }
 
     [Fact]
@@ -65,12 +70,17 @@ public sealed class RegisterUserApiTests : IntegrationTestBase
         Assert.Equal(email, data.GetProperty("email").GetString());
         
         await using var verifyDb = CreateDbContext();
-        var user = await verifyDb.Users.SingleAsync(x => x.Email == email);
+        var identity = await verifyDb.UserAuthIdentities
+            .Include(x => x.User)
+            .SingleAsync(x => x.Type == "LOCAL" && x.Identifier == email);
+        var user = identity.User!;
 
         Assert.True(user.UserId > int.MaxValue);
         Assert.Equal(username, user.Name);
-        Assert.NotEqual(password, user.PasswordHash);
-        Assert.StartsWith("$2", user.PasswordHash);
+        using var metadata = JsonDocument.Parse(identity.MetadataJson);
+        var passwordHash = metadata.RootElement.GetProperty("passwordHash").GetString();
+        Assert.NotEqual(password, passwordHash);
+        Assert.StartsWith("$2", passwordHash);
         
         var existResponse = await client.PostAsJsonAsync(
             "/api/v1/users",

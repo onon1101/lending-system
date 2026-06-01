@@ -5,6 +5,7 @@ namespace LendingSystem.SharedKernel.Infrastructure.Persistence;
 public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options) : DbContext(options)
 {
     public DbSet<UserEntity> Users => Set<UserEntity>();
+    public DbSet<UserAuthIdentityEntity> UserAuthIdentities => Set<UserAuthIdentityEntity>();
     public DbSet<ItemEntity> Items => Set<ItemEntity>();
     public DbSet<OrderEntity> Orders => Set<OrderEntity>();
     public DbSet<BorrowerDetailEntity> BorrowerDetails => Set<BorrowerDetailEntity>();
@@ -20,26 +21,14 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
                 table.HasCheckConstraint("ck_users_name_english_letters", "name ~ '^[A-Za-z0-9]+$'");
             });
             entity.HasKey(x => x.UserId).HasName("users_pkey");
-            entity.HasIndex(x => x.Email).IsUnique().HasDatabaseName("users_email_key");
             entity.HasIndex(x => x.Name).IsUnique().HasDatabaseName("users_name_key");
-            entity.HasIndex(x => new { x.AuthProvider, x.ProviderUserId })
-                .IsUnique()
-                .HasDatabaseName("users_auth_provider_provider_user_id_key");
             entity.Property(x => x.UserId).HasColumnName("user_id").ValueGeneratedNever();
             entity.Property(x => x.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
-            entity.Property(x => x.Email).HasColumnName("email").HasMaxLength(100);
-            entity.Property(x => x.PasswordHash).HasColumnName("password_hash").HasMaxLength(255);
-            entity.Property(x => x.AuthProvider)
-                .HasColumnName("auth_provider")
+            entity.Property(x => x.Status)
+                .HasColumnName("status")
                 .HasMaxLength(50)
-                .HasDefaultValue("LOCAL")
+                .HasDefaultValue("ACTIVE")
                 .IsRequired();
-            entity.Property(x => x.ProviderUserId)
-                .HasColumnName("provider_user_id")
-                .HasMaxLength(255);
-            entity.Property(x => x.IsDeleted)
-                .HasColumnName("is_deleted")
-                .HasDefaultValue(false);
             entity.Property(x => x.Role)
                 .HasColumnName("role")
                 .HasDefaultValue("user")
@@ -52,6 +41,34 @@ public sealed class LendingDbContext(DbContextOptions<LendingDbContext> options)
                 .HasColumnName("updated_at")
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .ValueGeneratedOnAdd();
+        });
+
+        modelBuilder.Entity<UserAuthIdentityEntity>(entity =>
+        {
+            entity.ToTable("user_auth_identities");
+            entity.HasKey(x => x.Id).HasName("user_auth_identities_pkey");
+            entity.HasIndex(x => x.UserId).HasDatabaseName("idx_user_auth_identities_user_id");
+            entity.HasIndex(x => new { x.Type, x.Identifier })
+                .IsUnique()
+                .HasDatabaseName("user_auth_identities_type_identifier_key");
+            entity.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
+            entity.Property(x => x.UserId).HasColumnName("user_id").IsRequired();
+            entity.Property(x => x.Type).HasColumnName("type").HasMaxLength(50).IsRequired();
+            entity.Property(x => x.Identifier).HasColumnName("identifier").HasMaxLength(255).IsRequired();
+            entity.Property(x => x.MetadataJson).HasColumnName("metadata_json").HasColumnType("jsonb").IsRequired();
+            entity.Property(x => x.CreatedAt)
+                .HasColumnName("created_at")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .ValueGeneratedOnAdd();
+            entity.Property(x => x.UpdatedAt)
+                .HasColumnName("updated_at")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .ValueGeneratedOnAdd();
+            entity.HasOne(x => x.User)
+                .WithMany(x => x.AuthIdentities)
+                .HasForeignKey(x => x.UserId)
+                .HasConstraintName("user_auth_identities_user_id_fkey")
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ItemEntity>(entity =>

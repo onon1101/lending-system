@@ -91,7 +91,7 @@ public sealed class ItemRepository(
             from users u
             join items i on i.owner_id = u.user_id
             where u.name = @OwnerUsername
-              and u.is_deleted = false
+              and u.status = 'ACTIVE'
               and i.object_name = @ItemName;
             """;
 
@@ -113,10 +113,17 @@ public sealed class ItemRepository(
                 coalesce(i.current_status, '') as CurrentStatus,
                 u.name as OwnerUsername,
                 u.name as OwnerName,
-                u.email as OwnerEmail,
+                coalesce(auth.email, '') as OwnerEmail,
                 i.image_url as ImageUrl
             from items i
             left join users u on u.user_id = i.owner_id
+            left join lateral (
+                select coalesce(a.metadata_json ->> 'email', a.identifier) as email
+                from user_auth_identities a
+                where a.user_id = u.user_id
+                order by case when a.type = 'LOCAL' then 0 else 1 end, a.id
+                limit 1
+            ) auth on true
             order by i.item_id;
             """;
 
@@ -133,7 +140,7 @@ public sealed class ItemRepository(
                 select 1
                 from users
                 where user_id = @UserId
-                  and is_deleted = false
+                  and status = 'ACTIVE'
             );
             """;
         const string sql = """
@@ -147,10 +154,17 @@ public sealed class ItemRepository(
                 coalesce(i.current_status, '') as CurrentStatus,
                 u.name as OwnerUsername,
                 u.name as OwnerName,
-                u.email as OwnerEmail,
+                coalesce(auth.email, '') as OwnerEmail,
                 i.image_url as ImageUrl
             from items i
             join users u on u.user_id = i.owner_id
+            left join lateral (
+                select coalesce(a.metadata_json ->> 'email', a.identifier) as email
+                from user_auth_identities a
+                where a.user_id = u.user_id
+                order by case when a.type = 'LOCAL' then 0 else 1 end, a.id
+                limit 1
+            ) auth on true
             where i.owner_id = @UserId
             order by i.item_id;
             """;
@@ -175,7 +189,7 @@ public sealed class ItemRepository(
                 select 1
                 from users
                 where name = @Username
-                  and is_deleted = false
+                  and status = 'ACTIVE'
             );
             """;
         const string sql = """
@@ -189,12 +203,19 @@ public sealed class ItemRepository(
                 coalesce(i.current_status, '') as CurrentStatus,
                 u.name as OwnerUsername,
                 u.name as OwnerName,
-                u.email as OwnerEmail,
+                coalesce(auth.email, '') as OwnerEmail,
                 i.image_url as ImageUrl
             from users u
             join items i on i.owner_id = u.user_id
+            left join lateral (
+                select coalesce(a.metadata_json ->> 'email', a.identifier) as email
+                from user_auth_identities a
+                where a.user_id = u.user_id
+                order by case when a.type = 'LOCAL' then 0 else 1 end, a.id
+                limit 1
+            ) auth on true
             where u.name = @Username
-              and u.is_deleted = false
+              and u.status = 'ACTIVE'
             order by i.item_id;
             """;
 
@@ -304,7 +325,7 @@ public sealed class ItemRepository(
             select user_id
             from users
             where name = @Username
-              and is_deleted = false;
+              and status = 'ACTIVE';
             """;
 
         using var connection = queryConnectionFactory.CreateConnection();
@@ -320,7 +341,7 @@ public sealed class ItemRepository(
                 from users u
                 join items i on i.owner_id = u.user_id
                 where u.name = @Username
-                  and u.is_deleted = false
+                  and u.status = 'ACTIVE'
                   and i.object_name = @ItemName
             );
             """;

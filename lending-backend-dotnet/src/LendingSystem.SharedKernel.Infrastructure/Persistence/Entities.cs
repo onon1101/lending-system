@@ -4,14 +4,23 @@ public sealed class UserEntity
 {
     public long UserId { get; init; }
     public required string Name { get; init; }
-    public string? Email { get; init; }
-    public string? PasswordHash { get; init; }
-    public string AuthProvider { get; set; } = "LOCAL";
-    public string? ProviderUserId { get; set; }
-    public bool IsDeleted { get; set; }
+    public string Status { get; set; } = "ACTIVE";
     public string Role { get; init; } = "user"; // user or admin 
     public DateTimeOffset? CreatedAt { get; init; }
     public DateTimeOffset? UpdatedAt { get; set; }
+    public ICollection<UserAuthIdentityEntity> AuthIdentities { get; set; } = [];
+}
+
+public sealed class UserAuthIdentityEntity
+{
+    public long Id { get; init; }
+    public long UserId { get; init; }
+    public required string Type { get; init; }
+    public required string Identifier { get; init; }
+    public required string MetadataJson { get; set; }
+    public DateTimeOffset? CreatedAt { get; init; }
+    public DateTimeOffset? UpdatedAt { get; set; }
+    public UserEntity? User { get; set; }
 }
 
 /// <summary>

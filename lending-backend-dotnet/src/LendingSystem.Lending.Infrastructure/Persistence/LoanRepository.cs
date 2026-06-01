@@ -122,7 +122,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
 
         var borrower = await db.Users
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.UserId == borrowerId && !x.IsDeleted, cancellationToken);
+            .FirstOrDefaultAsync(x => x.UserId == borrowerId && x.Status == "ACTIVE", cancellationToken);
         if (borrower is null)
         {
             await tx.RollbackAsync(cancellationToken);
@@ -136,7 +136,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
                 x => x.ObjectName == itemName
                     && x.Owner != null
                     && x.Owner.Name == itemOwnerUsername
-                    && !x.Owner.IsDeleted,
+                    && x.Owner.Status == "ACTIVE",
                 cancellationToken);
         if (item is null || item.Owner is null)
         {
@@ -411,7 +411,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
                 o.status as Status
             from orders o
             join borrower_details bd on bd.borrower_detail_id = o.borrower_detail_id
-            left join users u on u.user_id = bd.user_id and u.is_deleted = false
+            left join users u on u.user_id = bd.user_id and u.status = 'ACTIVE'
             join items i on i.item_id = o.item_id
             where i.owner_id = @OwnerId
               and o.status = @Status
@@ -462,7 +462,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
         {
             borrower = await db.Users
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.UserId == borrowerId && !x.IsDeleted, cancellationToken);
+                .FirstOrDefaultAsync(x => x.UserId == borrowerId && x.Status == "ACTIVE", cancellationToken);
             if (borrower is null)
             {
                 return Result<BorrowerDetailEntity>.Failure(LoanRepositoryErrors.BorrowerNotFound(borrowerId.Value));

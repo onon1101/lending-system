@@ -1,11 +1,7 @@
 CREATE TABLE IF NOT EXISTS "users" (
     "user_id" bigint NOT NULL,
     "name" character varying(100) NOT NULL,
-    "email" character varying(100),
-    "password_hash" character varying(255),
-    "auth_provider" character varying(50) NOT NULL DEFAULT 'LOCAL',
-    "provider_user_id" character varying(255),
-    "is_deleted" boolean NOT NULL DEFAULT false,
+    "status" character varying(50) NOT NULL DEFAULT 'ACTIVE',
     "role" text NOT NULL DEFAULT 'user',
     "created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     "updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
@@ -13,14 +9,29 @@ CREATE TABLE IF NOT EXISTS "users" (
     CONSTRAINT "ck_users_name_english_letters" CHECK ("name" ~ '^[A-Za-z0-9]+$')
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS "users_email_key"
-    ON "users" ("email");
-
 CREATE UNIQUE INDEX IF NOT EXISTS "users_name_key"
     ON "users" ("name");
 
-CREATE UNIQUE INDEX IF NOT EXISTS "users_auth_provider_provider_user_id_key"
-    ON "users" ("auth_provider", "provider_user_id");
+CREATE TABLE IF NOT EXISTS "user_auth_identities" (
+    "id" bigint NOT NULL,
+    "user_id" bigint NOT NULL,
+    "type" character varying(50) NOT NULL,
+    "identifier" character varying(255) NOT NULL,
+    "metadata_json" jsonb NOT NULL,
+    "created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "user_auth_identities_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "user_auth_identities_user_id_fkey"
+        FOREIGN KEY ("user_id")
+        REFERENCES "users" ("user_id")
+        ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS "idx_user_auth_identities_user_id"
+    ON "user_auth_identities" ("user_id");
+
+CREATE UNIQUE INDEX IF NOT EXISTS "user_auth_identities_type_identifier_key"
+    ON "user_auth_identities" ("type", "identifier");
 
 CREATE TABLE IF NOT EXISTS "items" (
     "item_id" bigint NOT NULL,

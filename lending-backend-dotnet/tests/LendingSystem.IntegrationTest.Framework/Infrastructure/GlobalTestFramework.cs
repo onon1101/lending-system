@@ -17,6 +17,7 @@ public class GlobalTestFramework : XunitTestFramework
 
     protected override ITestFrameworkExecutor CreateExecutor(AssemblyName assemblyName)
     {
+        IntegrationTestDatabase.UseAssemblyDatabaseSuffix(assemblyName.Name ?? string.Empty);
         return new GlobalTestFrameworkExecutor(
             assemblyName,
             SourceInformationProvider,
@@ -32,6 +33,7 @@ public class GlobalTestFrameworkExecutor : XunitTestFrameworkExecutor
         : base(assemblyName, sourceInformationProvider, diagnosticMessageSink)
     {
         // 封鎖並同步初始化所有資料庫 Pool
+        IntegrationTestDatabase.UseAssemblyDatabaseSuffix(assemblyName.Name ?? string.Empty);
         IntegrationTestDatabase.GlobalInitializeAsync().GetAwaiter().GetResult();
     }
 }

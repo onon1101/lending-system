@@ -18,15 +18,25 @@ public sealed class UserEntity_Test : InitializeData
             .Select(id => GenerateScript(id, now))
             .Append(GenerateAdminScript(9001, now))
             .ToArray();
-        var userNames = users.Select(x => x.Name).ToArray();
 
-        await db.Users
-            .Where(x => userNames.Contains(x.Name))
-            .ExecuteDeleteAsync(cancellationToken);
+        foreach (var user in users)
+        {
+            var identity = user.AuthIdentities.Single();
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO "users" ("user_id", "name", "status", "role", "created_at", "updated_at")
+                VALUES ({user.UserId}, {user.Name}, {user.Status}, {user.Role}, {user.CreatedAt}, {user.UpdatedAt})
+                ON CONFLICT ("name") DO UPDATE
+                SET "status" = EXCLUDED."status",
+                    "role" = EXCLUDED."role",
+                    "updated_at" = EXCLUDED."updated_at";
 
-        await db.Users.AddRangeAsync(users, cancellationToken);
-        
-        await db.SaveChangesAsync(cancellationToken);
+                INSERT INTO "user_auth_identities" ("id", "user_id", "type", "identifier", "metadata_json", "created_at", "updated_at")
+                VALUES ({identity.Id}, {user.UserId}, {identity.Type}, {identity.Identifier}, {identity.MetadataJson}::jsonb, {identity.CreatedAt}, {identity.UpdatedAt})
+                ON CONFLICT ("type", "identifier") DO UPDATE
+                SET "metadata_json" = EXCLUDED."metadata_json",
+                    "updated_at" = EXCLUDED."updated_at";
+                """, cancellationToken);
+        }
     }
 
     private static UserEntity GenerateScript(int id, DateTimeOffset time)
@@ -34,14 +44,23 @@ public sealed class UserEntity_Test : InitializeData
         {
             UserId = id,
             Name = $"testuser{id:00}",
-            Email = $"test{id:00}@test{id:00}.com.tw",
-            PasswordHash = "123",
-            AuthProvider = "LOCAL",
-            ProviderUserId = null,
-            IsDeleted = false,
+            Status = "ACTIVE",
             Role = "user",
             CreatedAt = time,
-            UpdatedAt = time 
+            UpdatedAt = time,
+            AuthIdentities =
+            [
+                new UserAuthIdentityEntity
+                {
+                    Id = 10000 + id,
+                    UserId = id,
+                    Type = "LOCAL",
+                    Identifier = $"test{id:00}@test{id:00}.com.tw",
+                    MetadataJson = $$"""{"email":"test{{id.ToString("00")}}@test{{id.ToString("00")}}.com.tw","passwordHash":"123"}""",
+                    CreatedAt = time,
+                    UpdatedAt = time
+                }
+            ]
         };
 
     private static UserEntity GenerateAdminScript(int id, DateTimeOffset time)
@@ -49,13 +68,22 @@ public sealed class UserEntity_Test : InitializeData
         {
             UserId = id,
             Name = $"testadmin{id:00}",
-            Email = $"testadmin{id:00}@testadmin{id:00}.com.tw",
-            PasswordHash = "123",
-            AuthProvider = "LOCAL",
-            ProviderUserId = null,
-            IsDeleted = false,
+            Status = "ACTIVE",
             Role = "admin",
             CreatedAt = time,
-            UpdatedAt = time
+            UpdatedAt = time,
+            AuthIdentities =
+            [
+                new UserAuthIdentityEntity
+                {
+                    Id = 10000 + id,
+                    UserId = id,
+                    Type = "LOCAL",
+                    Identifier = $"testadmin{id:00}@testadmin{id:00}.com.tw",
+                    MetadataJson = $$"""{"email":"testadmin{{id.ToString("00")}}@testadmin{{id.ToString("00")}}.com.tw","passwordHash":"123"}""",
+                    CreatedAt = time,
+                    UpdatedAt = time
+                }
+            ]
         };
 }

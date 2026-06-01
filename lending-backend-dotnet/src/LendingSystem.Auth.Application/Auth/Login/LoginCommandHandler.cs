@@ -40,14 +40,16 @@ internal sealed class LoginCommandHandler(
     {
         const string sql = """
                             select
-                                user_id as UserId,
-                                name as Username,
-                                email as Email,
-                                password_hash as PasswordHash,
-                                role as Role
-                            from users
-                            where email = @Email
-                              and is_deleted = false;
+                                u.user_id as UserId,
+                                u.name as Username,
+                                a.identifier as Email,
+                                a.metadata_json ->> 'passwordHash' as PasswordHash,
+                                u.role as Role
+                            from users u
+                            join user_auth_identities a on a.user_id = u.user_id
+                            where a.type = 'LOCAL'
+                              and a.identifier = @Email
+                              and u.status = 'ACTIVE';
                             """;
 
         var queryParams = new DynamicParameters();

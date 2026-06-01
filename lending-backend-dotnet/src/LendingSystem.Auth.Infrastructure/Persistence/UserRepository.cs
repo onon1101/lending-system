@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using System.ComponentModel.DataAnnotations;
 using Dapper;
 using LendingSystem.Auth.Application.Abstractions;
@@ -8,6 +9,7 @@ using LendingSystem.SharedKernel.Application.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using ApplicationGeneratedKey = LendingSystem.SharedKernel.Infrastructure.Persistence.ApplicationGeneratedKey;
 using LendingDbContext = LendingSystem.SharedKernel.Infrastructure.Persistence.LendingDbContext;
+using PersistenceUserAuthIdentityEntity = LendingSystem.SharedKernel.Infrastructure.Persistence.UserAuthIdentityEntity;
 using PersistenceUserEntity = LendingSystem.SharedKernel.Infrastructure.Persistence.UserEntity;
 
 namespace LendingSystem.Auth.Infrastructure.Persistence;
@@ -21,18 +23,20 @@ public sealed class UserRepository(
     {
         const string sql = """
             select
-                user_id as UserId,
-                email as Email,
-                password_hash as PasswordHash,
-                name as Name,
-                role as Role,
-                auth_provider as AuthProvider,
-                provider_user_id as ProviderUserId,
-                created_at as CreatedAt,
-                updated_at as UpdatedAt
-            from users
-            where email = @Email
-              and is_deleted = false;
+                u.user_id as UserId,
+                coalesce(a.metadata_json ->> 'email', a.identifier) as Email,
+                a.metadata_json ->> 'passwordHash' as PasswordHash,
+                u.name as Name,
+                u.role as Role,
+                a.type as AuthProvider,
+                case when a.type = 'LOCAL' then null else a.identifier end as ProviderUserId,
+                u.created_at as CreatedAt,
+                u.updated_at as UpdatedAt
+            from users u
+            join user_auth_identities a on a.user_id = u.user_id
+            where a.type = 'LOCAL'
+              and a.identifier = @Email
+              and u.status = 'ACTIVE';
             """;
 
         using var connection = queryConnectionFactory.CreateConnection();
@@ -45,19 +49,20 @@ public sealed class UserRepository(
     {
         const string sql = """
             select
-                user_id as UserId,
-                email as Email,
-                password_hash as PasswordHash,
-                name as Name,
-                role as Role,
-                auth_provider as AuthProvider,
-                provider_user_id as ProviderUserId,
-                created_at as CreatedAt,
-                updated_at as UpdatedAt
-            from users
-            where upper(auth_provider) = @Provider
-              and provider_user_id = @ProviderUserId
-              and is_deleted = false;
+                u.user_id as UserId,
+                coalesce(a.metadata_json ->> 'email', '') as Email,
+                a.metadata_json ->> 'passwordHash' as PasswordHash,
+                u.name as Name,
+                u.role as Role,
+                a.type as AuthProvider,
+                a.identifier as ProviderUserId,
+                u.created_at as CreatedAt,
+                u.updated_at as UpdatedAt
+            from users u
+            join user_auth_identities a on a.user_id = u.user_id
+            where a.type = @Provider
+              and a.identifier = @ProviderUserId
+              and u.status = 'ACTIVE';
             """;
 
         using var connection = queryConnectionFactory.CreateConnection();
@@ -72,16 +77,22 @@ public sealed class UserRepository(
         var entity = new PersistenceUserEntity
         {
             UserId = ApplicationGeneratedKey.NewId(),
-            Name = await CreateUniqueNameAsync(email, cancellationToken),
-            Email = email,
-            PasswordHash = passwordHash,
-            AuthProvider = AuthProvider.Local.Value
+            Name = name,
+            Status = "ACTIVE"
         };
+        entity.AuthIdentities.Add(new PersistenceUserAuthIdentityEntity
+        {
+            Id = ApplicationGeneratedKey.NewId(),
+            UserId = entity.UserId,
+            Type = AuthProvider.Local.Value,
+            Identifier = email,
+            MetadataJson = CreateLocalMetadata(email, passwordHash)
+        });
 
         db.Users.Add(entity);
         await db.SaveChangesAsync(cancellationToken);
 
-        return new UserProfile(entity.UserId, entity.Name, entity.Email ?? "");
+        return new UserProfile(entity.UserId, entity.Name, email);
     }
 
     public async Task<UserEntity> CreateExternalAsync(string name, string email, AuthProvider authProvider, string providerUserId, CancellationToken cancellationToken)
@@ -90,40 +101,71 @@ public sealed class UserRepository(
         {
             UserId = ApplicationGeneratedKey.NewId(),
             Name = await CreateUniqueNameAsync(email, cancellationToken),
-            Email = email,
-            AuthProvider = authProvider.Value,
-            ProviderUserId = providerUserId
+            Status = "ACTIVE"
         };
+        entity.AuthIdentities.Add(new PersistenceUserAuthIdentityEntity
+        {
+            Id = ApplicationGeneratedKey.NewId(),
+            UserId = entity.UserId,
+            Type = authProvider.Value,
+            Identifier = providerUserId,
+            MetadataJson = CreateExternalMetadata(email)
+        });
 
         db.Users.Add(entity);
         await db.SaveChangesAsync(cancellationToken);
 
-        return MapUser(entity);
+        return MapUser(entity, entity.AuthIdentities.Single());
     }
 
     public async Task<UserEntity?> LinkProviderAsync(long userId, AuthProvider authProvider, string providerUserId, CancellationToken cancellationToken)
     {
         var entity = await db.Users
-            .FirstOrDefaultAsync(x => x.UserId == userId && !x.IsDeleted, cancellationToken);
+            .Include(x => x.AuthIdentities)
+            .FirstOrDefaultAsync(x => x.UserId == userId && x.Status == "ACTIVE", cancellationToken);
 
         if (entity is null)
         {
             return null;
         }
 
-        entity.AuthProvider = authProvider.Value;
-        entity.ProviderUserId = providerUserId;
+        var identity = entity.AuthIdentities.FirstOrDefault(x =>
+            x.Type == authProvider.Value && x.Identifier == providerUserId);
+        if (identity is null)
+        {
+            identity = new PersistenceUserAuthIdentityEntity
+            {
+                Id = ApplicationGeneratedKey.NewId(),
+                UserId = userId,
+                Type = authProvider.Value,
+                Identifier = providerUserId,
+                MetadataJson = CreateExternalMetadata(entity.AuthIdentities.FirstOrDefault(x => x.Type == AuthProvider.Local.Value)?.Identifier ?? "")
+            };
+            entity.AuthIdentities.Add(identity);
+        }
         entity.UpdatedAt = DateTimeOffset.UtcNow;
 
         await db.SaveChangesAsync(cancellationToken);
 
-        return MapUser(entity);
+        return MapUser(entity, identity);
     }
 
     public async Task<bool> GetExistsAsync(string name, string email, CancellationToken cancellationToken)
     {
         const string sql = """
-                           SELECT COUNT(1) FROM users WHERE name = @Name AND email = @Email;
+                           SELECT COUNT(1)
+                           FROM users u
+                           WHERE u.status = 'ACTIVE'
+                             AND (
+                                 u.name = @Name
+                                 OR EXISTS (
+                                     SELECT 1
+                                     FROM user_auth_identities a
+                                     WHERE a.user_id = u.user_id
+                                       AND a.type = 'LOCAL'
+                                       AND a.identifier = @Email
+                                 )
+                             );
                            """;
         
         using var connection = queryConnectionFactory.CreateConnection();
@@ -136,10 +178,17 @@ public sealed class UserRepository(
             select
                 user_id as UserId,
                 name as Name,
-                coalesce(email, '') as Email
-            from users
-            where user_id = @UserId
-              and is_deleted = false;
+                coalesce(auth.email, '') as Email
+            from users u
+            left join lateral (
+                select coalesce(a.metadata_json ->> 'email', a.identifier) as email
+                from user_auth_identities a
+                where a.user_id = u.user_id
+                order by case when a.type = 'LOCAL' then 0 else 1 end, a.id
+                limit 1
+            ) auth on true
+            where u.user_id = @UserId
+              and u.status = 'ACTIVE';
             """;
 
         using var connection = queryConnectionFactory.CreateConnection();
@@ -153,11 +202,18 @@ public sealed class UserRepository(
             select
                 user_id as UserId,
                 name as Name,
-                coalesce(email, '') as Email
-            from users
-            where name ilike @Pattern
-              and is_deleted = false
-            order by user_id
+                coalesce(auth.email, '') as Email
+            from users u
+            left join lateral (
+                select coalesce(a.metadata_json ->> 'email', a.identifier) as email
+                from user_auth_identities a
+                where a.user_id = u.user_id
+                order by case when a.type = 'LOCAL' then 0 else 1 end, a.id
+                limit 1
+            ) auth on true
+            where u.name ilike @Pattern
+              and u.status = 'ACTIVE'
+            order by u.user_id
             limit 1;
             """;
 
@@ -174,7 +230,7 @@ public sealed class UserRepository(
         if (entity is null)
             return false;
 
-        entity.IsDeleted = true;
+        entity.Status = "DELETED";
         await db.SaveChangesAsync(cancellationToken);
 
         return true;
@@ -241,17 +297,45 @@ public sealed class UserRepository(
         return builder.ToString();
     }
 
-    private UserEntity MapUser(PersistenceUserEntity entity) => UserEntity.Create(
-        emailAddressAttribute,
-        entity.UserId,
-        entity.Email ?? "",
-        entity.PasswordHash ?? "",
-        entity.Name,
-        entity.Role ?? "",
-        entity.AuthProvider,
-        entity.ProviderUserId,
-        entity.CreatedAt ?? default,
-        entity.UpdatedAt ?? default);
+    private static string CreateLocalMetadata(string email, string passwordHash) =>
+        JsonSerializer.Serialize(new Dictionary<string, string>
+        {
+            ["email"] = email,
+            ["passwordHash"] = passwordHash
+        });
+
+    private static string CreateExternalMetadata(string email) =>
+        JsonSerializer.Serialize(new Dictionary<string, string>
+        {
+            ["email"] = email
+        });
+
+    private static (string Email, string PasswordHash) ReadMetadata(string metadataJson)
+    {
+        using var document = JsonDocument.Parse(metadataJson);
+        var root = document.RootElement;
+        var email = root.TryGetProperty("email", out var emailElement) ? emailElement.GetString() ?? "" : "";
+        var passwordHash = root.TryGetProperty("passwordHash", out var passwordHashElement)
+            ? passwordHashElement.GetString() ?? ""
+            : "";
+        return (email, passwordHash);
+    }
+
+    private UserEntity MapUser(PersistenceUserEntity entity, PersistenceUserAuthIdentityEntity identity)
+    {
+        var (email, passwordHash) = ReadMetadata(identity.MetadataJson);
+        return UserEntity.Create(
+            emailAddressAttribute,
+            entity.UserId,
+            identity.Type == AuthProvider.Local.Value ? identity.Identifier : email,
+            passwordHash,
+            entity.Name,
+            entity.Role ?? "",
+            identity.Type,
+            identity.Type == AuthProvider.Local.Value ? null : identity.Identifier,
+            entity.CreatedAt ?? default,
+            entity.UpdatedAt ?? default);
+    }
 
     private UserEntity MapUser(UserRow row) => UserEntity.Create(
         emailAddressAttribute,
