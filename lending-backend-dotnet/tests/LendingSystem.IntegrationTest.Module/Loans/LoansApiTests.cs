@@ -8,7 +8,7 @@ using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using Xunit;
 
-namespace LendingSystem.IntegrationTest.Lending.Loans;
+namespace LendingSystem.IntegrationTest.Auth.Loans;
 
 [WriteTest]
 public sealed class LoansApiTests : IntegrationTestBase

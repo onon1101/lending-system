@@ -18,7 +18,11 @@ public static class DatabaseMigrationExtensions
         }
 
         var appliedMigrations = await GetAppliedMigrationsAsync(db);
-        if (appliedMigrations.Count == 0 && await HasScannedLegacySchemaAsync(db))
+        if (appliedMigrations.Count == 0 && await HasCurrentSchemaAsync(db))
+        {
+            await BaselineExistingSchemaAsync(db, migrations);
+        }
+        else if (appliedMigrations.Count == 0 && await HasLegacyInitialSchemaAsync(db))
         {
             await BaselineExistingSchemaAsync(db, migrations[0]);
         }
@@ -43,7 +47,30 @@ public static class DatabaseMigrationExtensions
         }
     }
 
-    private static async Task<bool> HasScannedLegacySchemaAsync(LendingDbContext db)
+    private static Task BaselineExistingSchemaAsync(LendingDbContext db, string initialMigration) =>
+        BaselineExistingSchemaAsync(db, [initialMigration]);
+
+    private static async Task BaselineExistingSchemaAsync(LendingDbContext db, IReadOnlyCollection<string> migrations)
+    {
+        await db.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
+                "MigrationId" character varying(150) NOT NULL,
+                "ProductVersion" character varying(32) NOT NULL,
+                CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId")
+            );
+            """);
+
+        foreach (var migration in migrations)
+        {
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+                VALUES ({migration}, '10.0.4')
+                ON CONFLICT ("MigrationId") DO NOTHING;
+                """);
+        }
+    }
+
+    private static async Task<bool> HasLegacyInitialSchemaAsync(LendingDbContext db)
     {
         const string sql = """
             SELECT COUNT(*)
@@ -64,21 +91,59 @@ public static class DatabaseMigrationExtensions
         return tableCount == 5;
     }
 
-    private static async Task BaselineExistingSchemaAsync(LendingDbContext db, string initialMigration)
+    private static async Task<bool> HasCurrentSchemaAsync(LendingDbContext db)
     {
-        await db.Database.ExecuteSqlRawAsync("""
-            CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
-                "MigrationId" character varying(150) NOT NULL,
-                "ProductVersion" character varying(32) NOT NULL,
-                CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId")
-            );
-            """);
+        const string sql = """
+            SELECT
+                EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_schema = current_schema()
+                      AND table_name = 'items'
+                      AND column_name = 'item_id'
+                )
+                AND EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_schema = current_schema()
+                      AND table_name = 'users'
+                      AND column_name = 'status'
+                )
+                AND EXISTS (
+                    SELECT 1
+                    FROM information_schema.tables
+                    WHERE table_schema = current_schema()
+                      AND table_name = 'user_auth_identities'
+                )
+                AND EXISTS (
+                    SELECT 1
+                    FROM information_schema.tables
+                    WHERE table_schema = current_schema()
+                      AND table_name = 'borrower_details'
+                )
+                AND EXISTS (
+                    SELECT 1
+                    FROM information_schema.tables
+                    WHERE table_schema = current_schema()
+                      AND table_name = 'item_media'
+                )
+                AND EXISTS (
+                    SELECT 1
+                    FROM information_schema.tables
+                    WHERE table_schema = current_schema()
+                      AND table_name = 'lending_media'
+                );
+            """;
 
-        await db.Database.ExecuteSqlInterpolatedAsync($"""
-            INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-            VALUES ({initialMigration}, '10.0.4')
-            ON CONFLICT ("MigrationId") DO NOTHING;
-            """);
+        var connection = db.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        return Convert.ToBoolean(await command.ExecuteScalarAsync());
     }
 
     private static Task EnsureMediaSchemaAsync(
