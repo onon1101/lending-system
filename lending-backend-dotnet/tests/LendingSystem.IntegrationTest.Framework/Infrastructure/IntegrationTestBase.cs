@@ -14,7 +14,6 @@ public abstract class IntegrationTestBase : IAsyncLifetime
 
     protected IntegrationTestBase()
     {
-        IntegrationTestDatabase.UseAssemblyDatabaseSuffix(GetType().Assembly.GetName().Name ?? string.Empty);
         _isWriteTest = DetermineIfWriteTest();
     }
 

@@ -33,7 +33,6 @@ internal static class IntegrationTestDatabase
     /// 是否已經初始化
     /// </summary>
     private static bool _initialized;
-    private static string _databaseNameSuffix = string.Empty;
     
     /// <summary>
     /// 初始化資料庫資料
@@ -59,7 +58,7 @@ internal static class IntegrationTestDatabase
     
     public static string ReadonlyConnectionString => BuildConnectionString(ReadonlyDatabaseName);
     private static string ConfiguredBaseDatabaseName => Configuration["DB_NAME"] ?? Configuration["Database:Name"] ?? "lending_test";
-    private static string BaseDatabaseName => $"{ConfiguredBaseDatabaseName}{_databaseNameSuffix}";
+    private static string BaseDatabaseName => ConfiguredBaseDatabaseName;
     private static string MaintenanceDatabaseName => Configuration["DB_MAINTENANCE_NAME"] ?? Configuration["Database:MaintenanceName"] ?? "postgres";
     private static string ReadonlyDatabaseName => $"{BaseDatabaseName}_readonly";
     
@@ -67,32 +66,6 @@ internal static class IntegrationTestDatabase
         Enumerable.Range(1, WriteDatabasePoolSize)
             .Select(index => $"{BaseDatabaseName}_write_pool_{index}")
             .ToArray();
-
-    public static void UseAssemblyDatabaseSuffix(string assemblyName)
-    {
-        if (_initialized)
-        {
-            return;
-        }
-
-        var shortName = assemblyName.Split('.', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? assemblyName;
-        var sanitized = new string(shortName
-            .Select(character => char.IsLetterOrDigit(character) ? char.ToLowerInvariant(character) : '_')
-            .ToArray());
-
-        _databaseNameSuffix = string.IsNullOrWhiteSpace(sanitized)
-            ? string.Empty
-            : $"_{sanitized}_{Environment.ProcessId}";
-
-        while (AvailableWriteDbNames.TryDequeue(out _))
-        {
-        }
-
-        foreach (var dbName in WriteDatabaseNames)
-        {
-            AvailableWriteDbNames.Enqueue(dbName);
-        }
-    }
     
     public static LendingDbContext CreateDbContext(string connectionString)
     {
