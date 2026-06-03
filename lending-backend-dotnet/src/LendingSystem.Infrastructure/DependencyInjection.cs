@@ -4,6 +4,7 @@ using LendingSystem.Auth.ACL.Google;
 using LendingSystem.Auth.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.Auth.Application.Auth;
+using LendingSystem.Auth.Application.Auth.PasskeyRegistrationOption;
 using LendingSystem.Lending.Application.Items;
 using LendingSystem.SharedKernel.Application.System;
 using LendingSystem.Auth.Infrastructure.Auth;
@@ -50,6 +51,8 @@ public static class DependencyInjection
 
         public IServiceCollection AddInfrastructure(IConfiguration configuration)
         {
+            services.Configure<PasskeyOptions>(configuration.GetSection(PasskeyOptions.SectionName));
+
             var connectionString = BuildPostgresConnectionString(configuration);
             services.AddDbContext<LendingDbContext>(options => options.UseNpgsql(connectionString));
             services.AddScoped<IUserCommandRepository, UserRepository>();

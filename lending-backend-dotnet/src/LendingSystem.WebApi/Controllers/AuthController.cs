@@ -1,5 +1,6 @@
 using LendingSystem.Auth.Application.Auth;
 using LendingSystem.Auth.Application.Auth.GetUserByName;
+using LendingSystem.Auth.Application.Auth.PasskeyRegistrationOption;
 using LendingSystem.WebApi.Configuration.Authorization;
 using LendingSystem.WebApi.Models;
 using MediatR;
@@ -33,6 +34,12 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
         [FromBody] GoogleLoginCommand command,
         CancellationToken cancellationToken) =>
         this.ToActionResult(await mediator.Send(command, cancellationToken));
+
+    [HttpPost("/api/v1/auth/passkey/registration-options")]
+    public async Task<ActionResult<ApiResponse<PasskeyRegistrationOptionResult>>> PasskeyRegistrationOption(
+        [FromBody] PasskeyRegistrationOptionQuery query,
+        CancellationToken cancellationToken) =>
+        this.ToActionResult(await mediator.Send(query, cancellationToken));
 
     /// <summary>
     /// 新使用者註冊端點
