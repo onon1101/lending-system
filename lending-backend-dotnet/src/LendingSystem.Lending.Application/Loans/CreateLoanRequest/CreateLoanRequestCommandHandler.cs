@@ -19,6 +19,7 @@ public class CreateLoanRequestCommandHandler(
 {
     public async Task<Result<CreateLoanRequestResult>> Handle(CreateLoanRequestCommand request, CancellationToken cancellationToken)
     {
+        // 基本欄位值的驗證
         var validation = await validator.ValidateAsync(request, cancellationToken);
         var currentUserId = executionContext.Current.User.UserId;
 
@@ -27,18 +28,21 @@ public class CreateLoanRequestCommandHandler(
             return Result<CreateLoanRequestResult>.Failure(LoanErrors.ValidateFieldError());
         }
 
+        // 時間週期的 Value Object
         var period = CreatePeriod(request.StartDate, request.DurationDays);
         if (!period.IsSuccess)
         {
             return Result<CreateLoanRequestResult>.Failure(period.Error);
         }
 
+        // 取得當前借閱者
         var borrower = await loans.GetActiveRequestUserAsync(currentUserId, cancellationToken);
         if (borrower is null)
         {
             return Result<CreateLoanRequestResult>.Failure(LoanErrors.BorrowerNotFound(currentUserId));
         }
 
+        // 取得欲借閱物品
         var itemOwnerUsername = request.ItemOwnerUsername.Trim();
         var itemName = request.ItemName.Trim();
         var item = await loans.GetRequestItemAsync(itemOwnerUsername, itemName, cancellationToken);
@@ -47,6 +51,7 @@ public class CreateLoanRequestCommandHandler(
             return Result<CreateLoanRequestResult>.Failure(LoanErrors.ItemOwnerOrItemNotFound(itemOwnerUsername, itemName));
         }
 
+        // 創建借閱請求
         var aggregate = CreateRequestAggregate(
             borrower,
             item,
@@ -62,6 +67,7 @@ public class CreateLoanRequestCommandHandler(
             return Result<CreateLoanRequestResult>.Failure(aggregate.Error);
         }
 
+        // 儲存變更
         var requestAggregate = aggregate.Data!;
         var loan = await loans.SaveRequestAsync(
             requestAggregate.Aggregate,
