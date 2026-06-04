@@ -1,10 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
-using LendingSystem.Auth.Application.Auth;
+using LendingSystem.Auth.Application.Auth.GoogleLogin;
 using LendingSystem.IntegrationTest.Framework.Infrastructure;
 using Xunit;
 
-namespace LendingSystem.IntegrationTest.Auth;
+namespace LendingSystem.IntegrationTest.Auth.Auth;
 
 [WriteTest]
 public sealed class GoogleLoginApiTests : IntegrationTestBase

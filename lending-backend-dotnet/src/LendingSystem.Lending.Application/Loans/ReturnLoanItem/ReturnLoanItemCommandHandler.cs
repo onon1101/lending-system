@@ -3,7 +3,7 @@ using LendingSystem.Lending.Domain.Aggregate.Loans;
 using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
-namespace LendingSystem.Lending.Application.Loans;
+namespace LendingSystem.Lending.Application.Loans.ReturnLoanItem;
 
 internal sealed class ReturnLoanItemCommandHandler(ILoanCommandRepository loans) : IRequestHandler<ReturnLoanItemCommand, Result<ReturnLoanItemResult>>
 {

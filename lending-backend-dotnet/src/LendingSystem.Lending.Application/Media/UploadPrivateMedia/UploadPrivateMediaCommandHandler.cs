@@ -1,9 +1,8 @@
 using LendingSystem.Lending.Application.Abstractions;
-using LendingSystem.Lending.Application.Media;
 using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
-namespace LendingSystem.Lending.Application.Media;
+namespace LendingSystem.Lending.Application.Media.UploadPrivateMedia;
 
 internal sealed class UploadPrivateMediaCommandHandler(
     IItemQueryRepository items,

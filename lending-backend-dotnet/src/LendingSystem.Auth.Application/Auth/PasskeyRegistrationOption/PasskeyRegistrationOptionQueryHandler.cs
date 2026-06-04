@@ -17,7 +17,7 @@ internal sealed class PasskeyRegistrationOptionQueryHandler(
         PasskeyRegistrationOptionQuery request, 
         CancellationToken cancellationToken)
     {
-        var userId = executionContextAccessor.CurrentUserId;
+        var userId = executionContextAccessor.Current.User.UserId;
         var user = await userQueryRepository.GetByIdAsync(userId, cancellationToken);
         if (user is null)
         {

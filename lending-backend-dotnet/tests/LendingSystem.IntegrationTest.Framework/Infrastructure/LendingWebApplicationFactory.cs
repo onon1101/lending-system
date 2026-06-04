@@ -6,6 +6,7 @@ using LendingSystem.Lending.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
+using LendingSystem.WebApi;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;

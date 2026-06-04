@@ -1,11 +1,11 @@
 using Dapper;
-using LendingSystem.Auth.Application.Abstractions;
-using LendingSystem.SharedKernel.Application.Common;
 using FluentValidation;
+using LendingSystem.Auth.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Abstractions;
+using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
-namespace LendingSystem.Auth.Application.Auth;
+namespace LendingSystem.Auth.Application.Auth.Login;
 
 internal sealed class LoginCommandHandler(
     IPasswordHasher passwords,

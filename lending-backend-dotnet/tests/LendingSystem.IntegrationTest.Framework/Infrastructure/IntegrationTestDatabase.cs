@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Text;
-using LendingSystem.IntegrationTest.Framework.Abstractions;
+using LendingSystem.SharedKernel.Infrastructure.Abstractions;
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;

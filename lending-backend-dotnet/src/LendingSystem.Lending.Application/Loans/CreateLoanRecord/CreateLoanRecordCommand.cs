@@ -1,8 +1,7 @@
 using System.Text.Json.Serialization;
-using LendingSystem.SharedKernel.Application.Common;
-using MediatR;
+using LendingSystem.SharedKernel.Application.Abstractions;
 
-namespace LendingSystem.Lending.Application.Loans;
+namespace LendingSystem.Lending.Application.Loans.CreateLoanRecord;
 
 public sealed record CreateLoanRecordCommand : ICommand<CreateLoanRecordResult>
 {

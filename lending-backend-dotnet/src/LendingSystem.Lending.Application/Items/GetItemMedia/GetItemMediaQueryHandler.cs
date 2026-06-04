@@ -2,7 +2,7 @@ using LendingSystem.Lending.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
-namespace LendingSystem.Lending.Application.Items;
+namespace LendingSystem.Lending.Application.Items.GetItemMedia;
 
 internal sealed class GetItemMediaQueryHandler(IItemQueryRepository items) : IRequestHandler<GetItemMediaQuery, Result<IReadOnlyCollection<GetItemMediaResult>>>
 {

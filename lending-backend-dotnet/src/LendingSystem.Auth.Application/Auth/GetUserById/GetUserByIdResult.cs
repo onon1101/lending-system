@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace LendingSystem.Auth.Application.Auth;
+namespace LendingSystem.Auth.Application.Auth.GetUserById;
 
 public sealed record GetUserByIdResult(
     [property: JsonIgnore] long UserId,

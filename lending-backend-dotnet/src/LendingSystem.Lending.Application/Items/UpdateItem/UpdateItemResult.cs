@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace LendingSystem.Lending.Application.Items;
+namespace LendingSystem.Lending.Application.Items.UpdateItem;
 
 public sealed record UpdateItemResult(
     [property: JsonIgnore] long ItemId,

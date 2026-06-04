@@ -1,7 +1,6 @@
-using LendingSystem.SharedKernel.Application.Common;
-using MediatR;
+using LendingSystem.SharedKernel.Application.Abstractions;
 
-namespace LendingSystem.Lending.Application.Items;
+namespace LendingSystem.Lending.Application.Items.UploadItemImage;
 
 public sealed record UploadItemImageCommand(
     string OwnerUsername,

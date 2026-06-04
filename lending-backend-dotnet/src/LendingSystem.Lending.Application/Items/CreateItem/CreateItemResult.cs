@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace LendingSystem.Lending.Application.Items;
+namespace LendingSystem.Lending.Application.Items.CreateItem;
 
 public sealed record CreateItemResult(
     [property: JsonIgnore] long ItemId,

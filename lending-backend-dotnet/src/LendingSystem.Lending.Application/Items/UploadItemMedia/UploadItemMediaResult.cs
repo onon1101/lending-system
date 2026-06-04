@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace LendingSystem.Lending.Application.Items;
+namespace LendingSystem.Lending.Application.Items.UploadItemMedia;
 
 public sealed record UploadItemMediaResult(
     [property: JsonIgnore] long MediaId,

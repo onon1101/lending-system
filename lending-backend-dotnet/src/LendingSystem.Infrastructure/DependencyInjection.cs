@@ -6,6 +6,7 @@ using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.Auth.Application.Auth;
 using LendingSystem.Auth.Application.Auth.PasskeyRegistrationOption;
 using LendingSystem.Lending.Application.Items;
+using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.SharedKernel.Application.System;
 using LendingSystem.Auth.Infrastructure.Auth;
 using LendingSystem.Auth.Infrastructure.Persistence;
@@ -18,6 +19,8 @@ using LendingSystem.SharedKernel.Infrastructure.Messaging;
 using LendingSystem.SharedKernel.Infrastructure.Time;
 using LendingSystem.Lending.Infrastructure.Video;
 using FluentValidation;
+using LendingSystem.Auth.Application.Auth.Login;
+using LendingSystem.Lending.Application.Items.GetAllItems;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -46,6 +49,7 @@ public static class DependencyInjection
                 typeof(GetAllItemsQuery).Assembly,
                 typeof(SystemStatusService).Assembly);
             services.AddScoped<SystemStatusService>();
+            services.AddSingleton<IUserAccessChecker, UserAccessChecker>();
             return services;
         }
 

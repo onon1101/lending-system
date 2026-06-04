@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using FluentValidation;
 
-namespace LendingSystem.Auth.Application.Auth;
+namespace LendingSystem.Auth.Application.Auth.Login;
 
 public sealed class LoginCommandValidator : AbstractValidator<LoginCommand>
 {

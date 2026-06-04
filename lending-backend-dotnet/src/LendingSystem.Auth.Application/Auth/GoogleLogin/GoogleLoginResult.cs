@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace LendingSystem.Auth.Application.Auth;
+namespace LendingSystem.Auth.Application.Auth.GoogleLogin;
 
 public sealed record GoogleLoginResult(
     [property: JsonPropertyName("access_token")]

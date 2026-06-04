@@ -1,6 +1,5 @@
-using LendingSystem.SharedKernel.Application.Common;
-using MediatR;
+using LendingSystem.SharedKernel.Application.Abstractions;
 
-namespace LendingSystem.Auth.Application.Auth;
+namespace LendingSystem.Auth.Application.Auth.SearchUserByName;
 
 public sealed record SearchUserByNameQuery(string Username) : IQuery<SearchUserByNameResult>;

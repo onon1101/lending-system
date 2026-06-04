@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace LendingSystem.Lending.Application.Items;
+namespace LendingSystem.Lending.Application.Items.GetItemsByUserName;
 
 public sealed record GetItemsByUserNameResult(
     [property: JsonIgnore] long ItemId,

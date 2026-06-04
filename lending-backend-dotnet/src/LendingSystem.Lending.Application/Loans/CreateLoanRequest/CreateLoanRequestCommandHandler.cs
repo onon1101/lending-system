@@ -15,13 +15,14 @@ public class CreateLoanRequestCommandHandler(
     public async Task<Result<CreateLoanRequestResult>> Handle(CreateLoanRequestCommand request, CancellationToken cancellationToken)
     {
         var validation = await validator.ValidateAsync(request, cancellationToken);
-        if (!validation.IsValid || executionContext.CurrentUserId <= 0)
+        var currentUserId = executionContext.Current.User.UserId;
+        if (!validation.IsValid || currentUserId <= 0)
         {
             return Result<CreateLoanRequestResult>.Failure(LoanErrors.ValidateFieldError());
         }
 
         var loan = await loans.CreateRequestAsync(
-            executionContext.CurrentUserId,
+            currentUserId,
             request.BorrowerName.Trim(),
             request.ItemName.Trim(),
             request.StartDate,

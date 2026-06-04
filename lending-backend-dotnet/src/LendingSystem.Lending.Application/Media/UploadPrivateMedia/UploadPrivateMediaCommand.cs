@@ -1,7 +1,6 @@
-using LendingSystem.SharedKernel.Application.Common;
-using MediatR;
+using LendingSystem.SharedKernel.Application.Abstractions;
 
-namespace LendingSystem.Lending.Application.Media;
+namespace LendingSystem.Lending.Application.Media.UploadPrivateMedia;
 
 public sealed record UploadPrivateMediaCommand(
     string BorrowingKey,

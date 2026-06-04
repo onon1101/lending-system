@@ -2,7 +2,7 @@ using LendingSystem.Lending.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
-namespace LendingSystem.Lending.Application.Loans;
+namespace LendingSystem.Lending.Application.Loans.GetItemLoanHistory;
 
 internal sealed class GetItemLoanHistoryQueryHandler(
     ILoanQueryRepository loans,

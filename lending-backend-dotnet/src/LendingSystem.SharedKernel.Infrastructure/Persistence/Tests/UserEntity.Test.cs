@@ -1,4 +1,4 @@
-using LendingSystem.IntegrationTest.Framework.Abstractions;
+using LendingSystem.SharedKernel.Infrastructure.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
 namespace LendingSystem.SharedKernel.Infrastructure.Persistence.Tests;

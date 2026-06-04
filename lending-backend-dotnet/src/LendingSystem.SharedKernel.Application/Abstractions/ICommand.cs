@@ -1,6 +1,7 @@
+using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
-namespace LendingSystem.SharedKernel.Application.Common;
+namespace LendingSystem.SharedKernel.Application.Abstractions;
 
 public interface ICommand;
 

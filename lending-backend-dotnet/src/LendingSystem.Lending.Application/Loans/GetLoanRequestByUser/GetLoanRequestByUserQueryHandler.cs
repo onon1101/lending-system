@@ -18,12 +18,13 @@ internal sealed class GetLoanRequestByUserQueryHandler(
     /// <returns></returns>
     public async Task<Result<IReadOnlyCollection<GetLoanRequestByUserResult>>> Handle(GetLoanRequestByUserQuery request, CancellationToken cancellationToken)
     {
-        if (executionContext.CurrentUserId <= 0)
+        var currentUserId = executionContext.Current.User.UserId;
+        if (currentUserId <= 0)
         {
             return Result<IReadOnlyCollection<GetLoanRequestByUserResult>>.Success([]);
         }
 
-        var loanRequests = await loans.GetRequestsByOwnerIdAsync(executionContext.CurrentUserId, cancellationToken);
+        var loanRequests = await loans.GetRequestsByOwnerIdAsync(currentUserId, cancellationToken);
         return Result<IReadOnlyCollection<GetLoanRequestByUserResult>>.Success(
             loanRequests.Select(Map).ToArray());
     }

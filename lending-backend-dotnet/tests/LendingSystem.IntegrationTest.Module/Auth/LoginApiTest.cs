@@ -1,11 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using LendingSystem.Auth.Application.Auth;
+using LendingSystem.Auth.Application.Auth.Login;
+using LendingSystem.Auth.Application.Auth.RegisterUser;
 using LendingSystem.IntegrationTest.Framework.Infrastructure;
 using Xunit;
 
-namespace LendingSystem.IntegrationTest.Auth;
+namespace LendingSystem.IntegrationTest.Auth.Auth;
 
 [WriteTest]
 public sealed class LoginApiTest : IntegrationTestBase

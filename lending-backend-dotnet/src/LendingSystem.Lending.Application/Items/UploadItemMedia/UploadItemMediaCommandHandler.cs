@@ -3,7 +3,7 @@ using LendingSystem.Lending.Application.Media;
 using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
-namespace LendingSystem.Lending.Application.Items;
+namespace LendingSystem.Lending.Application.Items.UploadItemMedia;
 
 internal sealed class UploadItemMediaCommandHandler(
     IItemCommandRepository items,

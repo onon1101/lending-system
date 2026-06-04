@@ -1,8 +1,7 @@
 using System.Text.Json.Serialization;
-using LendingSystem.SharedKernel.Application.Common;
-using MediatR;
+using LendingSystem.SharedKernel.Application.Abstractions;
 
-namespace LendingSystem.Lending.Application.Items;
+namespace LendingSystem.Lending.Application.Items.UpdateItem;
 
 public sealed record UpdateItemCommand(
     [property: JsonPropertyName("object_name")] string? ObjectName,

@@ -4,12 +4,13 @@ using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
-namespace LendingSystem.Lending.Application.Loans;
+namespace LendingSystem.Lending.Application.Loans.CreateLoan;
 
 internal sealed class CreateLoanCommandHandler(
     ILoanCommandRepository loans,
     IItemQueryRepository items,
-    IExecutionContextAccessor executionContext) : IRequestHandler<CreateLoanCommand, Result<CreateLoanResult>>
+    IExecutionContextAccessor executionContext,
+    IUserAccessChecker userAccessChecker) : IRequestHandler<CreateLoanCommand, Result<CreateLoanResult>>
 {
     public async Task<Result<CreateLoanResult>> Handle(CreateLoanCommand request, CancellationToken cancellationToken)
     {
@@ -19,7 +20,8 @@ internal sealed class CreateLoanCommandHandler(
             borrowerId = await items.GetUserIdByUsernameAsync(request.BorrowerUsername, cancellationToken);
         }
 
-        if (!executionContext.CanAccessUser(borrowerId ?? 0))
+        var currentUser = executionContext.Current.User;
+        if (!userAccessChecker.CanAccessUser(currentUser.IsAdmin, currentUser.UserId, borrowerId ?? 0))
         {
             return Result<CreateLoanResult>.Failure(LoanErrors.CreateBorrowingsForSelfOnly());
         }

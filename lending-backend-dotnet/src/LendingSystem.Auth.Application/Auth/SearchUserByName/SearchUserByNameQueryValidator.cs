@@ -1,4 +1,4 @@
-namespace LendingSystem.Auth.Application.Auth;
+namespace LendingSystem.Auth.Application.Auth.SearchUserByName;
 
 public class SearchUserByNameQueryValidator
 {

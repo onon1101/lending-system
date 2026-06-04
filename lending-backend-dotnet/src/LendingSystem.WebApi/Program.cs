@@ -1,18 +1,17 @@
+using System.Reflection;
 using System.Text;
 using System.Text.Json.Serialization;
-using System.Reflection;
-using LendingSystem.SharedKernel.Domain.Common;
 using LendingSystem.Infrastructure;
+using LendingSystem.SharedKernel.Application.Abstractions;
+using LendingSystem.SharedKernel.Domain.Common;
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
-using LendingSystem.WebApi.Controllers;
 using LendingSystem.WebApi.Configuration.Authorization;
 using LendingSystem.WebApi.Configuration.ExecutionContext;
+using LendingSystem.WebApi.Controllers;
 using LendingSystem.WebApi.Middleware;
 using LendingSystem.WebApi.Models;
-using LendingSystem.SharedKernel.Application.Abstractions;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -117,4 +116,7 @@ app.Run();
 static ApiResponse<object> ToFailureResponse(Errors error, bool isDevelopment) =>
     ApiResponse<object>.Failure(error.Code, error.GetClientMessage(isDevelopment));
 
-public partial class Program;
+namespace LendingSystem.WebApi
+{
+    public partial class Program;
+}

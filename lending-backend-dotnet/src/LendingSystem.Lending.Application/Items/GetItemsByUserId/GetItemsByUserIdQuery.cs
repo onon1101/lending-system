@@ -1,6 +1,5 @@
-using LendingSystem.SharedKernel.Application.Common;
-using MediatR;
+using LendingSystem.SharedKernel.Application.Abstractions;
 
-namespace LendingSystem.Lending.Application.Items;
+namespace LendingSystem.Lending.Application.Items.GetItemsByUserId;
 
 public sealed record GetItemsByUserIdQuery(long UserId) : IQuery<IReadOnlyCollection<GetItemsByUserIdResult>>;

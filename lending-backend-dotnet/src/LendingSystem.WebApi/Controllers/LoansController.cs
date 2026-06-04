@@ -1,6 +1,12 @@
 using LendingSystem.Lending.Application.Loans;
+using LendingSystem.Lending.Application.Loans.CreateLoanRecord;
 using LendingSystem.Lending.Application.Loans.CreateLoanRequest;
+using LendingSystem.Lending.Application.Loans.DeleteLoanRecord;
+using LendingSystem.Lending.Application.Loans.GetItemLoanHistory;
 using LendingSystem.Lending.Application.Loans.GetLoanRequestByUser;
+using LendingSystem.Lending.Application.Loans.GetUserActiveLoans;
+using LendingSystem.Lending.Application.Loans.ReturnLoanItem;
+using LendingSystem.Lending.Application.Loans.UpdateLoanRecordTime;
 using LendingSystem.WebApi.Configuration.Authorization;
 using LendingSystem.WebApi.Models;
 using MediatR;

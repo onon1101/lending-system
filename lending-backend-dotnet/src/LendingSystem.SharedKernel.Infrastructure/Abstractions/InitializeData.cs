@@ -1,6 +1,6 @@
-namespace LendingSystem.IntegrationTest.Framework.Abstractions;
-
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
+
+namespace LendingSystem.SharedKernel.Infrastructure.Abstractions;
 
 public abstract class InitializeData
 {

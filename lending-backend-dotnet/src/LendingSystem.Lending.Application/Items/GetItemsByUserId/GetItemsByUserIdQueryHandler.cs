@@ -3,7 +3,7 @@ using LendingSystem.Lending.Domain.Aggregate.Item;
 using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
-namespace LendingSystem.Lending.Application.Items;
+namespace LendingSystem.Lending.Application.Items.GetItemsByUserId;
 
 internal sealed class GetItemsByUserIdQueryHandler(IItemQueryRepository items) : IRequestHandler<GetItemsByUserIdQuery, Result<IReadOnlyCollection<GetItemsByUserIdResult>>>
 {

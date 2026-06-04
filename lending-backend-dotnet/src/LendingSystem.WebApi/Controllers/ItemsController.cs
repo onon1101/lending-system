@@ -1,4 +1,12 @@
 using LendingSystem.Lending.Application.Items;
+using LendingSystem.Lending.Application.Items.CreateItem;
+using LendingSystem.Lending.Application.Items.GetAllItems;
+using LendingSystem.Lending.Application.Items.GetItemByName;
+using LendingSystem.Lending.Application.Items.GetItemMedia;
+using LendingSystem.Lending.Application.Items.GetItemsByUserName;
+using LendingSystem.Lending.Application.Items.UpdateItem;
+using LendingSystem.Lending.Application.Items.UploadItemImage;
+using LendingSystem.Lending.Application.Items.UploadItemMedia;
 using LendingSystem.Lending.Application.Media;
 using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.SharedKernel.Application.Abstractions;
@@ -72,7 +80,7 @@ public sealed class ItemsController(
         IFormFile? image,
         CancellationToken cancellationToken)
     {
-        var userId = executionContext.CurrentUserId;
+        var userId = executionContext.Current.User.UserId;
         if (userId <= 0)
         {
             return this.ApiFailure<CreateItemResult>(ControllerApiErrors.TokenInvalid());
@@ -108,7 +116,7 @@ public sealed class ItemsController(
     [HasPermission(Permissions.UpdateItems)]
     public async Task<ActionResult<ApiResponse<UpdateItemResult>>> Update([FromRoute] string username, [FromRoute] string objectName, [FromBody] UpdateItemCommand command, CancellationToken cancellationToken)
     {
-        var userId = executionContext.CurrentUserId;
+        var userId = executionContext.Current.User.UserId;
         if (userId <= 0)
         {
             return this.ApiFailure<UpdateItemResult>(ControllerApiErrors.TokenInvalid());
@@ -119,7 +127,7 @@ public sealed class ItemsController(
             OwnerUsername = username,
             OriginalObjectName = objectName,
             CurrentUserId = userId,
-            IsAdmin = executionContext.IsAdmin
+            IsAdmin = executionContext.Current.User.IsAdmin
         }, cancellationToken));
     }
 
@@ -135,14 +143,26 @@ public sealed class ItemsController(
     [HasPermission(Permissions.UploadItemMedia)]
     public async Task<ActionResult<ApiResponse<UploadItemImageResult>>> UploadImage([FromRoute] string username, [FromRoute] string objectName, IFormFile file, CancellationToken cancellationToken)
     {
-        var userId = executionContext.CurrentUserId;
+        var userId = executionContext.Current.User.UserId;
         if (userId <= 0)
         {
             return this.ApiFailure<UploadItemImageResult>(ControllerApiErrors.TokenInvalid());
         }
 
         await using var stream = file.OpenReadStream();
-        return this.ToActionResult(await mediator.Send(new UploadItemImageCommand(username, objectName, new FileFormat(stream, file.Length, file.FileName, file.ContentType), userId, executionContext.IsAdmin), cancellationToken));
+        return this.ToActionResult(
+            await mediator.Send(
+                new UploadItemImageCommand(
+                    username,
+                    objectName,
+                    new FileFormat(
+                        stream,
+                        file.Length,
+                        file.FileName,
+                        file.ContentType),
+                    userId,
+                    executionContext.Current.User.IsAdmin),
+                cancellationToken));
     }
 
     /// <summary>
@@ -157,7 +177,7 @@ public sealed class ItemsController(
     [HasPermission(Permissions.UploadItemMedia)]
     public async Task<ActionResult<ApiResponse<UploadItemMediaResult>>> UploadMedia(CancellationToken cancellationToken)
     {
-        var userId = executionContext.CurrentUserId;
+        var userId = executionContext.Current.User.UserId;
         if (userId <= 0)
         {
             return this.ApiFailure<UploadItemMediaResult>(ControllerApiErrors.TokenInvalid());
@@ -190,7 +210,7 @@ public sealed class ItemsController(
             file.FileName,
             file.ContentType,
             userId,
-            executionContext.IsAdmin),
+            executionContext.Current.User.IsAdmin),
             cancellationToken);
 
         return this.ToCreatedActionResult($"/api/v1/catalog/users/{Uri.EscapeDataString(ownerUsername)}/items/{Uri.EscapeDataString(objectName)}/media", result);

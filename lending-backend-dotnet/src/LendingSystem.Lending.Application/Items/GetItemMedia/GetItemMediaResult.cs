@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace LendingSystem.Lending.Application.Items;
+namespace LendingSystem.Lending.Application.Items.GetItemMedia;
 
 public sealed record GetItemMediaResult(
     [property: JsonPropertyName("type")] string Type,

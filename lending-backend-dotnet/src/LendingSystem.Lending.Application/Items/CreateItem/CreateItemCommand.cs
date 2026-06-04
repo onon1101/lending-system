@@ -1,9 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
-using LendingSystem.SharedKernel.Application.Common;
-using MediatR;
+using LendingSystem.SharedKernel.Application.Abstractions;
 
-namespace LendingSystem.Lending.Application.Items;
+namespace LendingSystem.Lending.Application.Items.CreateItem;
 
 public sealed record CreateItemCommand(
     [Required]

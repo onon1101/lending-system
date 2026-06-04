@@ -4,7 +4,7 @@ using LendingSystem.Lending.Domain.Aggregate.Item;
 using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
-namespace LendingSystem.Lending.Application.Items;
+namespace LendingSystem.Lending.Application.Items.UploadItemImage;
 
 internal sealed class UploadItemImageCommandHandler(
     IItemCommandRepository items,

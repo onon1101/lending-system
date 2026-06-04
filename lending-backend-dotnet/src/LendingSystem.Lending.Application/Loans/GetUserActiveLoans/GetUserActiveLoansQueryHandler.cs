@@ -4,12 +4,13 @@ using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
-namespace LendingSystem.Lending.Application.Loans;
+namespace LendingSystem.Lending.Application.Loans.GetUserActiveLoans;
 
 internal sealed class GetUserActiveLoansQueryHandler(
     ILoanQueryRepository loans,
     IItemQueryRepository items,
-    IExecutionContextAccessor executionContext) : IRequestHandler<GetUserActiveLoansQuery, Result<IReadOnlyCollection<GetUserActiveLoansResult>>>
+    IExecutionContextAccessor executionContext,
+    IUserAccessChecker userAccessChecker) : IRequestHandler<GetUserActiveLoansQuery, Result<IReadOnlyCollection<GetUserActiveLoansResult>>>
 {
     public async Task<Result<IReadOnlyCollection<GetUserActiveLoansResult>>> Handle(GetUserActiveLoansQuery request, CancellationToken cancellationToken)
     {
@@ -19,7 +20,8 @@ internal sealed class GetUserActiveLoansQueryHandler(
             return Result<IReadOnlyCollection<GetUserActiveLoansResult>>.Success([]);
         }
 
-        if (!executionContext.CanAccessUser(userId.Value))
+        var currentUser = executionContext.Current.User;
+        if (!userAccessChecker.CanAccessUser(currentUser.IsAdmin, currentUser.UserId, userId.Value))
         {
             return Result<IReadOnlyCollection<GetUserActiveLoansResult>>.Failure(LoanErrors.AccessOwnBorrowingsOnly());
         }

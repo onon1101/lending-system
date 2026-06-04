@@ -1,11 +1,10 @@
 using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
 using LendingSystem.IntegrationTest.Framework.Infrastructure;
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using Xunit;
 
-namespace LendingSystem.IntegrationTest.Auth;
+namespace LendingSystem.IntegrationTest.Auth.Auth;
 
 [WriteTest]
 public sealed class SearchUserByNameApiTest : IntegrationTestBase

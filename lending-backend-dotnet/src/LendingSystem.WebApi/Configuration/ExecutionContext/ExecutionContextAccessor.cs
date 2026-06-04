@@ -4,33 +4,38 @@ using LendingSystem.Auth.Domain.ValueObjects;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
 using Microsoft.Extensions.Hosting;
+using ExecutionContextModel = LendingSystem.SharedKernel.Application.Common.ExecutionContext;
 
 namespace LendingSystem.WebApi.Configuration.ExecutionContext;
 
 public sealed class ExecutionContextAccessor(
     IHttpContextAccessor httpContextAccessor,
     IConfiguration configuration,
-    IHostEnvironment environment) : IExecutionContextAccessor
+    IHostEnvironment environment)
+    : IExecutionContextAccessor
 {
     private static readonly Guid DefaultDevelopmentUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
-    public Guid UserId => GetUserId();
-
-    public long CurrentUserId => GetCurrentUserId();
-
-    public string Email => GetClaimValue(ClaimTypes.Email, JwtRegisteredClaimNames.Email, "email")
-        ?? GetDevelopmentValue("Email", "dev.user@lending-system.local");
-
-    public string PasswordHash => GetClaimValue("password_hash")
-        ?? GetDevelopmentValue("PasswordHash", "dev-password-hash");
-
-    public bool IsAdmin => GetCurrentUser()
-        ?.FindAll(ClaimTypes.Role)
-        .Concat(GetCurrentUser()?.FindAll("role") ?? [])
-        .Any(x => string.Equals(x.Value, UserRole.Admin.Value, StringComparison.OrdinalIgnoreCase)) == true;
-
-    public bool CanAccessUser(long userId) =>
-        IsAdmin || userId > 0 && CurrentUserId == userId;
+    public ExecutionContextModel Current => new()
+    {
+        User = new CurrentUserContext
+        {
+            IsAuthenticated = GetCurrentUser()?.Identity?.IsAuthenticated == true,
+            IdentityUserId = GetUserId(),
+            UserId = GetCurrentUserId(),
+            Username = GetClaimValue(ClaimTypes.Name, JwtRegisteredClaimNames.Name, "username", "name")
+                ?? GetDevelopmentValue("Username", "dev.user"),
+            Email = GetClaimValue(ClaimTypes.Email, JwtRegisteredClaimNames.Email, "email")
+                ?? GetDevelopmentValue("Email", "dev.user@lending-system.local"),
+            Roles = GetRoles()
+        },
+        Runtime = new RuntimeContext
+        {
+            EnvironmentName = environment.EnvironmentName,
+            IsDevelopment = environment.IsDevelopment(),
+            ApplicationName = environment.ApplicationName
+        }
+    };
 
     private Guid GetUserId()
     {
@@ -89,6 +94,27 @@ public sealed class ExecutionContextAccessor(
         return claimTypes
             .Select(claimType => user?.FindFirstValue(claimType))
             .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+    }
+
+    private IReadOnlyCollection<string> GetRoles()
+    {
+        var user = GetCurrentUser();
+        var roles = user
+            ?.FindAll(ClaimTypes.Role)
+            .Concat(user.FindAll("role"))
+            .Select(x => x.Value)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (roles is { Length: > 0 })
+        {
+            return roles;
+        }
+
+        return environment.IsDevelopment()
+            ? [GetDevelopmentValue("Role", UserRole.User.Value)]
+            : [];
     }
 
     private ClaimsPrincipal? GetCurrentUser() => httpContextAccessor.HttpContext?.User;

@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace LendingSystem.Lending.Application.Items;
+namespace LendingSystem.Lending.Application.Items.UploadItemImage;
 
 public sealed record UploadItemImageResult(
     [property: JsonIgnore] long ItemId,

@@ -1,4 +1,5 @@
 using LendingSystem.Lending.Application.Media;
+using LendingSystem.Lending.Application.Media.UploadPrivateMedia;
 using LendingSystem.WebApi.Configuration.Authorization;
 using LendingSystem.WebApi.Models;
 using MediatR;

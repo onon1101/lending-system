@@ -3,17 +3,19 @@ using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
-namespace LendingSystem.Lending.Application.Loans;
+namespace LendingSystem.Lending.Application.Loans.DeleteLoanRecord;
 
 internal sealed class DeleteLoanRecordCommandHandler(
     ILoanCommandRepository loans,
     IItemQueryRepository items,
-    IExecutionContextAccessor executionContext) : IRequestHandler<DeleteLoanRecordCommand, Result<DeleteLoanRecordResult>>
+    IExecutionContextAccessor executionContext,
+    IUserAccessChecker userAccessChecker) : IRequestHandler<DeleteLoanRecordCommand, Result<DeleteLoanRecordResult>>
 {
     public async Task<Result<DeleteLoanRecordResult>> Handle(DeleteLoanRecordCommand request, CancellationToken cancellationToken)
     {
         var ownerId = await items.GetUserIdByUsernameAsync(request.OwnerUsername, cancellationToken);
-        if (ownerId is null || !executionContext.CanAccessUser(ownerId.Value))
+        var currentUser = executionContext.Current.User;
+        if (ownerId is null || !userAccessChecker.CanAccessUser(currentUser.IsAdmin, currentUser.UserId, ownerId.Value))
         {
             return Result<DeleteLoanRecordResult>.Failure(LoanErrors.ManageOwnItemRecordsOnly());
         }

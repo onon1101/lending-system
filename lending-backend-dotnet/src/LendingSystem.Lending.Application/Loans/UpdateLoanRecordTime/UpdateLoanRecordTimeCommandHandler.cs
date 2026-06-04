@@ -4,12 +4,13 @@ using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
-namespace LendingSystem.Lending.Application.Loans;
+namespace LendingSystem.Lending.Application.Loans.UpdateLoanRecordTime;
 
 internal sealed class UpdateLoanRecordTimeCommandHandler(
     ILoanCommandRepository loans,
     IItemQueryRepository items,
-    IExecutionContextAccessor executionContext) : IRequestHandler<UpdateLoanRecordTimeCommand, Result<UpdateLoanRecordTimeResult>>
+    IExecutionContextAccessor executionContext,
+    IUserAccessChecker userAccessChecker) : IRequestHandler<UpdateLoanRecordTimeCommand, Result<UpdateLoanRecordTimeResult>>
 {
     public async Task<Result<UpdateLoanRecordTimeResult>> Handle(UpdateLoanRecordTimeCommand request, CancellationToken cancellationToken)
     {
@@ -18,7 +19,8 @@ internal sealed class UpdateLoanRecordTimeCommandHandler(
         {
             ownerId = await items.GetUserIdByUsernameAsync(request.OwnerUsername, cancellationToken);
         }
-        if (ownerId is null || !executionContext.CanAccessUser(ownerId.Value))
+        var currentUser = executionContext.Current.User;
+        if (ownerId is null || !userAccessChecker.CanAccessUser(currentUser.IsAdmin, currentUser.UserId, ownerId.Value))
         {
             return Result<UpdateLoanRecordTimeResult>.Failure(LoanErrors.ManageOwnItemRecordsOnly());
         }

@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using LendingSystem.SharedKernel.Application.Common;
 
-namespace LendingSystem.Lending.Application.Loans;
+namespace LendingSystem.Lending.Application.Loans.GetUserActiveLoans;
 
 public sealed record GetUserActiveLoansItemResult(
     [property: JsonIgnore] long ObjectDetailId,

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
 
 namespace LendingSystem.Lending.Application.Loans.CreateLoanRequest;

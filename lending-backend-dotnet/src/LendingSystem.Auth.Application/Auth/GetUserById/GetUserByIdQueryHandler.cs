@@ -2,7 +2,7 @@ using LendingSystem.Auth.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
 using MediatR;
 
-namespace LendingSystem.Auth.Application.Auth;
+namespace LendingSystem.Auth.Application.Auth.GetUserById;
 
 internal sealed class GetUserByIdQueryHandler(IUserQueryRepository users) : IRequestHandler<GetUserByIdQuery, Result<GetUserByIdResult>>
 {
