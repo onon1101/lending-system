@@ -49,7 +49,7 @@ public sealed class LoansApiTests : IntegrationTestBase
             "/api/v1/users/borrowings/request",
             new CreateLoanRequestCommand
             {
-                BorrowerName = "otherowner",
+                ItemOwnerUsername = "otherowner",
                 ItemName = "testitem",
                 StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
                 DurationDays = 7

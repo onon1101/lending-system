@@ -1,7 +1,11 @@
 using FluentValidation;
 using LendingSystem.Lending.Application.Abstractions;
+using LendingSystem.Lending.Domain.Aggregate.Loans;
+using LendingSystem.Lending.Domain.ValueObjects;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
+using LendingSystem.SharedKernel.Domain.Abstractions;
+using LendingSystem.SharedKernel.Domain.Common;
 using MediatR;
 
 namespace LendingSystem.Lending.Application.Loans.CreateLoanRequest;
@@ -9,6 +13,7 @@ namespace LendingSystem.Lending.Application.Loans.CreateLoanRequest;
 public class CreateLoanRequestCommandHandler(
     ILoanCommandRepository loans,
     IExecutionContextAccessor executionContext,
+    IClock clock,
     IValidator<CreateLoanRequestCommand> validator)
 :IRequestHandler<CreateLoanRequestCommand, Result<CreateLoanRequestResult>>
 {
@@ -16,17 +21,52 @@ public class CreateLoanRequestCommandHandler(
     {
         var validation = await validator.ValidateAsync(request, cancellationToken);
         var currentUserId = executionContext.Current.User.UserId;
+
         if (!validation.IsValid || currentUserId <= 0)
         {
             return Result<CreateLoanRequestResult>.Failure(LoanErrors.ValidateFieldError());
         }
 
-        var loan = await loans.CreateRequestAsync(
-            currentUserId,
-            request.BorrowerName.Trim(),
-            request.ItemName.Trim(),
-            request.StartDate,
-            request.DurationDays,
+        var period = CreatePeriod(request.StartDate, request.DurationDays);
+        if (!period.IsSuccess)
+        {
+            return Result<CreateLoanRequestResult>.Failure(period.Error);
+        }
+
+        var borrower = await loans.GetActiveRequestUserAsync(currentUserId, cancellationToken);
+        if (borrower is null)
+        {
+            return Result<CreateLoanRequestResult>.Failure(LoanErrors.BorrowerNotFound(currentUserId));
+        }
+
+        var itemOwnerUsername = request.ItemOwnerUsername.Trim();
+        var itemName = request.ItemName.Trim();
+        var item = await loans.GetRequestItemAsync(itemOwnerUsername, itemName, cancellationToken);
+        if (item is null)
+        {
+            return Result<CreateLoanRequestResult>.Failure(LoanErrors.ItemOwnerOrItemNotFound(itemOwnerUsername, itemName));
+        }
+
+        var aggregate = CreateRequestAggregate(
+            borrower,
+            item,
+            await loans.PrepareBorrowerDetailReferenceAsync(
+                borrower.UserId,
+                borrower.Name,
+                item.OwnerId,
+                Today(),
+                cancellationToken),
+            period.Data!);
+        if (!aggregate.IsSuccess)
+        {
+            return Result<CreateLoanRequestResult>.Failure(aggregate.Error);
+        }
+
+        var requestAggregate = aggregate.Data!;
+        var loan = await loans.SaveRequestAsync(
+            requestAggregate.Aggregate,
+            requestAggregate.BorrowerDetail,
+            Today(),
             cancellationToken);
 
         if (!loan.IsSuccess)
@@ -34,6 +74,60 @@ public class CreateLoanRequestCommandHandler(
             return Result<CreateLoanRequestResult>.Failure(loan.Error);
         }
 
-        return Result<CreateLoanRequestResult>.Success(new CreateLoanRequestResult("建立請求以送出"));
+        return Result<CreateLoanRequestResult>.Success(
+            new CreateLoanRequestResult("建立請求以送出"));
     }
+
+    private Result<LoanPeriod> CreatePeriod(DateOnly startDate, int durationDays)
+    {
+        try
+        {
+            return Result<LoanPeriod>.Success(LoanPeriod.Create(startDate, durationDays));
+        }
+        catch (BusinessRuleValidationException ex)
+        {
+            return Result<LoanPeriod>.Failure(MapBusinessRule(ex.BrokenRule));
+        }
+    }
+
+    private static Result<LoanRequestAggregate> CreateRequestAggregate(
+        LoanRequestUser borrower,
+        LoanRequestItem item,
+        LoanBorrowerDetail borrowerDetail,
+        LoanPeriod period)
+    {
+        try
+        {
+            var aggregate = LoansAggregate.RequestBorrowing(
+                borrowerDetail.BorrowerDetailId,
+                item.OwnerId,
+                item.OwnerName,
+                borrower.UserId,
+                borrower.Name,
+                item.ItemId,
+                item.ItemName,
+                item.CurrentStatus,
+                period);
+
+            return Result<LoanRequestAggregate>.Success(new LoanRequestAggregate(aggregate, borrowerDetail));
+        }
+        catch (BusinessRuleValidationException ex)
+        {
+            return Result<LoanRequestAggregate>.Failure(MapBusinessRule(ex.BrokenRule));
+        }
+    }
+
+    private DateOnly Today() => DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
+
+    private static Errors MapBusinessRule(IBusinessRule rule) =>
+        rule switch
+        {
+            DurationDaysMustBePositiveRule => LoanDomainError.DurationDaysMustBePositive(),
+            LoanStartDateMustBeEarlierThanEndDateRule => LoanDomainError.StartDateMustBeEarlierThanEndDate(),
+            CannotBorrowOwnItemRule => LoanDomainError.CannotBorrowOwnItem(),
+            ItemMustBeAvailableRule itemRule => LoanDomainError.ItemMustBeAvailable(itemRule.ItemId),
+            _ => new DomainErrors("LOAN_BUSINESS_RULE_BROKEN", rule.Message, rule.Message)
+        };
+
+    private sealed record LoanRequestAggregate(LoansAggregate Aggregate, LoanBorrowerDetail BorrowerDetail);
 }

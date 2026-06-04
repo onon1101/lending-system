@@ -98,37 +98,17 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
             : Result<UserLoan>.Success(created);
     }
 
-    public async Task<Result<UserLoan>> CreateRequestAsync(
-        long borrowerId,
-        string itemOwnerUsername,
-        string itemName,
-        DateOnly startDate,
-        int durationDays,
-        CancellationToken cancellationToken)
+    public async Task<LoanRequestUser?> GetActiveRequestUserAsync(long userId, CancellationToken cancellationToken)
     {
-        await using var tx = await BeginTransactionIfNeededAsync(cancellationToken);
-
-        if (borrowerId <= 0)
-        {
-            await tx.RollbackAsync(cancellationToken);
-            return Result<UserLoan>.Failure(LoanRepositoryErrors.BorrowerNotFound(borrowerId));
-        }
-
-        if (durationDays <= 0)
-        {
-            await tx.RollbackAsync(cancellationToken);
-            return Result<UserLoan>.Failure(LoanDomainError.StartDateMustBeEarlierThanEndDate());
-        }
-
-        var borrower = await db.Users
+        var user = await db.Users
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.UserId == borrowerId && x.Status == "ACTIVE", cancellationToken);
-        if (borrower is null)
-        {
-            await tx.RollbackAsync(cancellationToken);
-            return Result<UserLoan>.Failure(LoanRepositoryErrors.BorrowerNotFound(borrowerId));
-        }
+            .FirstOrDefaultAsync(x => x.UserId == userId && x.Status == "ACTIVE", cancellationToken);
 
+        return user is null ? null : new LoanRequestUser(user.UserId, user.Name);
+    }
+
+    public async Task<LoanRequestItem?> GetRequestItemAsync(string itemOwnerUsername, string itemName, CancellationToken cancellationToken)
+    {
         var item = await db.Items
             .Include(x => x.Owner)
             .AsNoTracking()
@@ -138,42 +118,85 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
                     && x.Owner.Name == itemOwnerUsername
                     && x.Owner.Status == "ACTIVE",
                 cancellationToken);
+
         if (item is null || item.Owner is null)
         {
-            await tx.RollbackAsync(cancellationToken);
-            return Result<UserLoan>.Failure(LoanRepositoryErrors.ItemOwnerOrItemNotFound(itemOwnerUsername, itemName));
+            return null;
         }
 
-        if (item.CurrentStatus != ItemStatuses.Available)
-        {
-            await tx.RollbackAsync(cancellationToken);
-            return Result<UserLoan>.Failure(LoanRepositoryErrors.ItemUnavailableOrNotFound(item.ItemId));
-        }
-
-        var endDate = startDate.AddDays(durationDays);
-        var borrowerResult = await GetOrCreateBorrowerDetailAsync(
-            borrower.UserId,
-            borrower.Name,
-            item.OwnerId,
-            Today(),
-            cancellationToken);
-        if (!borrowerResult.IsSuccess)
-        {
-            await tx.RollbackAsync(cancellationToken);
-            return Result<UserLoan>.Failure(borrowerResult.Error);
-        }
-
-        var aggregate = LoansAggregate.Create(
-            borrowerResult.Data!.BorrowerDetailId,
-            item.OwnerId,
-            item.Owner.Name,
-            borrower.UserId,
-            borrower.Name,
+        return new LoanRequestItem(
             item.ItemId,
             item.ObjectName,
-            startDate,
-            endDate,
-            isBorrowingRequest: true);
+            item.CurrentStatus,
+            item.OwnerId,
+            item.Owner.Name);
+    }
+
+    public async Task<LoanBorrowerDetail> PrepareBorrowerDetailReferenceAsync(
+        long borrowerId,
+        string borrowerName,
+        long ownerId,
+        DateOnly today,
+        CancellationToken cancellationToken)
+    {
+        var existing = await db.BorrowerDetails
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                x => x.UserId == borrowerId
+                    && x.BorrowerName == borrowerName,
+                cancellationToken);
+        if (existing is not null)
+        {
+            return new LoanBorrowerDetail(
+                existing.BorrowerDetailId,
+                borrowerId,
+                borrowerName,
+                ownerId,
+                IsNew: false);
+        }
+
+        return new LoanBorrowerDetail(
+            ApplicationGeneratedKey.NewId(),
+            borrowerId,
+            borrowerName,
+            ownerId,
+            IsNew: true);
+    }
+
+    public async Task<Result<UserLoan>> SaveRequestAsync(
+        LoansAggregate aggregate,
+        LoanBorrowerDetail borrowerDetail,
+        DateOnly today,
+        CancellationToken cancellationToken)
+    {
+        await using var tx = await BeginTransactionIfNeededAsync(cancellationToken);
+
+        if (borrowerDetail.IsNew)
+        {
+            db.BorrowerDetails.Add(new BorrowerDetailEntity
+            {
+                BorrowerDetailId = borrowerDetail.BorrowerDetailId,
+                UserId = borrowerDetail.BorrowerUserId,
+                BorrowerName = borrowerDetail.BorrowerName,
+                CreatedAt = today,
+                UpdatedAt = today,
+                CreatedBy = borrowerDetail.OwnerId.ToString(),
+                UpdatedBy = borrowerDetail.OwnerId.ToString()
+            });
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        else
+        {
+            var existing = await db.BorrowerDetails
+                .FirstOrDefaultAsync(x => x.BorrowerDetailId == borrowerDetail.BorrowerDetailId, cancellationToken);
+            if (existing is not null)
+            {
+                existing.UpdatedAt = today;
+                existing.UpdatedBy = borrowerDetail.OwnerId.ToString();
+                await db.SaveChangesAsync(cancellationToken);
+            }
+        }
+
         var domainEvent = aggregate.DomainEvents.OfType<LoanRequestCreatedDomainEvent>().Single();
         await publisher.Publish(domainEvent, cancellationToken);
         aggregate.ClearDomainEvents();

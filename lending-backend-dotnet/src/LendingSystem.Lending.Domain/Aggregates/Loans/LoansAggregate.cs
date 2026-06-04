@@ -1,5 +1,7 @@
 using LendingSystem.SharedKernel.Domain.Abstractions;
 using LendingSystem.SharedKernel.Domain.Common;
+using LendingSystem.Lending.Domain.Aggregate.Item;
+using LendingSystem.Lending.Domain.ValueObjects;
 
 namespace LendingSystem.Lending.Domain.Aggregate.Loans;
 
@@ -66,6 +68,24 @@ public static class LoanDomainError
         new("LOAN_START_DATE_MUST_BE_EARLIER_THAN_END_DATE",
             "start_date must be earlier than end_date",
             "Loan start date must be earlier than end date");
+
+    public static DomainErrors DurationDaysMustBePositive() =>
+        new(
+            "LOAN_DURATION_DAYS_MUST_BE_POSITIVE",
+            "duration_days must be greater than 0",
+            "Loan duration days must be greater than 0");
+
+    public static DomainErrors CannotBorrowOwnItem() =>
+        new(
+            "LOAN_CANNOT_BORROW_OWN_ITEM",
+            "Borrower cannot borrow their own item",
+            "Borrower cannot borrow their own item");
+
+    public static DomainErrors ItemMustBeAvailable(long itemId) =>
+        new(
+            "LOAN_ITEM_MUST_BE_AVAILABLE",
+            $"Item {itemId} must be available before creating a loan request",
+            "Item must be available before creating a loan request");
 
     /// <summary>
     /// 查無借閱紀錄
@@ -178,6 +198,61 @@ public sealed class LoansAggregate : Entity, IAggregateRoot
         _media.Add(media);
         AddDomainEvent(new LoanMediaAddedDomainEvent(media));
     }
+
+    public static LoansAggregate RequestBorrowing(
+        long borrowerDetailId,
+        long itemOwnerId,
+        string itemOwnerName,
+        long borrowerUserId,
+        string borrowerName,
+        long itemId,
+        string itemName,
+        string itemStatus,
+        LoanPeriod period)
+    {
+        CheckRule(new CannotBorrowOwnItemRule(borrowerUserId, itemOwnerId));
+        CheckRule(new ItemMustBeAvailableRule(itemId, itemStatus));
+
+        var loan = Loan.CreateRequest(itemId, period);
+
+        var aggregate = new LoansAggregate(
+            borrowerDetailId,
+            borrowerUserId,
+            borrowerName,
+            [loan],
+            null);
+
+        aggregate.AddDomainEvent(new LoanRequestCreatedDomainEvent(
+            borrowerDetailId,
+            itemOwnerId,
+            itemOwnerName,
+            borrowerUserId,
+            borrowerName,
+            itemName,
+            loan));
+
+        return aggregate;
+    }
+}
+
+public sealed class CannotBorrowOwnItemRule(long borrowerUserId, long itemOwnerId) : IBusinessRule
+{
+    public long BorrowerUserId { get; } = borrowerUserId;
+    public long ItemOwnerId { get; } = itemOwnerId;
+
+    public bool IsBroken() => BorrowerUserId == ItemOwnerId;
+
+    public string Message => "Borrower cannot borrow their own item.";
+}
+
+public sealed class ItemMustBeAvailableRule(long itemId, string itemStatus) : IBusinessRule
+{
+    public long ItemId { get; } = itemId;
+    public string ItemStatus { get; } = itemStatus;
+
+    public bool IsBroken() => ItemStatus != ItemStatuses.Available;
+
+    public string Message => $"Item {ItemId} must be available before creating a loan request.";
 }
 
 public sealed class LoanCreatedDomainEvent(long borrowerDetailId, Loan loan) : IDomainEvent

@@ -69,4 +69,24 @@ public static class LoanErrors
             "You can only manage your own item records",
             "You can only manage your own item records",
             ErrorType.Unauthorized);
+
+    public static ApplicationErrors ItemNotFound() =>
+        new("ITEM_NOT_FOUND",
+            "Item not found",
+            "Item not found",
+            ErrorType.NotFound);
+
+    public static ApplicationErrors BorrowerNotFound(long borrowerId) =>
+        new(
+            "BORROWER_NOT_FOUND",
+            $"Borrower {borrowerId} was not found",
+            "Borrower was not found",
+            ErrorType.NotFound);
+
+    public static ApplicationErrors ItemOwnerOrItemNotFound(string itemOwnerUsername, string itemName) =>
+        new(
+            "ITEM_OWNER_OR_ITEM_NOT_FOUND",
+            $"Item owner {itemOwnerUsername} or item {itemName} was not found",
+            "Item owner or item was not found",
+            ErrorType.NotFound);
 }

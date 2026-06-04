@@ -9,8 +9,8 @@ public sealed class CreateLoanRequestCommand : ICommand<CreateLoanRequestResult>
     /// <summary>
     /// 欲借閱物品的擁有者者名字
     /// </summary>
-    [JsonPropertyName("borrower_name")]
-    public string BorrowerName { get; init; } = string.Empty;
+    [JsonPropertyName("item_owner_username")]
+    public string ItemOwnerUsername { get; init; } = string.Empty;
 
     /// <summary>
     /// 借閱物品

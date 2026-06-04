@@ -6,9 +6,9 @@ public class CreateLoanRequestCommandValidator : AbstractValidator<CreateLoanReq
 {
     public CreateLoanRequestCommandValidator()
     {
-        this.RuleFor(x => x.BorrowerName)
+        this.RuleFor(x => x.ItemOwnerUsername)
             .NotEmpty()
-            .WithMessage("BorrowerName is required");
+            .WithMessage("ItemOwnerUsername is required");
         
         this.RuleFor(x => x.ItemName)
             .NotEmpty()

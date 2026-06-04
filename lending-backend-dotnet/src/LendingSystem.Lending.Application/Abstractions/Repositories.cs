@@ -28,13 +28,32 @@ public interface IItemQueryRepository
 public interface ILoanCommandRepository
 {
     Task<Result<UserLoan>> CreateAsync(long? borrowerId, string? borrowerName, IReadOnlyCollection<long> itemIds, int durationDays, CancellationToken cancellationToken);
-    Task<Result<UserLoan>> CreateRequestAsync(long borrowerId, string itemOwnerUsername, string itemName, DateOnly startDate, int durationDays, CancellationToken cancellationToken);
+    Task<LoanRequestUser?> GetActiveRequestUserAsync(long userId, CancellationToken cancellationToken);
+    Task<LoanRequestItem?> GetRequestItemAsync(string itemOwnerUsername, string itemName, CancellationToken cancellationToken);
+    Task<LoanBorrowerDetail> PrepareBorrowerDetailReferenceAsync(long borrowerId, string borrowerName, long ownerId, DateOnly today, CancellationToken cancellationToken);
+    Task<Result<UserLoan>> SaveRequestAsync(LoansAggregate aggregate, LoanBorrowerDetail borrowerDetail, DateOnly today, CancellationToken cancellationToken);
     Task<Result<UserLoan>> CreateRecordAsync(long ownerId, long? borrowerId, string? borrowerName, long itemId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken);
     Task<Result<UserLoan>> UpdateRecordTimeAsync(long ownerId, long orderId, DateOnly? startDate, DateOnly? endDate, CancellationToken cancellationToken);
     Task<Result<bool>> DeleteRecordAsync(long ownerId, long orderId, CancellationToken cancellationToken);
     Task<Result<UserLoan>> ReturnItemAsync(long orderId, long objectId, CancellationToken cancellationToken);
     Task<Result<UserLoan>> ReturnItemAsync(long orderId, CancellationToken cancellationToken);
 }
+
+public sealed record LoanRequestUser(long UserId, string Name);
+
+public sealed record LoanRequestItem(
+    long ItemId,
+    string ItemName,
+    string CurrentStatus,
+    long OwnerId,
+    string OwnerName);
+
+public sealed record LoanBorrowerDetail(
+    long BorrowerDetailId,
+    long BorrowerUserId,
+    string BorrowerName,
+    long OwnerId,
+    bool IsNew);
 
 public interface ILoanQueryRepository
 {

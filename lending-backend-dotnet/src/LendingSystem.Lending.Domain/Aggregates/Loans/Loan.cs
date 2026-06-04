@@ -1,3 +1,4 @@
+using LendingSystem.Lending.Domain.ValueObjects;
 using LendingSystem.SharedKernel.Domain.Common;
 
 namespace LendingSystem.Lending.Domain.Aggregate.Loans;
@@ -57,5 +58,16 @@ public sealed class Loan : Entity
 
         StartDate = startDate;
         EndDate = endDate;
+    }
+
+    public static Loan CreateRequest(long itemId, LoanPeriod period)
+    {
+        return new Loan(
+            0,
+            itemId,
+            period.StartDate,
+            period.EndDate,
+            null,
+            LoanStatuses.Requested);
     }
 }
