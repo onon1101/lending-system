@@ -1,9 +1,8 @@
 using System.ComponentModel.DataAnnotations;
-using LendingSystem.SharedKernel.Domain.Common;
 
-namespace LendingSystem.Auth.Domain.ValueObjects;
+namespace LendingSystem.SharedKernel.Domain.ValueObject;
 
-public sealed class Email : ValueObject
+public sealed class Email : Common.ValueObject
 {
     private Email(string localPart, string domainPart)
     {

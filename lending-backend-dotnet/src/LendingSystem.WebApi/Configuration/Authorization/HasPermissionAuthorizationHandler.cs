@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using LendingSystem.Auth.Domain.ValueObjects;
+using LendingSystem.SharedKernel.Domain.ValueObject;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Hosting;
 

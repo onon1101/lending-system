@@ -1,6 +1,7 @@
 using LendingSystem.Auth.Application.Abstractions;
 using LendingSystem.Auth.Domain.ValueObjects;
 using LendingSystem.SharedKernel.Application.Common;
+using LendingSystem.SharedKernel.Domain.Common;
 using MediatR;
 
 namespace LendingSystem.Auth.Application.Auth.GoogleLogin;

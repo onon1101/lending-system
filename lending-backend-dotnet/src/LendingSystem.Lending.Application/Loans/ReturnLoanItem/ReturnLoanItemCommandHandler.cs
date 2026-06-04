@@ -1,6 +1,7 @@
 using LendingSystem.Lending.Application.Abstractions;
-using LendingSystem.Lending.Domain.Aggregate.Loans;
+using LendingSystem.Lending.Domain.Aggregates.Loans;
 using LendingSystem.SharedKernel.Application.Common;
+using LendingSystem.SharedKernel.Domain.Common;
 using MediatR;
 
 namespace LendingSystem.Lending.Application.Loans.ReturnLoanItem;

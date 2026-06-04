@@ -1,4 +1,4 @@
-using LendingSystem.Auth.Domain.ValueObjects;
+using LendingSystem.SharedKernel.Domain.ValueObject;
 
 namespace LendingSystem.SharedKernel.Application.Common;
 

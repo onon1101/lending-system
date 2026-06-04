@@ -1,5 +1,5 @@
-using LendingSystem.Lending.Domain.Aggregate.Item;
-using LendingSystem.Lending.Domain.Aggregate.Loans;
+using LendingSystem.Lending.Domain.Aggregates.Item;
+using LendingSystem.Lending.Domain.Aggregates.Loans;
 
 namespace LendingSystem.Lending.Application.Media;
 

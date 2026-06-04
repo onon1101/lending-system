@@ -1,10 +1,11 @@
 using LendingSystem.Lending.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
-using LendingSystem.Lending.Domain.Aggregate.Item;
-using LendingSystem.Lending.Domain.Aggregate.Loans;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using Dapper;
+using LendingSystem.Lending.Domain.Aggregates.Item;
+using LendingSystem.Lending.Domain.Aggregates.Loans;
+using LendingSystem.SharedKernel.Domain.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;

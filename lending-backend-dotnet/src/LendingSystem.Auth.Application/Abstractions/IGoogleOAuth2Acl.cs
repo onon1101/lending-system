@@ -1,5 +1,6 @@
 using LendingSystem.Auth.Application.Auth;
 using LendingSystem.SharedKernel.Application.Common;
+using LendingSystem.SharedKernel.Domain.Common;
 
 namespace LendingSystem.Auth.Application.Abstractions;
 

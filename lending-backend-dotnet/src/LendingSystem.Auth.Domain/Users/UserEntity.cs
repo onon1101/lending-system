@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using LendingSystem.Auth.Domain.ValueObjects;
 using LendingSystem.SharedKernel.Domain.Abstractions;
 using LendingSystem.SharedKernel.Domain.Common;
+using LendingSystem.SharedKernel.Domain.ValueObject;
 
 namespace LendingSystem.Auth.Domain.Users;
 

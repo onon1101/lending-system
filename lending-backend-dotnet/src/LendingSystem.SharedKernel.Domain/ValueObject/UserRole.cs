@@ -1,8 +1,6 @@
-using LendingSystem.SharedKernel.Domain.Common;
+namespace LendingSystem.SharedKernel.Domain.ValueObject;
 
-namespace LendingSystem.Auth.Domain.ValueObjects;
-
-public sealed class UserRole : ValueObject
+public sealed class UserRole : Common.ValueObject
 {
     public static readonly UserRole Guest = new("Guest");
     public static readonly UserRole User = new("User");

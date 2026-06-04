@@ -1,8 +1,8 @@
 using LendingSystem.Lending.Application.Abstractions;
-using LendingSystem.Lending.Domain.Aggregate.Item;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using Dapper;
+using LendingSystem.Lending.Domain.Aggregates.Item;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 

@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using LendingSystem.Auth.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
+using LendingSystem.SharedKernel.Domain.Common;
 using MediatR;
 using Microsoft.Extensions.Options;
 

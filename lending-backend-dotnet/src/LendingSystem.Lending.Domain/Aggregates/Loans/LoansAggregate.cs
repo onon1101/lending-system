@@ -1,9 +1,8 @@
+using LendingSystem.Lending.Domain.Aggregates.Item;
 using LendingSystem.SharedKernel.Domain.Abstractions;
 using LendingSystem.SharedKernel.Domain.Common;
-using LendingSystem.Lending.Domain.Aggregate.Item;
-using LendingSystem.Lending.Domain.ValueObjects;
 
-namespace LendingSystem.Lending.Domain.Aggregate.Loans;
+namespace LendingSystem.Lending.Domain.Aggregates.Loans;
 
 public static class LoanStatuses
 {

@@ -3,6 +3,7 @@ using FluentValidation;
 using LendingSystem.Auth.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
+using LendingSystem.SharedKernel.Domain.Common;
 using MediatR;
 
 namespace LendingSystem.Auth.Application.Auth.Login;

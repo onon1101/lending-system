@@ -1,7 +1,7 @@
 using LendingSystem.SharedKernel.Domain.Abstractions;
 using LendingSystem.SharedKernel.Domain.Common;
 
-namespace LendingSystem.Lending.Domain.ValueObjects;
+namespace LendingSystem.Lending.Domain.Aggregates.Loans;
 
 public sealed record LoanPeriod
 {

@@ -1,7 +1,6 @@
-using LendingSystem.Lending.Domain.ValueObjects;
 using LendingSystem.SharedKernel.Domain.Common;
 
-namespace LendingSystem.Lending.Domain.Aggregate.Loans;
+namespace LendingSystem.Lending.Domain.Aggregates.Loans;
 
 public sealed class Loan : Entity
 {

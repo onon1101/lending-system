@@ -1,4 +1,5 @@
 using LendingSystem.SharedKernel.Application.Common;
+using LendingSystem.SharedKernel.Domain.Common;
 using MediatR;
 
 namespace LendingSystem.SharedKernel.Application.Abstractions;

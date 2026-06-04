@@ -1,5 +1,6 @@
 using LendingSystem.Lending.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
+using LendingSystem.SharedKernel.Domain.Common;
 using MediatR;
 
 namespace LendingSystem.Lending.Application.Loans.GetItemLoanHistory;

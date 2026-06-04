@@ -1,6 +1,6 @@
 using LendingSystem.SharedKernel.Domain.Common;
 
-namespace LendingSystem.Lending.Domain.Aggregate.Item;
+namespace LendingSystem.Lending.Domain.Aggregates.Item;
 
 public sealed class ItemMedia : Entity
 {

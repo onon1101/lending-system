@@ -3,6 +3,7 @@ using System.Security.Claims;
 using LendingSystem.Auth.Domain.ValueObjects;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
+using LendingSystem.SharedKernel.Domain.ValueObject;
 using Microsoft.Extensions.Hosting;
 using ExecutionContextModel = LendingSystem.SharedKernel.Application.Common.ExecutionContext;
 

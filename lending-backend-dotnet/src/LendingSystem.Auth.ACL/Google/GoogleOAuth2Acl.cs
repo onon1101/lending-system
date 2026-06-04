@@ -4,6 +4,7 @@ using LendingSystem.Auth.Application.Auth;
 using LendingSystem.Auth.Domain.ValueObjects;
 using LendingSystem.Auth.Domain.Users;
 using LendingSystem.SharedKernel.Application.Common;
+using LendingSystem.SharedKernel.Domain.Common;
 using Microsoft.Extensions.Configuration;
 
 namespace LendingSystem.Auth.ACL.Google;
