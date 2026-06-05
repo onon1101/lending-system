@@ -2,8 +2,6 @@ using FluentValidation;
 using LendingSystem.Lending.Application.Abstractions;
 using LendingSystem.Lending.Domain.Aggregates.Loans;
 using LendingSystem.SharedKernel.Application.Abstractions;
-using LendingSystem.SharedKernel.Application.Common;
-using LendingSystem.SharedKernel.Domain.Abstractions;
 using LendingSystem.SharedKernel.Domain.Common;
 using MediatR;
 
@@ -28,7 +26,7 @@ public class CreateLoanRequestCommandHandler(
         }
 
         // 時間週期的 Value Object
-        var period = CreatePeriod(request.StartDate, request.DurationDays);
+        var period = LoanPeriod.Create(request.StartDate, request.DurationDays);
         if (!period.IsSuccess)
         {
             return Result<CreateLoanRequestResult>.Failure(period.Error);
@@ -51,15 +49,21 @@ public class CreateLoanRequestCommandHandler(
         }
 
         // 創建借閱請求
-        var aggregate = CreateRequestAggregate(
-            borrower,
-            item,
-            await loans.PrepareBorrowerDetailReferenceAsync(
+        var borrowerDetail = await loans.PrepareBorrowerDetailReferenceAsync(
                 borrower.UserId,
                 borrower.Name,
                 item.OwnerId,
                 Today(),
-                cancellationToken),
+                cancellationToken);
+        var aggregate = LoansAggregate.RequestBorrowing(
+            borrowerDetail.BorrowerDetailId,
+            item.OwnerId,
+            item.OwnerName,
+            borrower.UserId,
+            borrower.Name,
+            item.ItemId,
+            item.ItemName,
+            item.CurrentStatus,
             period.Data!);
         if (!aggregate.IsSuccess)
         {
@@ -69,8 +73,8 @@ public class CreateLoanRequestCommandHandler(
         // 儲存變更
         var requestAggregate = aggregate.Data!;
         var loan = await loans.SaveRequestAsync(
-            requestAggregate.Aggregate,
-            requestAggregate.BorrowerDetail,
+            requestAggregate,
+            borrowerDetail,
             Today(),
             cancellationToken);
 
@@ -83,56 +87,5 @@ public class CreateLoanRequestCommandHandler(
             new CreateLoanRequestResult("建立請求以送出"));
     }
 
-    private Result<LoanPeriod> CreatePeriod(DateOnly startDate, int durationDays)
-    {
-        try
-        {
-            return Result<LoanPeriod>.Success(LoanPeriod.Create(startDate, durationDays));
-        }
-        catch (BusinessRuleValidationException ex)
-        {
-            return Result<LoanPeriod>.Failure(MapBusinessRule(ex.BrokenRule));
-        }
-    }
-
-    private static Result<LoanRequestAggregate> CreateRequestAggregate(
-        LoanRequestUser borrower,
-        LoanRequestItem item,
-        LoanBorrowerDetail borrowerDetail,
-        LoanPeriod period)
-    {
-        try
-        {
-            var aggregate = LoansAggregate.RequestBorrowing(
-                borrowerDetail.BorrowerDetailId,
-                item.OwnerId,
-                item.OwnerName,
-                borrower.UserId,
-                borrower.Name,
-                item.ItemId,
-                item.ItemName,
-                item.CurrentStatus,
-                period);
-
-            return Result<LoanRequestAggregate>.Success(new LoanRequestAggregate(aggregate, borrowerDetail));
-        }
-        catch (BusinessRuleValidationException ex)
-        {
-            return Result<LoanRequestAggregate>.Failure(MapBusinessRule(ex.BrokenRule));
-        }
-    }
-
     private DateOnly Today() => DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
-
-    private static Errors MapBusinessRule(IBusinessRule rule) =>
-        rule switch
-        {
-            DurationDaysMustBePositiveRule => LoanDomainError.DurationDaysMustBePositive(),
-            LoanStartDateMustBeEarlierThanEndDateRule => LoanDomainError.StartDateMustBeEarlierThanEndDate(),
-            CannotBorrowOwnItemRule => LoanDomainError.CannotBorrowOwnItem(),
-            ItemMustBeAvailableRule itemRule => LoanDomainError.ItemMustBeAvailable(itemRule.ItemId),
-            _ => new DomainErrors("LOAN_BUSINESS_RULE_BROKEN", rule.Message, rule.Message)
-        };
-
-    private sealed record LoanRequestAggregate(LoansAggregate Aggregate, LoanBorrowerDetail BorrowerDetail);
 }
