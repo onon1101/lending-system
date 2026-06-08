@@ -49,6 +49,13 @@ public static class LoanErrors
             "Missing required fields",
             ErrorType.Validation);
 
+    public static ApplicationErrors MissingLoanRequestDecisionFields() =>
+        new(
+            "LOAN_MISSING_REQUEST_DECISION_FIELDS",
+            "Missing required fields (borrowing_key)",
+            "Missing required fields",
+            ErrorType.Validation);
+
     public static ApplicationErrors AccessOwnBorrowingsOnly() =>
         new(
             "ACCESS_OWN_BORROWINGS_ONLY",
@@ -88,5 +95,12 @@ public static class LoanErrors
             "ITEM_OWNER_OR_ITEM_NOT_FOUND",
             $"Item owner {itemOwnerUsername} or item {itemName} was not found",
             "Item owner or item was not found",
+            ErrorType.NotFound);
+
+    public static ApplicationErrors LoanRequestNotFound() =>
+        new(
+            "LOAN_REQUEST_NOT_FOUND",
+            "Loan request was not found",
+            "Loan request was not found",
             ErrorType.NotFound);
 }

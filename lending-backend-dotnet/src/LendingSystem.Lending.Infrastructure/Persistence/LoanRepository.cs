@@ -3,6 +3,7 @@ using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using Dapper;
+using LendingSystem.Lending.Application.Commons;
 using LendingSystem.Lending.Domain.Aggregates.Item;
 using LendingSystem.Lending.Domain.Aggregates.Loans;
 using LendingSystem.SharedKernel.Domain.Common;
@@ -208,6 +209,57 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
         return created is null
             ? Result<UserLoan>.Failure(LoanRepositoryErrors.LoanNotFound())
             : Result<UserLoan>.Success(created);
+    }
+
+    public async Task<Loan?> GetRequestForDecisionAsync(long ownerId, long orderId, CancellationToken cancellationToken)
+    {
+        var order = await db.Orders
+            .Include(x => x.Item)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                x => x.OrderId == orderId
+                    && x.Item != null
+                    && x.Item.OwnerId == ownerId,
+                cancellationToken);
+
+        return order is null
+            ? null
+            : Loan.Rehydrate(
+                order.OrderId,
+                order.ObjectId,
+                order.StartDate,
+                order.EndDate,
+                order.ActualReturnDate,
+                order.Status);
+    }
+
+    public async Task<Result<UserLoan>> SaveDecisionAsync(Loan loan, CancellationToken cancellationToken)
+    {
+        await using var tx = await BeginTransactionIfNeededAsync(cancellationToken);
+
+        var order = await db.Orders
+            .Include(x => x.Item)
+            .FirstOrDefaultAsync(x => x.OrderId == loan.OrderId, cancellationToken);
+        if (order is null)
+        {
+            await tx.RollbackAsync(cancellationToken);
+            return Result<UserLoan>.Failure(LoanRepositoryErrors.LoanNotFound());
+        }
+
+        order.Status = loan.Status;
+
+        if (order.Item is not null && loan.Status == LoanStatuses.Approved)
+        {
+            order.Item.CurrentStatus = ItemStatuses.UnAvailable;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+
+        var updated = await GetByOrderIdAsync(loan.OrderId, cancellationToken);
+        return updated is null
+            ? Result<UserLoan>.Failure(LoanRepositoryErrors.LoanNotFound())
+            : Result<UserLoan>.Success(updated);
     }
 
     public async Task<Result<UserLoan>> CreateRecordAsync(long ownerId, long? borrowerId, string? borrowerName, long itemId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken)

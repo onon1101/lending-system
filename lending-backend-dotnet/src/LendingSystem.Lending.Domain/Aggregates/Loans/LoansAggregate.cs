@@ -4,59 +4,7 @@ using LendingSystem.SharedKernel.Domain.Common;
 
 namespace LendingSystem.Lending.Domain.Aggregates.Loans;
 
-public static class LoanStatuses
-{
-    /// <summary>
-    /// 已經送出請求給
-    /// </summary>
-    public const string Requested = "Requested";
-    
-    /// <summary>
-    /// 已同意
-    /// </summary>
-    public const string Approved = "Approved";
 
-    /// <summary>
-    /// 已經由借閱者拿取，正在使用
-    /// </summary>
-    public const string OnLoan = "On Loan";
-
-    /// <summary>
-    /// 已歸還
-    /// </summary>
-    public const string Returned = "Returned";
-}
-
-public sealed record LoanItemDetail(
-    long ObjectDetailId,
-    long ObjectId,
-    string ObjectName,
-    string DetailStatus,
-    DateOnly? ActualReturnDate);
-
-public sealed record UserLoan(
-    long OrderId,
-    long UserId,
-    DateOnly OrderStartDate,
-    DateOnly OrderEndDate,
-    string OrderStatus,
-    IReadOnlyCollection<LoanItemDetail> Items);
-
-public sealed record LoanRecord(
-    long? OrderId,
-    DateOnly? StartDate,
-    DateOnly? EndDate,
-    string? Name,
-    string? Status);
-
-public sealed record LoanRequestRecord(
-    long OrderId,
-    string ItemName,
-    string BorrowerName,
-    string BorrowerUsername,
-    DateOnly StartDate,
-    DateOnly EndDate,
-    string Status);
 
 public sealed class LoansAggregate : Entity, IAggregateRoot
 {
@@ -83,6 +31,15 @@ public sealed class LoansAggregate : Entity, IAggregateRoot
     public IReadOnlyCollection<Loan> LoanEntries => _loans.AsReadOnly();
     public IReadOnlyCollection<LoanMedia> Media => _media.AsReadOnly();
 
+    /// <summary>
+    /// 從資料復原資料
+    /// </summary>
+    /// <param name="borrowerDetailId"></param>
+    /// <param name="borrowerUserId"></param>
+    /// <param name="borrowerName"></param>
+    /// <param name="loans"></param>
+    /// <param name="media"></param>
+    /// <returns></returns>
     public static LoansAggregate Rehydrate(
         long borrowerDetailId,
         long? borrowerUserId,
@@ -195,6 +152,7 @@ public sealed class LoansAggregate : Entity, IAggregateRoot
         return Result<LoansAggregate>.Success(aggregate);
     }
 }
+
 
 public sealed class LoanCreatedDomainEvent(long borrowerDetailId, Loan loan) : IDomainEvent
 {

@@ -1,10 +1,12 @@
 using LendingSystem.Lending.Application.Loans;
+using LendingSystem.Lending.Application.Loans.ApproveLoanRequestCommand;
 using LendingSystem.Lending.Application.Loans.CreateLoanRecord;
 using LendingSystem.Lending.Application.Loans.CreateLoanRequest;
 using LendingSystem.Lending.Application.Loans.DeleteLoanRecord;
 using LendingSystem.Lending.Application.Loans.GetItemLoanHistory;
 using LendingSystem.Lending.Application.Loans.GetLoanRequestByUser;
 using LendingSystem.Lending.Application.Loans.GetUserActiveLoans;
+using LendingSystem.Lending.Application.Loans.RejectLoanRequestCommand;
 using LendingSystem.Lending.Application.Loans.ReturnLoanItem;
 using LendingSystem.Lending.Application.Loans.UpdateLoanRecordTime;
 using LendingSystem.WebApi.Configuration.Authorization;
@@ -53,6 +55,32 @@ public sealed class LoansController(IMediator mediator) : ControllerBase
     [HasPermission(Permissions.ReadBorrowings)]
     public async Task<ActionResult<ApiResponse<IReadOnlyCollection<GetLoanRequestByUserResult>>>> GetLoanRequestsByCurrentUser(CancellationToken cancellationToken) =>
         this.ToActionResult(await mediator.Send(new GetLoanRequestByUserQuery(), cancellationToken));
+
+    /// <summary>
+    /// 同意目前使用者收到的借閱請求
+    /// </summary>
+    /// <param name="borrowingKey">借閱公開 key</param>
+    /// <param name="cancellationToken">取消作業的通知權杖</param>
+    /// <returns>同意後的借閱請求狀態</returns>
+    [HttpPost("/api/v1/management/borrowings/requests/{borrowingKey}/approve")]
+    [HasPermission(Permissions.ManageBorrowings)]
+    public async Task<ActionResult<ApiResponse<ApproveLoanRequestResult>>> ApproveRequest(
+        [FromRoute] string borrowingKey,
+        CancellationToken cancellationToken) =>
+        this.ToActionResult(await mediator.Send(new ApproveLoanRequestCommand(borrowingKey), cancellationToken));
+
+    /// <summary>
+    /// 拒絕目前使用者收到的借閱請求
+    /// </summary>
+    /// <param name="borrowingKey">借閱公開 key</param>
+    /// <param name="cancellationToken">取消作業的通知權杖</param>
+    /// <returns>拒絕後的借閱請求狀態</returns>
+    [HttpPost("/api/v1/management/borrowings/requests/{borrowingKey}/reject")]
+    [HasPermission(Permissions.ManageBorrowings)]
+    public async Task<ActionResult<ApiResponse<RejectLoanRequestResult>>> RejectRequest(
+        [FromRoute] string borrowingKey,
+        CancellationToken cancellationToken) =>
+        this.ToActionResult(await mediator.Send(new RejectLoanRequestCommand(borrowingKey), cancellationToken));
 
     // /// <summary>
     // /// 建立借閱單

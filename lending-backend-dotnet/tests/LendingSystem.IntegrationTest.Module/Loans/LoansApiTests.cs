@@ -2,12 +2,14 @@ using System.Net;
 using System.Net.Http.Json;
 using LendingSystem.IntegrationTest.Framework.Infrastructure;
 using LendingSystem.Lending.Application.Loans;
+using LendingSystem.Lending.Application.Loans.ApproveLoanRequestCommand;
 using LendingSystem.Lending.Application.Loans.CreateLoanRecord;
 using LendingSystem.Lending.Application.Loans.CreateLoanRequest;
 using LendingSystem.Lending.Application.Loans.DeleteLoanRecord;
 using LendingSystem.Lending.Application.Loans.GetItemLoanHistory;
 using LendingSystem.Lending.Application.Loans.GetLoanRequestByUser;
 using LendingSystem.Lending.Application.Loans.GetUserActiveLoans;
+using LendingSystem.Lending.Application.Loans.RejectLoanRequestCommand;
 using LendingSystem.Lending.Application.Loans.ReturnLoanItem;
 using LendingSystem.Lending.Application.Loans.UpdateLoanRecordTime;
 using LendingSystem.SharedKernel.Application.Common;
@@ -79,6 +81,46 @@ public sealed class LoansApiTests : IntegrationTestBase
         var result = await ParseJsonAsync<IReadOnlyCollection<GetLoanRequestByUserResult>>(response);
         Assert.True(result.Issuccess);
         Assert.Contains(result.Data!, request => request.ItemName == "testitem");
+    }
+
+    [Fact]
+    public async Task ApproveLoanRequest_WithExistingRequest_ShouldReturnOk()
+    {
+        // Arrange
+        var borrowingKey = await SeedUsersItemAndOrderAsync(status: "Requested", borrowerId: 1001);
+        using var client = Factory.CreateClient();
+
+        // Act
+        var response = await client.PostAsync($"/api/v1/management/borrowings/requests/{borrowingKey}/approve", null);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await ParseJsonAsync<ApproveLoanRequestResult>(response);
+        Assert.True(result.Issuccess);
+        Assert.Equal("Approved", result.Data!.OrderStatus);
+
+        await using var db = CreateDbContext();
+        var item = await db.Items.FindAsync(2000);
+        Assert.Equal("Unavailable", item!.CurrentStatus);
+    }
+
+    [Fact]
+    public async Task RejectLoanRequest_WithExistingRequest_ShouldReturnOk()
+    {
+        // Arrange
+        var borrowingKey = await SeedUsersItemAndOrderAsync(status: "Requested", borrowerId: 1001);
+        using var client = Factory.CreateClient();
+
+        // Act
+        var response = await client.PostAsync($"/api/v1/management/borrowings/requests/{borrowingKey}/reject", null);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await ParseJsonAsync<RejectLoanRequestResult>(response);
+        Assert.True(result.Issuccess);
+        Assert.Equal("Rejected", result.Data!.OrderStatus);
     }
 
     [Fact]

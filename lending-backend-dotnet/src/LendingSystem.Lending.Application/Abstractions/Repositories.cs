@@ -1,3 +1,4 @@
+using LendingSystem.Lending.Application.Commons;
 using LendingSystem.Lending.Application.Media;
 using LendingSystem.Lending.Domain.Aggregates.Item;
 using LendingSystem.Lending.Domain.Aggregates.Loans;
@@ -30,9 +31,8 @@ public interface ILoanCommandRepository
 {
     Task<Result<UserLoan>> CreateAsync(long? borrowerId, string? borrowerName, IReadOnlyCollection<long> itemIds, int durationDays, CancellationToken cancellationToken);
     Task<LoanRequestUser?> GetActiveRequestUserAsync(long userId, CancellationToken cancellationToken);
-    Task<LoanRequestItem?> GetRequestItemAsync(string itemOwnerUsername, string itemName, CancellationToken cancellationToken);
-    Task<LoanBorrowerDetail> PrepareBorrowerDetailReferenceAsync(long borrowerId, string borrowerName, long ownerId, DateOnly today, CancellationToken cancellationToken);
     Task<Result<UserLoan>> SaveRequestAsync(LoansAggregate aggregate, LoanBorrowerDetail borrowerDetail, DateOnly today, CancellationToken cancellationToken);
+    Task<Result<UserLoan>> SaveDecisionAsync(Loan loan, CancellationToken cancellationToken);
     Task<Result<UserLoan>> CreateRecordAsync(long ownerId, long? borrowerId, string? borrowerName, long itemId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken);
     Task<Result<UserLoan>> UpdateRecordTimeAsync(long ownerId, long orderId, DateOnly? startDate, DateOnly? endDate, CancellationToken cancellationToken);
     Task<Result<bool>> DeleteRecordAsync(long ownerId, long orderId, CancellationToken cancellationToken);
@@ -41,20 +41,6 @@ public interface ILoanCommandRepository
 }
 
 public sealed record LoanRequestUser(long UserId, string Name);
-
-public sealed record LoanRequestItem(
-    long ItemId,
-    string ItemName,
-    string CurrentStatus,
-    long OwnerId,
-    string OwnerName);
-
-public sealed record LoanBorrowerDetail(
-    long BorrowerDetailId,
-    long BorrowerUserId,
-    string BorrowerName,
-    long OwnerId,
-    bool IsNew);
 
 public interface ILoanQueryRepository
 {

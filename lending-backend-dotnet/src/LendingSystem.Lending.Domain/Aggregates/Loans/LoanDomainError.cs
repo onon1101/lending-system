@@ -4,6 +4,16 @@ namespace LendingSystem.Lending.Domain.Aggregates.Loans;
 
 public static class LoanDomainError
 {
+    public static DomainErrors OnlyRequestedLoanCanBeApproved() =>
+        new("ONLY_REQUESTED_LOAN_CAN_BE_APPROVED",
+            "只能同意有借閱請求的借閱請求",
+            "只能同意有借閱請求的借閱請求");
+
+    public static DomainErrors OnlyRequestedLoanCanBeRejected() =>
+        new("ONLY_REQUESTED_LOAN_CAN_BE_REJECTED",
+            "只能拒絕有借閱請求的借閱請求",
+            "只能拒絕有借閱請求的借閱請求");
+
     /// <summary>
     /// 開始時間不得大於結束時間
     /// </summary>

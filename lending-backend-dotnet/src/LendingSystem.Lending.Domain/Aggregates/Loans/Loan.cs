@@ -69,4 +69,34 @@ public sealed class Loan : Entity
             null,
             LoanStatuses.Requested);
     }
+    
+    /// <summary>
+    /// 同意借閱
+    /// </summary>
+    /// <returns></returns>
+    public Result<Loan> Approve()
+    {
+        if (Status != LoanStatuses.Requested)
+        {
+            return Result<Loan>.Failure(LoanDomainError.OnlyRequestedLoanCanBeApproved());
+        }
+
+        Status = LoanStatuses.Approved;
+        return Result<Loan>.Success(this);
+    }
+
+    /// <summary>
+    /// 拒絕借閱
+    /// </summary>
+    /// <returns></returns>
+    public Result<Loan> Reject()
+    {
+        if (Status != LoanStatuses.Requested)
+        {
+            return Result<Loan>.Failure(LoanDomainError.OnlyRequestedLoanCanBeRejected());
+        }
+
+        Status = LoanStatuses.Rejected;
+        return Result<Loan>.Success(this);
+    }
 }

@@ -1,5 +1,6 @@
 using FluentValidation;
 using LendingSystem.Lending.Application.Abstractions;
+using LendingSystem.Lending.Application.Abstractions.Loans;
 using LendingSystem.Lending.Domain.Aggregates.Loans;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Domain.Common;
@@ -7,7 +8,9 @@ using MediatR;
 
 namespace LendingSystem.Lending.Application.Loans.CreateLoanRequest;
 
-public class CreateLoanRequestCommandHandler(
+public sealed class CreateLoanRequestCommandHandler(
+    ILoanPrepareBorrowerDetailReference loanPrepareBorrowerDetail,
+    ILoanRequestItemReader loanRequestItem,
     ILoanCommandRepository loans,
     IExecutionContextAccessor executionContext,
     IClock clock,
@@ -42,14 +45,14 @@ public class CreateLoanRequestCommandHandler(
         // 取得欲借閱物品
         var itemOwnerUsername = request.ItemOwnerUsername.Trim();
         var itemName = request.ItemName.Trim();
-        var item = await loans.GetRequestItemAsync(itemOwnerUsername, itemName, cancellationToken);
+        var item = await loanRequestItem.GetAsync(itemOwnerUsername, itemName, cancellationToken);
         if (item is null)
         {
             return Result<CreateLoanRequestResult>.Failure(LoanErrors.ItemOwnerOrItemNotFound(itemOwnerUsername, itemName));
         }
 
         // 創建借閱請求
-        var borrowerDetail = await loans.PrepareBorrowerDetailReferenceAsync(
+        var borrowerDetail = await loanPrepareBorrowerDetail.GetAsync(
                 borrower.UserId,
                 borrower.Name,
                 item.OwnerId,
