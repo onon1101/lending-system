@@ -1,8 +1,8 @@
-using LendingSystem.Lending.Domain.Aggregates.Item;
+using LendingSystem.Lending.Domain.Item;
 using LendingSystem.SharedKernel.Domain.Abstractions;
 using LendingSystem.SharedKernel.Domain.Common;
 
-namespace LendingSystem.Lending.Domain.Aggregates.Loans;
+namespace LendingSystem.Lending.Domain.Loans;
 
 
 

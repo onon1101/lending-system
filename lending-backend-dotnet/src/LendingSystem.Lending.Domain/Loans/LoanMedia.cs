@@ -1,6 +1,6 @@
 using LendingSystem.SharedKernel.Domain.Common;
 
-namespace LendingSystem.Lending.Domain.Aggregates.Loans;
+namespace LendingSystem.Lending.Domain.Loans;
 
 public sealed class LoanMedia : Entity
 {

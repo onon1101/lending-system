@@ -1,19 +1,25 @@
 using LendingSystem.Lending.Application.Abstractions;
+using LendingSystem.Lending.Application.Abstractions.Loans;
 using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using Dapper;
 using LendingSystem.Lending.Application.Commons;
-using LendingSystem.Lending.Domain.Aggregates.Item;
-using LendingSystem.Lending.Domain.Aggregates.Loans;
 using LendingSystem.SharedKernel.Domain.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using LendingSystem.Lending.Domain.Loans;
+using LendingSystem.Lending.Domain.Item;
 
 namespace LendingSystem.Lending.Infrastructure.Persistence;
 
-public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory queryConnectionFactory, IPublisher publisher) : ILoanCommandRepository, ILoanQueryRepository
+public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory queryConnectionFactory, IPublisher publisher) :
+    ILoanCommandRepository,
+    ILoanQueryRepository,
+    ILoanRequestItemReader,
+    ILoanPrepareBorrowerDetailReference,
+    ILoanRequestDecisionReader
 {
     public async Task<IReadOnlyCollection<UserLoan>> GetActiveLoansByUserIdAsync(long userId, CancellationToken cancellationToken)
     {
@@ -109,7 +115,10 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
         return user is null ? null : new LoanRequestUser(user.UserId, user.Name);
     }
 
-    public async Task<LoanRequestItem?> GetRequestItemAsync(string itemOwnerUsername, string itemName, CancellationToken cancellationToken)
+    async Task<LoanRequestItem?> ILoanRequestItemReader.GetAsync(
+        string itemOwnerUsername,
+        string itemName,
+        CancellationToken cancellationToken)
     {
         var item = await db.Items
             .Include(x => x.Owner)
@@ -134,7 +143,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
             item.Owner.Name);
     }
 
-    public async Task<LoanBorrowerDetail> PrepareBorrowerDetailReferenceAsync(
+    async Task<LoanBorrowerDetail> ILoanPrepareBorrowerDetailReference.GetAsync(
         long borrowerId,
         string borrowerName,
         long ownerId,
@@ -211,7 +220,10 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
             : Result<UserLoan>.Success(created);
     }
 
-    public async Task<Loan?> GetRequestForDecisionAsync(long ownerId, long orderId, CancellationToken cancellationToken)
+    async Task<LoanRequestDecisionContext?> ILoanRequestDecisionReader.GetAsync(
+        long ownerId,
+        long orderId,
+        CancellationToken cancellationToken)
     {
         var order = await db.Orders
             .Include(x => x.Item)
@@ -222,15 +234,24 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
                     && x.Item.OwnerId == ownerId,
                 cancellationToken);
 
-        return order is null
-            ? null
-            : Loan.Rehydrate(
-                order.OrderId,
-                order.ObjectId,
-                order.StartDate,
-                order.EndDate,
-                order.ActualReturnDate,
-                order.Status);
+        if (order is null || order.Item is null)
+        {
+            return null;
+        }
+
+        var loan = Loan.Rehydrate(
+            order.OrderId,
+            order.ObjectId,
+            order.StartDate,
+            order.EndDate,
+            order.ActualReturnDate,
+            order.Status);
+
+        return new LoanRequestDecisionContext(
+            loan,
+            order.Item.OwnerId,
+            order.Item.ItemId,
+            order.Item.CurrentStatus);
     }
 
     public async Task<Result<UserLoan>> SaveDecisionAsync(Loan loan, CancellationToken cancellationToken)

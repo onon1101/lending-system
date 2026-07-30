@@ -1,4 +1,3 @@
-using LendingSystem.Auth.Application.Auth;
 using LendingSystem.Auth.Application.Auth.GetUserByName;
 using LendingSystem.Auth.Application.Auth.GoogleLogin;
 using LendingSystem.Auth.Application.Auth.Login;
@@ -23,7 +22,9 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
     /// <returns>AccessToken 與 RefreshToken</returns>
     [HttpPost("/api/v1/auth/session")]
     [NoPermissionRequired]
-    public async Task<ActionResult<ApiResponse<LoginResult>>> Login([FromBody] LoginCommand command, CancellationToken cancellationToken) =>
+    public async Task<ActionResult<ApiResponse<LoginResult>>> Login(
+        [FromBody] LoginCommand command,
+        CancellationToken cancellationToken) =>
         this.ToActionResult(await mediator.Send(command, cancellationToken));
 
     /// <summary>
@@ -71,7 +72,7 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
         [FromRoute] string username,
         CancellationToken cancellationToken) =>
         this.ToActionResult(await mediator.Send(new GetUserByNameQuery(username), cancellationToken));
-    
+
 
     /// <summary>
     /// 使用 Username 與模糊搜索，取得使用者資訊
@@ -81,7 +82,9 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
     /// <returns>指定使用者的基本資訊</returns>
     [HttpGet("/api/v1/users/search/{username}")]
     [HasPermission(Permissions.ReadUsers)]
-    public async Task<ActionResult<ApiResponse<SearchUserByNameResult>>> GetUserByBlurName([FromRoute] string username, CancellationToken cancellationToken) =>
+    public async Task<ActionResult<ApiResponse<SearchUserByNameResult>>> GetUserByBlurName(
+        [FromRoute] string username,
+        CancellationToken cancellationToken) =>
         this.ToActionResult(await mediator.Send(new SearchUserByNameQuery(Uri.UnescapeDataString(username)), cancellationToken));
 
 }

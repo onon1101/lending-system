@@ -1,4 +1,4 @@
-using LendingSystem.Lending.Domain.Aggregates.Loans;
+using LendingSystem.Lending.Domain.Loans;
 
 namespace LendingSystem.Lending.Application.Commons;
 

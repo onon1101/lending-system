@@ -1,6 +1,6 @@
 using LendingSystem.SharedKernel.Domain.Common;
 
-namespace LendingSystem.Lending.Domain.Aggregates.Loans;
+namespace LendingSystem.Lending.Domain.Loans;
 
 public sealed class Loan : Entity
 {
@@ -69,7 +69,7 @@ public sealed class Loan : Entity
             null,
             LoanStatuses.Requested);
     }
-    
+
     /// <summary>
     /// 同意借閱
     /// </summary>

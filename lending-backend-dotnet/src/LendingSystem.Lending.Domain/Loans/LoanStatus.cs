@@ -1,4 +1,4 @@
-namespace LendingSystem.Lending.Domain.Aggregates.Loans;
+namespace LendingSystem.Lending.Domain.Loans;
 
 /// <summary>
 /// 借閱狀態

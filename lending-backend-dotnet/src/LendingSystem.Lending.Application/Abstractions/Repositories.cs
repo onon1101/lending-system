@@ -1,7 +1,7 @@
 using LendingSystem.Lending.Application.Commons;
 using LendingSystem.Lending.Application.Media;
-using LendingSystem.Lending.Domain.Aggregates.Item;
-using LendingSystem.Lending.Domain.Aggregates.Loans;
+using LendingSystem.Lending.Domain.Item;
+using LendingSystem.Lending.Domain.Loans;
 using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.SharedKernel.Domain.Common;
 

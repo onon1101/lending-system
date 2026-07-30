@@ -11,6 +11,7 @@ using LendingSystem.SharedKernel.Application.System;
 using LendingSystem.Auth.Infrastructure.Auth;
 using LendingSystem.Auth.Infrastructure.Persistence;
 using LendingSystem.Lending.Application.Abstractions;
+using LendingSystem.Lending.Application.Abstractions.Loans;
 using LendingSystem.Lending.Infrastructure.Persistence;
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using LendingSystem.Lending.Infrastructure.Storage;
@@ -65,6 +66,9 @@ public static class DependencyInjection
             services.AddScoped<IItemQueryRepository, ItemRepository>();
             services.AddScoped<ILoanCommandRepository, LoanRepository>();
             services.AddScoped<ILoanQueryRepository, LoanRepository>();
+            services.AddScoped<ILoanRequestItemReader, LoanRepository>();
+            services.AddScoped<ILoanPrepareBorrowerDetailReference, LoanRepository>();
+            services.AddScoped<ILoanRequestDecisionReader, LoanRepository>();
             services.AddScoped<IMediaCommandRepository, MediaRepository>();
             services.AddScoped<IQueryConnectionFactory, PostgresQueryConnectionFactory>();
             services.AddScoped<IDatabaseHealthCheck, PostgresHealthCheck>();

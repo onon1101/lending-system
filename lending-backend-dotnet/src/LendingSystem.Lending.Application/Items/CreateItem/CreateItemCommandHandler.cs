@@ -1,6 +1,6 @@
 using LendingSystem.Lending.Application.Abstractions;
 using LendingSystem.Lending.Application.Media;
-using LendingSystem.Lending.Domain.Aggregates.Item;
+using LendingSystem.Lending.Domain.Item;
 using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.SharedKernel.Domain.Common;
 using MediatR;

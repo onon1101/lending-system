@@ -1,7 +1,7 @@
 using FluentValidation;
 using LendingSystem.Lending.Application.Abstractions;
 using LendingSystem.Lending.Application.Abstractions.Loans;
-using LendingSystem.Lending.Domain.Aggregates.Loans;
+using LendingSystem.Lending.Domain.Loans;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Domain.Common;
 using MediatR;

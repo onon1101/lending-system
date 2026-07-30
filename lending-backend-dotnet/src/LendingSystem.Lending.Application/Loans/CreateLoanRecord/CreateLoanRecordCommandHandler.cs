@@ -1,5 +1,5 @@
 using LendingSystem.Lending.Application.Abstractions;
-using LendingSystem.Lending.Domain.Aggregates.Loans;
+using LendingSystem.Lending.Domain.Loans;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.SharedKernel.Domain.Common;

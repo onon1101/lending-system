@@ -1,7 +1,7 @@
 using LendingSystem.Lending.Application.Abstractions;
 using LendingSystem.Lending.Application.Media;
-using LendingSystem.Lending.Domain.Aggregates.Item;
-using LendingSystem.Lending.Domain.Aggregates.Loans;
+using LendingSystem.Lending.Domain.Item;
+using LendingSystem.Lending.Domain.Loans;
 using MediatR;
 
 namespace LendingSystem.Lending.Infrastructure.Persistence;

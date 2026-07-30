@@ -1,7 +1,7 @@
 using LendingSystem.SharedKernel.Domain.Abstractions;
 using LendingSystem.SharedKernel.Domain.Common;
 
-namespace LendingSystem.Lending.Domain.Aggregates.Item;
+namespace LendingSystem.Lending.Domain.Item;
 
 public static class ItemStatuses
 {

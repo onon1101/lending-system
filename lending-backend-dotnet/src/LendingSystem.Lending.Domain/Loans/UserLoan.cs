@@ -1,4 +1,4 @@
-namespace LendingSystem.Lending.Domain.Aggregates.Loans;
+namespace LendingSystem.Lending.Domain.Loans;
 
 public sealed record UserLoan(
     long OrderId,
