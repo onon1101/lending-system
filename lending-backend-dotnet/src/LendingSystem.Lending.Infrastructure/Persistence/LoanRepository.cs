@@ -1,16 +1,15 @@
+using Dapper;
 using LendingSystem.Lending.Application.Abstractions;
 using LendingSystem.Lending.Application.Abstractions.Loans;
-using LendingSystem.SharedKernel.Application.Common;
-using LendingSystem.SharedKernel.Application.Abstractions;
-using LendingSystem.SharedKernel.Infrastructure.Persistence;
-using Dapper;
 using LendingSystem.Lending.Application.Commons;
+using LendingSystem.Lending.Domain.Item;
+using LendingSystem.Lending.Domain.Loans;
+using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Domain.Common;
+using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using LendingSystem.Lending.Domain.Loans;
-using LendingSystem.Lending.Domain.Item;
 
 namespace LendingSystem.Lending.Infrastructure.Persistence;
 
