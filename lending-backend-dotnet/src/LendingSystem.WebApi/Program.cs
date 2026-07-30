@@ -9,6 +9,7 @@ using LendingSystem.WebApi.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
 using System.Reflection;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -18,6 +19,11 @@ var isDevelopment = builder.Environment.IsDevelopment();
 
 var appPort = builder.Configuration["APP_PORT"] ?? builder.Configuration["App:Port"] ?? "8000";
 builder.WebHost.UseUrls($"http://0.0.0.0:{appPort}");
+
+builder.Services.AddSerilog((services, configuration) => configuration
+    .ReadFrom.Configuration(builder.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext());
 
 builder.Services
     .AddControllers()
@@ -91,6 +97,8 @@ builder.Services.AddPermissionAuthorization();
 var app = builder.Build();
 
 //await app.Services.MigrateDatabaseAsync();
+
+app.UseSerilogRequestLogging();
 
 app.UseMiddleware<ApiExceptionMiddleware>();
 
