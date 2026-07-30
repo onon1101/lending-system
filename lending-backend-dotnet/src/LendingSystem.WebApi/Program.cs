@@ -1,10 +1,6 @@
-using System.Reflection;
-using System.Text;
-using System.Text.Json.Serialization;
 using LendingSystem.Infrastructure;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Domain.Common;
-using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using LendingSystem.WebApi.Configuration.Authorization;
 using LendingSystem.WebApi.Configuration.ExecutionContext;
 using LendingSystem.WebApi.Controllers;
@@ -13,6 +9,9 @@ using LendingSystem.WebApi.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using System.Reflection;
+using System.Text;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 var isDevelopment = builder.Environment.IsDevelopment();
@@ -91,7 +90,7 @@ builder.Services.AddPermissionAuthorization();
 
 var app = builder.Build();
 
-await app.Services.MigrateDatabaseAsync();
+//await app.Services.MigrateDatabaseAsync();
 
 app.UseMiddleware<ApiExceptionMiddleware>();
 
