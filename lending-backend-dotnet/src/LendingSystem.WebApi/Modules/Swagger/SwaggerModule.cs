@@ -1,5 +1,7 @@
-using System.Reflection;
 using LendingSystem.WebApi.Modules.Definitions;
+using LendingSystem.WebApi.Options;
+using Microsoft.Extensions.Options;
+using System.Reflection;
 
 namespace LendingSystem.WebApi.Modules.Swagger;
 
@@ -38,10 +40,11 @@ public sealed class SwaggerModule : ModuleInstaller
                 "/swagger/v1/swagger.json",
                 "物品借閱系統 API v1"));
 
-        var appPort = app.Configuration["APP_PORT"]
-            ?? app.Configuration["App:Port"]
-            ?? "8000";
-        var swaggerUrl = $"http://0.0.0.0:{appPort}/swagger";
+        var appOptions = app.Services
+            .GetRequiredService<IOptions<AppOptions>>()
+            .Value;
+
+        var swaggerUrl = $"http://{appOptions.Ip}:{appOptions.Port}/swagger/index.html";
 
         app.Logger.LogInformation(
             "Swagger UI is available at {SwaggerUrl}",

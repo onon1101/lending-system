@@ -1,4 +1,5 @@
 using LendingSystem.WebApi.Modules.Definitions;
+using LendingSystem.WebApi.Options;
 using System.Reflection;
 
 namespace LendingSystem.WebApi.Startup;
@@ -15,11 +16,13 @@ public static class ApplicationLoader
     /// <returns></returns>
     public static WebApplicationBuilder ConfigureWebHost(this WebApplicationBuilder builder)
     {
-        var appPort = builder.Configuration["APP_PORT"]
-            ?? builder.Configuration["App:Port"]
-            ?? "8000";
+        var appOptions = builder.Configuration
+            .GetSection(AppOptions.SettingsName)
+            .Get<AppOptions>()
+            ?? new AppOptions();
 
-        builder.WebHost.UseUrls($"http://0.0.0.0:{appPort}");
+        builder.WebHost.UseUrls($"http://{appOptions.Ip}:{appOptions.Port}");
+
         return builder;
     }
 
