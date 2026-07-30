@@ -1,6 +1,5 @@
 using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.SharedKernel.Domain.Common;
-using LendingSystem.WebApi.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LendingSystem.WebApi.Controllers;

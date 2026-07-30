@@ -1,5 +1,5 @@
 using System.Text.Json;
-using LendingSystem.WebApi.Models;
+using LendingSystem.WebApi.Controllers;
 
 namespace LendingSystem.IntegrationTest.Framework.Common;
 

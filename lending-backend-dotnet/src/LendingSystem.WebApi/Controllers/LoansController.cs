@@ -10,7 +10,6 @@ using LendingSystem.Lending.Application.Loans.RejectLoanRequestCommand;
 using LendingSystem.Lending.Application.Loans.ReturnLoanItem;
 using LendingSystem.Lending.Application.Loans.UpdateLoanRecordTime;
 using LendingSystem.WebApi.Configuration.Authorization;
-using LendingSystem.WebApi.Models;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

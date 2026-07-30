@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace LendingSystem.WebApi.Models;
+namespace LendingSystem.WebApi.Controllers;
 
 public sealed record ApiResponse<T>
 {

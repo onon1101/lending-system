@@ -15,7 +15,11 @@ public sealed class SystemStatusService(IClock clock, IDatabaseHealthCheck datab
     {
         var error = await database.GetErrorAsync(cancellationToken);
         return error is null
-            ? new SystemStatusResponse("ok", "ok", new DependencyStatus("ok"), clock.UtcNow)
-            : new SystemStatusResponse("degraded", "ok", new DependencyStatus("error", error), clock.UtcNow);
+            ? new SystemStatusResponse("ok", "lending-backend", new DependencyStatus("ok"), clock.UtcNow)
+            : new SystemStatusResponse(
+                "degraded",
+                "lending-backend",
+                new DependencyStatus("error", error),
+                clock.UtcNow);
     }
 }

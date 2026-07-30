@@ -5,7 +5,6 @@ using LendingSystem.Auth.Application.Auth.PasskeyRegistrationOption;
 using LendingSystem.Auth.Application.Auth.RegisterUser;
 using LendingSystem.Auth.Application.Auth.SearchUserByName;
 using LendingSystem.WebApi.Configuration.Authorization;
-using LendingSystem.WebApi.Models;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

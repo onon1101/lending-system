@@ -1,5 +1,10 @@
 namespace LendingSystem.SharedKernel.Domain.Common;
 
+public interface IResult
+{
+    bool IsSuccess { get; }
+}
+
 /// <summary>
 /// 回傳資料結果型別
 /// </summary>
@@ -11,7 +16,7 @@ namespace LendingSystem.SharedKernel.Domain.Common;
 /// 所以使用 Result Pattern 解決上述問題。
 /// </remarks>
 /// <typeparam name="T"></typeparam>
-public sealed record Result<T>
+public sealed record Result<T> : IResult
 {
     /// <summary>
     /// 建構子

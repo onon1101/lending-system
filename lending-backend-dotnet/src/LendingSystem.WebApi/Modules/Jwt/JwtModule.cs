@@ -1,8 +1,9 @@
 using System.Security.Claims;
 using System.Text;
+using LendingSystem.Auth.Application.Abstractions;
+using LendingSystem.Auth.Infrastructure.Auth;
 using LendingSystem.SharedKernel.Domain.Common;
 using LendingSystem.WebApi.Controllers;
-using LendingSystem.WebApi.Models;
 using LendingSystem.WebApi.Modules.Definitions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -19,6 +20,8 @@ public sealed class JwtModule : ModuleInstaller
         var secretKey = configuration["SECRET_KEY"]
             ?? configuration["Jwt:SecretKey"]
             ?? "development-secret-key-change-before-production";
+
+        services.AddSingleton<ITokenService, JwtTokenService>();
 
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

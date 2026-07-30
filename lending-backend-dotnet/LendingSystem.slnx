@@ -1,6 +1,5 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/LendingSystem.Infrastructure/LendingSystem.Infrastructure.csproj" />
     <Project Path="src/LendingSystem.WebApi/LendingSystem.WebApi.csproj" />
   </Folder>
   <Folder Name="/src/Module/" />

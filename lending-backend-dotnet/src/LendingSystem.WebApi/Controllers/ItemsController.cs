@@ -11,7 +11,6 @@ using LendingSystem.Lending.Application.Media;
 using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.WebApi.Configuration.Authorization;
-using LendingSystem.WebApi.Models;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

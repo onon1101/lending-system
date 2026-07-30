@@ -1,7 +1,6 @@
 using System.Text.Json.Serialization;
 using LendingSystem.SharedKernel.Domain.Common;
 using LendingSystem.WebApi.Controllers;
-using LendingSystem.WebApi.Models;
 using LendingSystem.WebApi.Modules.Definitions;
 using Microsoft.AspNetCore.Mvc;
 

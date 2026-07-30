@@ -1,7 +1,7 @@
 using System.Text.Json;
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using LendingSystem.WebApi;
-using LendingSystem.WebApi.Models;
+using LendingSystem.WebApi.Controllers;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 

@@ -1,5 +1,4 @@
 using LendingSystem.WebApi.Controllers;
-using LendingSystem.WebApi.Models;
 
 namespace LendingSystem.WebApi.Middleware;
 

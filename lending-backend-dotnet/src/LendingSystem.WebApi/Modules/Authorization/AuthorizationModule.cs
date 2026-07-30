@@ -1,3 +1,5 @@
+using LendingSystem.SharedKernel.Application.Abstractions;
+using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.WebApi.Configuration.Authorization;
 using LendingSystem.WebApi.Modules.Definitions;
 
@@ -11,6 +13,7 @@ public sealed class AuthorizationModule : ModuleInstaller
         IWebHostEnvironment environment)
     {
         services.AddPermissionAuthorization();
+        services.AddSingleton<IUserAccessChecker, UserAccessChecker>();
         return services;
     }
 
