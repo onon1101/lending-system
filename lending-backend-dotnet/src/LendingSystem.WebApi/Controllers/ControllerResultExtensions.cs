@@ -31,33 +31,17 @@ internal static class ControllerResultExtensions
 
     public static IActionResult ApiFailureResult(this ControllerBase controller, Errors errors)
     {
-        var environment = controller.HttpContext.RequestServices
-            .GetRequiredService<IHostEnvironment>();
-
-        var message = errors.GetClientMessage(environment.IsDevelopment());
-
         return controller.StatusCode(
             GetStatusCode(errors),
-            ApiResponse<object>.Failure(errors.Code, message));
+            ApiResponse<object>.Failure(errors.Code, errors.ErrorMessage));
     }
 
     /// <summary>
-    /// 選擇是否錯誤回報時，應該選擇 Dev 還是 Pub 的環境訊息。
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="controller"></param>
-    /// <param name="errors"></param>
-    /// <returns></returns>
     private static ActionResult<ApiResponse<T>> UnwrapErrorMessage<T>(ControllerBase controller, Errors errors)
     {
-        var environment = controller.HttpContext.RequestServices
-            .GetRequiredService<IHostEnvironment>();
-
-        var message = errors.GetClientMessage(environment.IsDevelopment());
-
         return controller.StatusCode(
             GetStatusCode(errors), 
-            ApiResponse<T>.Failure(errors.Code, message));
+            ApiResponse<T>.Failure(errors.Code, errors.ErrorMessage));
     }
 
     private static int GetStatusCode(Errors errors) =>

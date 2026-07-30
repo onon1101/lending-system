@@ -1,4 +1,4 @@
-using LendingSystem.Lending.Domain.Item;
+using LendingSystem.Lending.Domain.Item_old;
 using LendingSystem.SharedKernel.Domain.Abstractions;
 using LendingSystem.SharedKernel.Domain.Common;
 
@@ -123,12 +123,12 @@ public sealed class LoansAggregate : Entity, IAggregateRoot
     {
         if (borrowerUserId == itemOwnerId)
         {
-            return Result<LoansAggregate>.Failure(LoanDomainError.CannotBorrowOwnItem());
+            return Result<LoansAggregate>.Failure(LoanErrors.CannotBorrowOwnItem());
         }
 
         if (itemStatus != ItemStatuses.Available)
         {
-            return Result<LoansAggregate>.Failure(LoanDomainError.ItemMustBeAvailable(itemId));
+            return Result<LoansAggregate>.Failure(LoanErrors.ItemMustBeAvailable(itemId));
         }
 
         var loan = Loan.CreateRequest(itemId, period);

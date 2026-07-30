@@ -1,27 +1,40 @@
 namespace LendingSystem.SharedKernel.Domain.Common;
 
-public abstract class ValueObject
+public abstract class ValueObject<TValue>
 {
-    protected abstract IEnumerable<object?> GetEqualityComponents();
+    protected abstract IEnumerable<TValue?> GetEqualityComponents();
 
     public override bool Equals(object? obj)
     {
-        if (obj is null || obj.GetType() != GetType())
+        if (obj is not ValueObject<TValue> other ||
+            obj.GetType() != GetType())
         {
             return false;
         }
 
-        var other = (ValueObject)obj;
-        return GetEqualityComponents().SequenceEqual(other.GetEqualityComponents());
+        return GetEqualityComponents()
+            .SequenceEqual(other.GetEqualityComponents());
     }
 
     public override int GetHashCode()
     {
         return GetEqualityComponents()
-            .Aggregate(1, (current, component) => HashCode.Combine(current, component));
+            .Aggregate(
+                1,
+                (current, component) => HashCode.Combine(current, component));
     }
 
-    public static bool operator ==(ValueObject? left, ValueObject? right) => Equals(left, right);
+    public static bool operator ==(
+        ValueObject<TValue>? left,
+        ValueObject<TValue>? right)
+    {
+        return Equals(left, right);
+    }
 
-    public static bool operator !=(ValueObject? left, ValueObject? right) => !Equals(left, right);
+    public static bool operator !=(
+        ValueObject<TValue>? left,
+        ValueObject<TValue>? right)
+    {
+        return !Equals(left, right);
+    }
 }

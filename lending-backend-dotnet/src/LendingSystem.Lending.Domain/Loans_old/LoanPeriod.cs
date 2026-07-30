@@ -43,7 +43,7 @@ public sealed record LoanPeriod
         // 借閱時間小於等於 0 
         if (durationDays <= 0)
         {
-            return Result<LoanPeriod>.Failure(LoanDomainError.DurationDaysMustBePositive());
+            return Result<LoanPeriod>.Failure(LoanErrors.DurationDaysMustBePositive());
         }
 
         // 轉換成結束日期
@@ -52,7 +52,7 @@ public sealed record LoanPeriod
         // 借閱開始時間大於結束時間
         if (startDate >= endDate)
         {
-            return Result<LoanPeriod>.Failure(LoanDomainError.StartDateMustBeEarlierThanEndDate());
+            return Result<LoanPeriod>.Failure(LoanErrors.StartDateMustBeEarlierThanEndDate());
         }
 
         return Result<LoanPeriod>.Success(new LoanPeriod(startDate, endDate));

@@ -1,5 +1,6 @@
 using LendingSystem.Lending.Application.Abstractions;
 using LendingSystem.Lending.Domain.Item;
+using LendingSystem.Lending.Domain.Item_old;
 using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.SharedKernel.Domain.Common;
 using MediatR;
@@ -16,7 +17,7 @@ internal sealed class GetItemByIdQueryHandler(IItemQueryRepository items) : IReq
             : Result<GetItemByIdResult>.Success(Map(item));
     }
 
-    private static GetItemByIdResult Map(Item item) => new(
+    private static GetItemByIdResult Map(ItemAggregate item) => new(
         item.ItemId,
         item.OwnerId,
         item.ObjectName,

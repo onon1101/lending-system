@@ -14,7 +14,7 @@ namespace LendingSystem.WebApi.Controllers;
 public sealed class AuthController(IMediator mediator) : ControllerBase
 {
     /// <summary>
-    /// 登入端點
+    /// 帳號密碼登入窗口
     /// </summary>
     /// <param name="command">登入請求</param>
     /// <param name="cancellationToken">取消作業的通知權杖</param>
@@ -27,7 +27,7 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
         this.ToActionResult(await mediator.Send(command, cancellationToken));
 
     /// <summary>
-    /// 使用 Google OAuth2 登入
+    /// Google OAuth2 登入窗口
     /// </summary>
     /// <param name="command">Google OAuth2 登入請求</param>
     /// <param name="cancellationToken">取消作業的通知權杖</param>
@@ -39,6 +39,12 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
         CancellationToken cancellationToken) =>
         this.ToActionResult(await mediator.Send(command, cancellationToken));
 
+    /// <summary>
+    /// 取得註冊 passkey 的註冊資訊
+    /// </summary>
+    /// <param name="query"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     [HttpPost("/api/v1/auth/passkey/registration-options")]
     public async Task<ActionResult<ApiResponse<PasskeyRegistrationOptionResult>>> PasskeyRegistrationOption(
         [FromBody] PasskeyRegistrationOptionQuery query,
@@ -53,7 +59,9 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
     /// <returns>新建立使用者的 UserId、Username 與 Email</returns>
     [HttpPost("/api/v1/users")]
     [NoPermissionRequired]
-    public async Task<ActionResult<ApiResponse<RegisterUserResult>>> Register([FromBody] RegisterUserCommand command, CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<RegisterUserResult>>> Register(
+        [FromBody] RegisterUserCommand command,
+        CancellationToken cancellationToken)
     {
         var created = await mediator.Send(command, cancellationToken);
         return this.ToCreatedActionResult(created.IsSuccess ? $"/api/v1/users/{created.Data!.Name}" : "", created);

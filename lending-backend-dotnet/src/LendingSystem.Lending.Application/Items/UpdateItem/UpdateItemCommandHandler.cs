@@ -1,5 +1,6 @@
 using LendingSystem.Lending.Application.Abstractions;
 using LendingSystem.Lending.Domain.Item;
+using LendingSystem.Lending.Domain.Item_old;
 using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.SharedKernel.Domain.Common;
 using MediatR;
@@ -43,7 +44,7 @@ internal sealed class UpdateItemCommandHandler(
         return Result<UpdateItemResult>.Success(Map(item!));
     }
 
-    private static UpdateItemResult Map(Item item) => new(
+    private static UpdateItemResult Map(ItemAggregate item) => new(
         item.ItemId,
         item.OwnerId,
         item.ObjectName,

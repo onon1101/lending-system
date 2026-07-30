@@ -1,6 +1,7 @@
 using LendingSystem.Lending.Application.Commons;
 using LendingSystem.Lending.Application.Media;
 using LendingSystem.Lending.Domain.Item;
+using LendingSystem.Lending.Domain.Item_old;
 using LendingSystem.Lending.Domain.Loans;
 using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.SharedKernel.Domain.Common;
@@ -9,16 +10,16 @@ namespace LendingSystem.Lending.Application.Abstractions;
 
 public interface IItemCommandRepository
 {
-    Task<Item> CreateAsync(long userId, string objectName, string maker, string material, string description, string imageUrl, CancellationToken cancellationToken);
-    Task<Item?> GetByIdForCommandAsync(long itemId, CancellationToken cancellationToken);
-    Task<Item?> UpdateAsync(long itemId, string? objectName, string? maker, string? material, string? description, string? currentStatus, string? imageUrl, CancellationToken cancellationToken);
+    Task<ItemAggregate> CreateAsync(long userId, string objectName, string maker, string material, string description, string imageUrl, CancellationToken cancellationToken);
+    Task<ItemAggregate?> GetByIdForCommandAsync(long itemId, CancellationToken cancellationToken);
+    Task<ItemAggregate?> UpdateAsync(long itemId, string? objectName, string? maker, string? material, string? description, string? currentStatus, string? imageUrl, CancellationToken cancellationToken);
 }
 
 public interface IItemQueryRepository
 {
-    Task<Item?> GetByIdAsync(long itemId, CancellationToken cancellationToken);
-    Task<Item?> GetByNameAsync(long userId, string itemName, CancellationToken cancellation);
-    Task<Item?> GetByNameAsync(string ownerUsername, string itemName, CancellationToken cancellation);
+    Task<ItemAggregate?> GetByIdAsync(long itemId, CancellationToken cancellationToken);
+    Task<ItemAggregate?> GetByNameAsync(long userId, string itemName, CancellationToken cancellation);
+    Task<ItemAggregate?> GetByNameAsync(string ownerUsername, string itemName, CancellationToken cancellation);
     Task<IReadOnlyCollection<ItemSummary>> GetAllAsync(CancellationToken cancellationToken);
     Task<IReadOnlyCollection<ItemSummary>?> GetItemsByUserId(long userId, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<ItemSummary>?> GetItemsByUserName(string username, CancellationToken cancellationToken);
