@@ -14,8 +14,11 @@ public sealed class ApiExceptionMiddleware(RequestDelegate next, ILogger<ApiExce
         catch (Exception ex)
         {
             logger.LogError(ex, "Unhandled API exception");
+
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+
             var environment = context.RequestServices.GetRequiredService<IHostEnvironment>();
+
             var error = ControllerApiErrors.ServerError();
             await context.Response.WriteAsJsonAsync(ApiResponse<object>.Failure(error.Code, error.GetClientMessage(environment.IsDevelopment())));
         }

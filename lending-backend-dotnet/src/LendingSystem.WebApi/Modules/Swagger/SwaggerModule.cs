@@ -38,6 +38,15 @@ public sealed class SwaggerModule : ModuleInstaller
                 "/swagger/v1/swagger.json",
                 "物品借閱系統 API v1"));
 
+        var appPort = app.Configuration["APP_PORT"]
+            ?? app.Configuration["App:Port"]
+            ?? "8000";
+        var swaggerUrl = $"http://0.0.0.0:{appPort}/swagger";
+
+        app.Logger.LogInformation(
+            "Swagger UI is available at {SwaggerUrl}",
+            swaggerUrl);
+
         return app;
     }
 }
