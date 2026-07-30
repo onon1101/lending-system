@@ -1,6 +1,7 @@
 using LendingSystem.Lending.Application.Abstractions;
 using LendingSystem.Lending.Application.Media;
 using LendingSystem.Lending.Domain.Item;
+using LendingSystem.Lending.Domain.Item_old;
 using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.SharedKernel.Domain.Common;
 using MediatR;
@@ -51,7 +52,7 @@ internal sealed class UploadItemImageCommandHandler(
         return Result<UploadItemImageResult>.Success(Map(item));
     }
 
-    private static UploadItemImageResult Map(Item item) => new(
+    private static UploadItemImageResult Map(ItemAggregate item) => new(
         item.ItemId,
         item.OwnerId,
         item.ObjectName,

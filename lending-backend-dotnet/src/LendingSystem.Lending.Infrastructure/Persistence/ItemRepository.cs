@@ -5,6 +5,7 @@ using Dapper;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using LendingSystem.Lending.Domain.Item;
+using LendingSystem.Lending.Domain.Item_old;
 
 namespace LendingSystem.Lending.Infrastructure.Persistence;
 
@@ -13,7 +14,7 @@ public sealed class ItemRepository(
     IQueryConnectionFactory queryConnectionFactory,
     IPublisher publisher) : IItemCommandRepository, IItemQueryRepository
 {
-    public async Task<Item> CreateAsync(long userId, string objectName, string maker, string material, string description, string imageUrl, CancellationToken cancellationToken)
+    public async Task<ItemAggregate> CreateAsync(long userId, string objectName, string maker, string material, string description, string imageUrl, CancellationToken cancellationToken)
     {
         var aggregate = ItemAggregate.Create(userId, objectName, maker, material, description, imageUrl);
         var domainEvent = aggregate.DomainEvents.OfType<ItemCreatedDomainEvent>().Single();
@@ -24,7 +25,7 @@ public sealed class ItemRepository(
             ?? throw new InvalidOperationException("Item was not persisted by domain event handlers.");
     }
 
-    public async Task<Item?> GetByIdAsync(long itemId, CancellationToken cancellationToken)
+    public async Task<ItemAggregate?> GetByIdAsync(long itemId, CancellationToken cancellationToken)
     {
         const string sql = """
             select
@@ -41,11 +42,11 @@ public sealed class ItemRepository(
             """;
 
         using var connection = queryConnectionFactory.CreateConnection();
-        return await connection.QuerySingleOrDefaultAsync<Item>(
+        return await connection.QuerySingleOrDefaultAsync<ItemAggregate>(
             new CommandDefinition(sql, new { ItemId = itemId }, cancellationToken: cancellationToken));
     }
 
-    public async Task<Item?> GetByIdForCommandAsync(long itemId, CancellationToken cancellationToken)
+    public async Task<ItemAggregate?> GetByIdForCommandAsync(long itemId, CancellationToken cancellationToken)
     {
         var entity = await db.Items
             .AsNoTracking()
@@ -54,7 +55,7 @@ public sealed class ItemRepository(
         return entity is null ? null : Map(entity);
     }
 
-    public async Task<Item?> GetByNameAsync(long userId, string itemName, CancellationToken cancellation)
+    public async Task<ItemAggregate?> GetByNameAsync(long userId, string itemName, CancellationToken cancellation)
     {
         const string sql = """
             select
@@ -72,11 +73,11 @@ public sealed class ItemRepository(
             """;
 
         using var connection = queryConnectionFactory.CreateConnection();
-        return await connection.QuerySingleOrDefaultAsync<Item>(
+        return await connection.QuerySingleOrDefaultAsync<ItemAggregate>(
             new CommandDefinition(sql, new { UserId = userId, ItemName = itemName }, cancellationToken: cancellation));
     }
 
-    public async Task<Item?> GetByNameAsync(string ownerUsername, string itemName, CancellationToken cancellation)
+    public async Task<ItemAggregate?> GetByNameAsync(string ownerUsername, string itemName, CancellationToken cancellation)
     {
         const string sql = """
             select
@@ -96,7 +97,7 @@ public sealed class ItemRepository(
             """;
 
         using var connection = queryConnectionFactory.CreateConnection();
-        return await connection.QuerySingleOrDefaultAsync<Item>(
+        return await connection.QuerySingleOrDefaultAsync<ItemAggregate>(
             new CommandDefinition(sql, new { OwnerUsername = ownerUsername, ItemName = itemName }, cancellationToken: cancellation));
     }
 
@@ -233,7 +234,7 @@ public sealed class ItemRepository(
         return rows;
     }
 
-    public async Task<Item?> UpdateAsync(long itemId, string? objectName, string? maker, string? material, string? description, string? currentStatus, string? imageUrl, CancellationToken cancellationToken)
+    public async Task<ItemAggregate?> UpdateAsync(long itemId, string? objectName, string? maker, string? material, string? description, string? currentStatus, string? imageUrl, CancellationToken cancellationToken)
     {
         var entity = await db.Items
             .FirstOrDefaultAsync(x => x.ItemId == itemId, cancellationToken);
@@ -351,7 +352,7 @@ public sealed class ItemRepository(
             new CommandDefinition(sql, new { Username = username, ItemName = itemName }, cancellationToken: cancellationToken));
     }
 
-    private static Item Map(ItemEntity entity) => new(
+    private static ItemAggregate Map(ItemEntity entity) => new(
         entity.ItemId,
         entity.OwnerId,
         entity.ObjectName,

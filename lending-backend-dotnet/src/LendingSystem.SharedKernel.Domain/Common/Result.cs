@@ -35,12 +35,12 @@ public sealed record Result<T> : IResult
     /// Wrapper 裡面的資料
     /// </summary>
     public T? Data { get; }
-    
+
     /// <summary>
     /// 是否成功
     /// </summary>
     public bool IsSuccess { get; }
-    
+
     /// <summary>
     /// 是否錯誤
     /// </summary>

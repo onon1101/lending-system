@@ -1,5 +1,5 @@
 using LendingSystem.Lending.Application.Abstractions;
-using LendingSystem.Lending.Domain.Item;
+using LendingSystem.Lending.Domain.Item_old;
 using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.SharedKernel.Domain.Common;
 using MediatR;

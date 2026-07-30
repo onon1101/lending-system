@@ -78,7 +78,7 @@ public sealed class Loan : Entity
     {
         if (Status != LoanStatuses.Requested)
         {
-            return Result<Loan>.Failure(LoanDomainError.OnlyRequestedLoanCanBeApproved());
+            return Result<Loan>.Failure(LoanErrors.OnlyRequestedLoanCanBeApproved());
         }
 
         Status = LoanStatuses.Approved;
@@ -93,7 +93,7 @@ public sealed class Loan : Entity
     {
         if (Status != LoanStatuses.Requested)
         {
-            return Result<Loan>.Failure(LoanDomainError.OnlyRequestedLoanCanBeRejected());
+            return Result<Loan>.Failure(LoanErrors.OnlyRequestedLoanCanBeRejected());
         }
 
         Status = LoanStatuses.Rejected;

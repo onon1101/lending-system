@@ -44,7 +44,7 @@ internal sealed class UpdateLoanRecordTimeCommandHandler(
             request.EndDate is not null &&
             request.StartDate >= request.EndDate)
         {
-            return Result<UpdateLoanRecordTimeResult>.Failure(LoanDomainError.StartDateMustBeEarlierThanEndDate());
+            return Result<UpdateLoanRecordTimeResult>.Failure(LendingSystem.Lending.Domain.Loans.LoanErrors.StartDateMustBeEarlierThanEndDate());
         }
 
         var loan = await loans.UpdateRecordTimeAsync(

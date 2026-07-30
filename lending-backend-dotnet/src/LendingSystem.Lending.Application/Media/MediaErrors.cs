@@ -4,9 +4,9 @@ namespace LendingSystem.Lending.Application.Media;
 
 public static class MediaErrors
 {
-    public static ApplicationErrors UnsupportedFileType() =>
-        new("MEDIA_UNSUPPORTED_FILE_TYPE", "Unsupported file type", "Unsupported file type", ErrorType.Validation);
+    public static Errors UnsupportedFileType() =>
+        new("Media.UnsupportedFileType", "Unsupported file type", ErrorType.Validation);
 
-    public static ApplicationErrors LendingOrderRequired() =>
-        new("MEDIA_LENDING_ORDER_REQUIRED", "borrowing_key is required for lending media", "Borrowing key is required", ErrorType.Validation);
+    public static Errors LendingOrderRequired() =>
+        new("Media.LendingOrderRequired", "Borrowing key is required", ErrorType.Validation);
 }

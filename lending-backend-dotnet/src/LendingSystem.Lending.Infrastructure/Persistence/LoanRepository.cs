@@ -2,7 +2,7 @@ using Dapper;
 using LendingSystem.Lending.Application.Abstractions;
 using LendingSystem.Lending.Application.Abstractions.Loans;
 using LendingSystem.Lending.Application.Commons;
-using LendingSystem.Lending.Domain.Item;
+using LendingSystem.Lending.Domain.Item_old;
 using LendingSystem.Lending.Domain.Loans;
 using LendingSystem.SharedKernel.Application.Abstractions;
 using LendingSystem.SharedKernel.Domain.Common;
@@ -52,7 +52,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
     {
         if (itemIds.Count != itemIds.Distinct().Count())
         {
-            return Result<UserLoan>.Failure(LoanRepositoryErrors.DuplicateBorrowingItems());
+            return Result<UserLoan>.Failure(LoanErrors.DuplicateBorrowingItems());
         }
 
         await using var tx = await BeginTransactionIfNeededAsync(cancellationToken);
@@ -77,7 +77,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
             if (item is null || item.CurrentStatus != ItemStatuses.Available)
             {
                 await tx.RollbackAsync(cancellationToken);
-                return Result<UserLoan>.Failure(LoanRepositoryErrors.ItemUnavailableOrNotFound(objectId));
+                return Result<UserLoan>.Failure(LoanErrors.ItemUnavailableOrNotFound(objectId));
             }
         }
 
@@ -101,7 +101,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
 
         var created = await GetByOrderIdAsync(orders[0].OrderId, cancellationToken);
         return created is null
-            ? Result<UserLoan>.Failure(LoanRepositoryErrors.LoanNotFound())
+            ? Result<UserLoan>.Failure(LoanErrors.LoanNotFound())
             : Result<UserLoan>.Success(created);
     }
 
@@ -215,7 +215,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
         var createdOrderId = domainEvent.CreatedLoan?.OrderId ?? 0;
         var created = createdOrderId <= 0 ? null : await GetByOrderIdAsync(createdOrderId, cancellationToken);
         return created is null
-            ? Result<UserLoan>.Failure(LoanRepositoryErrors.LoanNotFound())
+            ? Result<UserLoan>.Failure(LoanErrors.LoanNotFound())
             : Result<UserLoan>.Success(created);
     }
 
@@ -263,7 +263,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
         if (order is null)
         {
             await tx.RollbackAsync(cancellationToken);
-            return Result<UserLoan>.Failure(LoanRepositoryErrors.LoanNotFound());
+            return Result<UserLoan>.Failure(LoanErrors.LoanNotFound());
         }
 
         order.Status = loan.Status;
@@ -278,7 +278,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
 
         var updated = await GetByOrderIdAsync(loan.OrderId, cancellationToken);
         return updated is null
-            ? Result<UserLoan>.Failure(LoanRepositoryErrors.LoanNotFound())
+            ? Result<UserLoan>.Failure(LoanErrors.LoanNotFound())
             : Result<UserLoan>.Success(updated);
     }
 
@@ -289,12 +289,12 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
             .FirstOrDefaultAsync(x => x.ItemId == itemId, cancellationToken);
         if (item is null)
         {
-            return Result<UserLoan>.Failure(LoanRepositoryErrors.ItemNotFound(itemId));
+            return Result<UserLoan>.Failure(LoanErrors.ItemNotFound(itemId));
         }
 
         if (item.OwnerId != ownerId)
         {
-            return Result<UserLoan>.Failure(LoanRepositoryErrors.ItemDoesNotBelongToOwner(itemId, ownerId));
+            return Result<UserLoan>.Failure(LoanErrors.ItemDoesNotBelongToOwner(itemId, ownerId));
         }
 
         var borrowerResult = await GetOrCreateBorrowerDetailAsync(borrowerId, borrowerName, ownerId, Today(), cancellationToken);
@@ -316,7 +316,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
         var createdOrderId = domainEvent.CreatedLoan?.OrderId ?? 0;
         var created = createdOrderId <= 0 ? null : await GetByOrderIdAsync(createdOrderId, cancellationToken);
         return created is null
-            ? Result<UserLoan>.Failure(LoanRepositoryErrors.LoanRecordNotFound())
+            ? Result<UserLoan>.Failure(LoanErrors.LoanRecordNotFound())
             : Result<UserLoan>.Success(created);
     }
 
@@ -330,13 +330,13 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
         if (order is null)
         {
             await tx.RollbackAsync(cancellationToken);
-            return Result<bool>.Failure(LoanRepositoryErrors.LoanRecordNotFound(orderId));
+            return Result<bool>.Failure(LoanErrors.LoanRecordNotFound(orderId));
         }
 
         if (order.Item is null || order.Item.OwnerId != ownerId)
         {
             await tx.RollbackAsync(cancellationToken);
-            return Result<bool>.Failure(LoanRepositoryErrors.LoanRecordDoesNotBelongToOwner(orderId, ownerId));
+            return Result<bool>.Failure(LoanErrors.LoanRecordDoesNotBelongToOwner(orderId, ownerId));
         }
 
         if (order.Status == LoanStatuses.OnLoan)
@@ -358,19 +358,19 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
             .FirstOrDefaultAsync(x => x.OrderId == orderId, cancellationToken);
         if (order is null)
         {
-            return Result<UserLoan>.Failure(LoanRepositoryErrors.LoanRecordNotFound(orderId));
+            return Result<UserLoan>.Failure(LoanErrors.LoanRecordNotFound(orderId));
         }
 
         if (order.Item is null || order.Item.OwnerId != ownerId)
         {
-            return Result<UserLoan>.Failure(LoanRepositoryErrors.LoanRecordDoesNotBelongToOwner(orderId, ownerId));
+            return Result<UserLoan>.Failure(LoanErrors.LoanRecordDoesNotBelongToOwner(orderId, ownerId));
         }
 
         var updatedStartDate = startDate ?? order.StartDate;
         var updatedEndDate = endDate ?? order.EndDate;
         if (updatedStartDate >= updatedEndDate)
         {
-            return Result<UserLoan>.Failure(LoanDomainError.StartDateMustBeEarlierThanEndDate());
+            return Result<UserLoan>.Failure(LoanErrors.StartDateMustBeEarlierThanEndDate());
         }
 
         var oldEndDate = order.EndDate;
@@ -386,7 +386,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
 
         var updated = await GetByOrderIdAsync(orderId, cancellationToken);
         return updated is null
-            ? Result<UserLoan>.Failure(LoanRepositoryErrors.LoanRecordNotFound())
+            ? Result<UserLoan>.Failure(LoanErrors.LoanRecordNotFound())
             : Result<UserLoan>.Success(updated);
     }
 
@@ -405,7 +405,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
         if (order is null)
         {
             await tx.RollbackAsync(cancellationToken);
-            return Result<UserLoan>.Failure(LoanRepositoryErrors.LoanItemAlreadyReturnedOrNotFound(orderId, objectId));
+            return Result<UserLoan>.Failure(LoanErrors.LoanItemAlreadyReturnedOrNotFound(orderId, objectId));
         }
 
         order.Status = LoanStatuses.Returned;
@@ -421,7 +421,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
 
         var loan = await GetByOrderIdAsync(orderId, cancellationToken);
         return loan is null
-            ? Result<UserLoan>.Failure(LoanRepositoryErrors.LoanNotFound())
+            ? Result<UserLoan>.Failure(LoanErrors.LoanNotFound())
             : Result<UserLoan>.Success(loan);
     }
 
@@ -438,7 +438,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
         if (order is null)
         {
             await tx.RollbackAsync(cancellationToken);
-            return Result<UserLoan>.Failure(LoanRepositoryErrors.LoanNotFound());
+            return Result<UserLoan>.Failure(LoanErrors.LoanNotFound());
         }
 
         order.Status = LoanStatuses.Returned;
@@ -454,7 +454,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
 
         var loan = await GetByOrderIdAsync(orderId, cancellationToken);
         return loan is null
-            ? Result<UserLoan>.Failure(LoanRepositoryErrors.LoanNotFound())
+            ? Result<UserLoan>.Failure(LoanErrors.LoanNotFound())
             : Result<UserLoan>.Success(loan);
     }
 
@@ -561,7 +561,7 @@ public sealed class LoanRepository(LendingDbContext db, IQueryConnectionFactory 
                 .FirstOrDefaultAsync(x => x.UserId == borrowerId && x.Status == "ACTIVE", cancellationToken);
             if (borrower is null)
             {
-                return Result<BorrowerDetailEntity>.Failure(LoanRepositoryErrors.BorrowerNotFound(borrowerId.Value));
+                return Result<BorrowerDetailEntity>.Failure(LoanErrors.BorrowerNotFound(borrowerId.Value));
             }
         }
 

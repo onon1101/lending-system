@@ -45,15 +45,13 @@ public sealed class JwtModule : ModuleInstaller
                         context.HandleResponse();
                         context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                         await context.Response.WriteAsJsonAsync(ToFailureResponse(
-                            ControllerApiErrors.Unauthorized(),
-                            environment.IsDevelopment()));
+                            ControllerApiErrors.Unauthorized()));
                     },
                     OnForbidden = async context =>
                     {
                         context.Response.StatusCode = StatusCodes.Status403Forbidden;
                         await context.Response.WriteAsJsonAsync(ToFailureResponse(
-                            ControllerApiErrors.Forbidden(),
-                            environment.IsDevelopment()));
+                            ControllerApiErrors.Forbidden()));
                     }
                 };
             });
@@ -67,10 +65,8 @@ public sealed class JwtModule : ModuleInstaller
         return app;
     }
 
-    private static ApiResponse<object> ToFailureResponse(
-        Errors error,
-        bool isDevelopment) =>
+    private static ApiResponse<object> ToFailureResponse(Errors error) =>
         ApiResponse<object>.Failure(
             error.Code,
-            error.GetClientMessage(isDevelopment));
+            error.ErrorMessage);
 }

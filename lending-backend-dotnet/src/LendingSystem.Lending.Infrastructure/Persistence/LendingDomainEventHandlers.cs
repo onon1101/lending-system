@@ -1,4 +1,5 @@
 using LendingSystem.Lending.Domain.Item;
+using LendingSystem.Lending.Domain.Item_old;
 using LendingSystem.Lending.Domain.Loans;
 using LendingSystem.SharedKernel.Infrastructure.Persistence;
 using MediatR;

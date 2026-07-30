@@ -32,8 +32,7 @@ public sealed class ControllersModule : ModuleInstaller
                         : error.ErrorMessage));
 
                 return new BadRequestObjectResult(ToFailureResponse(
-                    ControllerApiErrors.InvalidRequestBody(message),
-                    environment.IsDevelopment()));
+                    ControllerApiErrors.InvalidRequestBody(message)));
             };
         });
 
@@ -46,10 +45,8 @@ public sealed class ControllersModule : ModuleInstaller
         return app;
     }
 
-    private static ApiResponse<object> ToFailureResponse(
-        Errors error,
-        bool isDevelopment) =>
+    private static ApiResponse<object> ToFailureResponse(Errors error) =>
         ApiResponse<object>.Failure(
             error.Code,
-            error.GetClientMessage(isDevelopment));
+            error.ErrorMessage);
 }
