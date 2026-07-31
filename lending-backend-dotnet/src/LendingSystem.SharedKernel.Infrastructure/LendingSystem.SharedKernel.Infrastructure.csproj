@@ -2,9 +2,11 @@
 
     <ItemGroup>
         <ProjectReference Include="..\LendingSystem.SharedKernel.Application\LendingSystem.SharedKernel.Application.csproj" />
+        <ProjectReference Include="..\LendingSystem.SharedKernel.WebApi\LendingSystem.SharedKernel.WebApi.csproj" />
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="Dapper" Version="2.1.79" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.4">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>

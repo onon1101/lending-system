@@ -4,11 +4,14 @@ using LendingSystem.Auth.Application.Auth.Login;
 using LendingSystem.Auth.Application.Auth.PasskeyRegistrationOption;
 using LendingSystem.Auth.Application.Auth.RegisterUser;
 using LendingSystem.Auth.Application.Auth.SearchUserByName;
+using LendingSystem.Auth.WebApi.Login;
+using LendingSystem.SharedKernel.Domain.Common;
 using LendingSystem.WebApi.Configuration.Authorization;
+using LendingSystem.WebApi.Controllers;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
-namespace LendingSystem.WebApi.Controllers;
+namespace LendingSystem.Auth.WebApi.Controllers;
 
 [ApiController]
 public sealed class AuthController(IMediator mediator) : ControllerBase
@@ -16,15 +19,35 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
     /// <summary>
     /// 帳號密碼登入窗口
     /// </summary>
-    /// <param name="command">登入請求</param>
+    /// <param name="request">登入請求</param>
     /// <param name="cancellationToken">取消作業的通知權杖</param>
     /// <returns>AccessToken 與 RefreshToken</returns>
     [HttpPost("/api/v1/auth/session")]
     [NoPermissionRequired]
     public async Task<ActionResult<ApiResponse<LoginResult>>> Login(
-        [FromBody] LoginCommand command,
-        CancellationToken cancellationToken) =>
-        this.ToActionResult(await mediator.Send(command, cancellationToken));
+        [FromBody] LoginRequest request,
+        CancellationToken cancellationToken)
+    {
+        // 驗證帳號規則
+        var accountResult = Account.Create(request.Account);
+        if (!accountResult.IsSuccess)
+        {
+            return this.ToActionResult(Result<LoginResult>.Failure(accountResult.Error));
+        }
+        
+        // 驗證密碼規則
+        var passwordResult = Password.Create(request.Password);
+        if (!passwordResult.IsSuccess)
+        {
+            return this.ToActionResult(Result<LoginResult>.Failure(passwordResult.Error));
+        }
+
+        // 呼叫 Service
+        return this.ToActionResult(await mediator.Send(new LoginCommand(
+            accountResult.Data!,
+            passwordResult.Data!),
+            cancellationToken));
+    }
 
     /// <summary>
     /// Google OAuth2 登入窗口

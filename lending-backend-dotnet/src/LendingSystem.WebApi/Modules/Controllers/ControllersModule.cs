@@ -1,4 +1,6 @@
 using System.Text.Json.Serialization;
+using LendingSystem.Auth.WebApi;
+using LendingSystem.Lending.WebApi;
 using LendingSystem.SharedKernel.Domain.Common;
 using LendingSystem.WebApi.Controllers;
 using LendingSystem.WebApi.Modules.Definitions;
@@ -15,6 +17,8 @@ public sealed class ControllersModule : ModuleInstaller
     {
         services
             .AddControllers()
+            .AddApplicationPart(typeof(AuthWebApiAssembly).Assembly)
+            .AddApplicationPart(typeof(LendingWebApiAssembly).Assembly)
             .AddJsonOptions(options =>
             {
                 options.JsonSerializerOptions.DefaultIgnoreCondition =

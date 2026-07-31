@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using LendingSystem.Lending.Application.Items;
 using LendingSystem.Lending.Application.Items.CreateItem;
 using LendingSystem.Lending.Application.Items.GetAllItems;
@@ -7,14 +8,17 @@ using LendingSystem.Lending.Application.Items.GetItemsByUserName;
 using LendingSystem.Lending.Application.Items.UpdateItem;
 using LendingSystem.Lending.Application.Items.UploadItemImage;
 using LendingSystem.Lending.Application.Items.UploadItemMedia;
-using LendingSystem.Lending.Application.Media;
-using LendingSystem.SharedKernel.Application.Common;
+using LendingSystem.Lending.WebApi.CreateItem;
+using LendingSystem.Lending.WebApi.UpdateItem;
 using LendingSystem.SharedKernel.Application.Abstractions;
+using LendingSystem.SharedKernel.WebApi.Pagination;
 using LendingSystem.WebApi.Configuration.Authorization;
+using LendingSystem.WebApi.Controllers;
 using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace LendingSystem.WebApi.Controllers;
+namespace LendingSystem.Lending.WebApi.Controllers;
 
 [ApiController]
 public sealed class ItemsController(
@@ -28,9 +32,10 @@ public sealed class ItemsController(
     /// <returns>所有可瀏覽的物品摘要</returns>
     [HttpGet("/api/v1/catalog/items")]
     [NoPermissionRequired]
-    public async Task<ActionResult<ApiResponse<IReadOnlyCollection<GetAllItemsResult>>>> GetAll(CancellationToken cancellationToken) =>
+    public async Task<ActionResult<ApiResponse<PagedResult<GetAllItemsResult>>>> GetAll(
+        CancellationToken cancellationToken = default) =>
         this.ToActionResult(await mediator.Send(new GetAllItemsQuery(), cancellationToken));
-
+    
     /// <summary>
     /// 依照使用者名稱取得該使用者擁有的所有物品
     /// </summary>
@@ -39,45 +44,58 @@ public sealed class ItemsController(
     /// <returns>指定使用者擁有的物品摘要清單</returns>
     [HttpGet("/api/v1/catalog/items/user/{username}")]
     [NoPermissionRequired]
-    public async Task<ActionResult<ApiResponse<IReadOnlyCollection<GetItemsByUserNameResult>>>> GetItemsByUserName(
-        [FromRoute] string username, CancellationToken cancellationToken)
-        => this.ToActionResult(await mediator.Send(new GetItemsByUserNameQuery(username), cancellationToken));
-        
+    public async Task<ActionResult<ApiResponse<PagedResult<GetItemsByUserNameResult>>>> GetItemsByUserName(
+        [FromRoute] string username,
+        CancellationToken cancellationToken = default) =>
+        this.ToActionResult(await mediator.Send(new GetItemsByUserNameQuery(username), cancellationToken));
 
     /// <summary>
-    /// 建立目前登入使用者的新物品
+    /// 建立目前登入使用者的新物品，但不支援上傳圖片
     /// </summary>
-    /// <param name="command">建立物品請求</param>
+    /// <param name="request">建立物品請求</param>
     /// <param name="cancellationToken">取消作業的通知權杖</param>
     /// <returns>新建立物品的資訊</returns>
-    [HttpPost("/api/v1/catalog/items")]
+    [HttpPost("/api/v1/catalog/items/create")]
     [HasPermission(Permissions.CreateItems)]
     public async Task<ActionResult<ApiResponse<CreateItemResult>>> Create(
-        [FromBody] CreateItemCommand command,
+        [FromBody] CreateItemWithoutImageRequest request,
         CancellationToken cancellationToken) =>
-        await CreateForCurrentUserAsync(command, null, cancellationToken);
+        await CreateForCurrentUserAsync(new CreateItemForCurrentUserDto(
+            request.ObjectName,
+            request.Maker,
+            request.Material,
+            request.Description,
+            null), cancellationToken);
 
     /// <summary>
-    /// 使用 multipart/form-data 建立目前登入使用者的新物品
+    /// 使用 multipart/form-data 建立目前登入使用者的新物品，支援上傳圖片
     /// </summary>
-    /// <param name="form">建立物品表單，包含物品資料與選填圖片</param>
+    /// <param name="request">建立物品表單，包含物品資料與選填圖片</param>
     /// <param name="cancellationToken">取消作業的通知權杖</param>
     /// <returns>新建立物品的資訊</returns>
-    [HttpPost("/api/v1/catalog/items/form")]
+    [HttpPost("/api/v1/catalog/items/create/form")]
     [HasPermission(Permissions.CreateItems)]
     [Consumes("multipart/form-data")]
     public async Task<ActionResult<ApiResponse<CreateItemResult>>> CreateWithForm(
-        [FromForm] CreateItemFormCommand form,
-        CancellationToken cancellationToken)
-    {
-        var command = new CreateItemCommand(form.ObjectName, form.Maker, form.Material, form.Description);
-        return await CreateForCurrentUserAsync(command, form.Image, cancellationToken);
-    }
+        [FromForm] CreateItemWithImageRequest request,
+        CancellationToken cancellationToken) =>
+        await CreateForCurrentUserAsync(new CreateItemForCurrentUserDto(
+            request.ObjectName,
+            request.Maker,
+            request.Material,
+            request.Description,
+            request.File),
+            cancellationToken);
 
+    /// <summary>
+    /// 建立物品資料與預覽圖
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     private async Task<ActionResult<ApiResponse<CreateItemResult>>> CreateForCurrentUserAsync(
-        CreateItemCommand command,
-        IFormFile? image,
-        CancellationToken cancellationToken)
+        CreateItemForCurrentUserDto dto,
+        CancellationToken cancellationToken = default)
     {
         var userId = executionContext.Current.User.UserId;
         if (userId <= 0)
@@ -85,13 +103,24 @@ public sealed class ItemsController(
             return this.ApiFailure<CreateItemResult>(ControllerApiErrors.TokenInvalid());
         }
 
-        await using var stream = image?.OpenReadStream();
-        var fileFormat = image is null ? null : new FileFormat(stream!, image.Length, image.FileName, image.ContentType);
-        var created = await mediator.Send(command with { UserId = userId, FileFormat = fileFormat }, cancellationToken);
+        await using var stream = dto.Image?.OpenReadStream();
 
-        return this.ToCreatedActionResult(created.IsSuccess ? $"/api/v1/catalog/items" : "", created);
+        var fileFormat = dto.Image is null
+            ? null
+            : new FileFormat(stream!, dto.Image.Length, dto.Image.FileName, dto.Image.ContentType);
+
+        var created = await mediator.Send(new CreateItemCommand(dto.ObjectName,
+            dto.Maker,
+            dto.Material,
+            dto.Description,
+            userId,
+            fileFormat), cancellationToken);
+
+        return this.ToCreatedActionResult(created.IsSuccess
+            ? $"/api/v1/catalog/items"
+            : "", created);
     }
-
+    
     /// <summary>
     /// 使用擁有者 username 與物品名稱取得物品詳細資訊
     /// </summary>
@@ -101,7 +130,9 @@ public sealed class ItemsController(
         [FromRoute] string username,
         [FromRoute] string objectName,
         CancellationToken cancellation) =>
-        this.ToActionResult(await mediator.Send(new GetItemByNameQuery(username, objectName), cancellation));
+        this.ToActionResult(await mediator.Send(
+            new GetItemByNameQuery(username,
+                objectName), cancellation));
 
     /// <summary>
     /// 更新物品資訊
@@ -111,24 +142,49 @@ public sealed class ItemsController(
     /// <param name="command">更新物品請求</param>
     /// <param name="cancellationToken">取消作業的通知權杖</param>
     /// <returns>更新後的物品資訊</returns>
-    [HttpPut("/api/v1/catalog/users/{username}/items/{objectName}")]
-    [HasPermission(Permissions.UpdateItems)]
-    public async Task<ActionResult<ApiResponse<UpdateItemResult>>> Update([FromRoute] string username, [FromRoute] string objectName, [FromBody] UpdateItemCommand command, CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<UpdateItemResult>>> Update(
+        [FromBody] UpdateItemRequest request,
+        CancellationToken cancellationToken)
     {
         var userId = executionContext.Current.User.UserId;
         if (userId <= 0)
         {
-            return this.ApiFailure<UpdateItemResult>(ControllerApiErrors.TokenInvalid());
+            return this.ApiFailure<UpdateItemResult>(
+                ControllerApiErrors.TokenInvalid());
         }
 
-        return this.ToActionResult(await mediator.Send(command with
-        {
-            OwnerUsername = username,
-            OriginalObjectName = objectName,
-            CurrentUserId = userId,
-            IsAdmin = executionContext.Current.User.IsAdmin
-        }, cancellationToken));
+        //todo: UpdateItemCommand, UpdateItemRequest 都需要更新
+        return this.ToActionResult(await mediator.Send(new UpdateItemCommand(
+            request.ObjectName,
+            request.Maker,
+            request.Material,
+            request.Description,
+            request.CurrentStatus,
+            request.OriginUrl)
+            , cancellationToken));
     }
+    
+    // [HttpPut("/api/v1/catalog/users/{username}/items/{objectName}")]
+    // [HasPermission(Permissions.UpdateItems)]
+    // public async Task<ActionResult<ApiResponse<UpdateItemResult>>> Update([FromRoute] string username,
+    //     [FromRoute] string objectName,
+    //     [FromBody] UpdateItemCommand command,
+    //     CancellationToken cancellationToken)
+    // {
+    //     var userId = executionContext.Current.User.UserId;
+    //     if (userId <= 0)
+    //     {
+    //         return this.ApiFailure<UpdateItemResult>(ControllerApiErrors.TokenInvalid());
+    //     }
+    //
+    //     return this.ToActionResult(await mediator.Send(command with
+    //     {
+    //         OwnerUsername = username,
+    //         OriginalObjectName = objectName,
+    //         CurrentUserId = userId,
+    //         IsAdmin = executionContext.Current.User.IsAdmin
+    //     }, cancellationToken));
+    // }
 
     /// <summary>
     /// 上傳或更新物品主圖

@@ -8,16 +8,19 @@
     <Project Path="src/LendingSystem.Auth.Application/LendingSystem.Auth.Application.csproj" />
     <Project Path="src/LendingSystem.Auth.Domain/LendingSystem.Auth.Domain.csproj" />
     <Project Path="src/LendingSystem.Auth.Infrastructure/LendingSystem.Auth.Infrastructure.csproj" />
+    <Project Path="src/LendingSystem.Auth.WebApi/LendingSystem.Auth.WebApi.csproj" />
   </Folder>
   <Folder Name="/src/Module/Lending/">
     <Project Path="src/LendingSystem.Lending.Application/LendingSystem.Lending.Application.csproj" />
     <Project Path="src/LendingSystem.Lending.Domain/LendingSystem.Lending.Domain.csproj" />
     <Project Path="src/LendingSystem.Lending.Infrastructure/LendingSystem.Lending.Infrastructure.csproj" />
+    <Project Path="src/LendingSystem.Lending.WebApi/LendingSystem.Lending.WebApi.csproj" />
   </Folder>
   <Folder Name="/src/Module/SharedKernel/">
     <Project Path="src/LendingSystem.SharedKernel.Application/LendingSystem.SharedKernel.Application.csproj" />
     <Project Path="src/LendingSystem.SharedKernel.Domain/LendingSystem.SharedKernel.Domain.csproj" />
     <Project Path="src/LendingSystem.SharedKernel.Infrastructure/LendingSystem.SharedKernel.Infrastructure.csproj" />
+    <Project Path="src/LendingSystem.SharedKernel.WebApi/LendingSystem.SharedKernel.WebApi.csproj" />
   </Folder>
   <Folder Name="/tests/" />
   <Folder Name="/tests/Integration/">

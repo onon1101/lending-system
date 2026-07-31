@@ -1,10 +1,11 @@
 using LendingSystem.Lending.Application.Media;
 using LendingSystem.Lending.Application.Media.UploadPrivateMedia;
 using LendingSystem.WebApi.Configuration.Authorization;
+using LendingSystem.WebApi.Controllers;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
-namespace LendingSystem.WebApi.Controllers;
+namespace LendingSystem.Lending.WebApi.Controllers;
 
 [ApiController]
 public sealed class MediaController(IMediator mediator) : ControllerBase

@@ -1,10 +1,11 @@
 using LendingSystem.SharedKernel.Application.Common;
 using LendingSystem.SharedKernel.Domain.Common;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LendingSystem.WebApi.Controllers;
 
-internal static class ControllerResultExtensions
+public static class ControllerResultExtensions
 {
     public static ActionResult<ApiResponse<T>> ToActionResult<T>(this ControllerBase controller, Result<T> result)
     {

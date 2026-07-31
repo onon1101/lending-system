@@ -60,4 +60,10 @@ public sealed record Result<T> : IResult
     /// <returns></returns>
     public static Result<T> Failure(Errors error) =>
         new(default, false, error);
+
+    /// <summary>
+    /// Converts a value into a successful result.
+    /// </summary>
+    /// <param name="data">The successful result value.</param>
+    public static implicit operator Result<T>(T data) => Success(data);
 }

@@ -27,11 +27,14 @@
     <ProjectReference Include="..\LendingSystem.Auth.ACL\LendingSystem.Auth.ACL.csproj" />
     <ProjectReference Include="..\LendingSystem.Auth.Application\LendingSystem.Auth.Application.csproj" />
     <ProjectReference Include="..\LendingSystem.Auth.Infrastructure\LendingSystem.Auth.Infrastructure.csproj" />
+    <ProjectReference Include="..\LendingSystem.Auth.WebApi\LendingSystem.Auth.WebApi.csproj" />
     <ProjectReference Include="..\LendingSystem.Lending.Application\LendingSystem.Lending.Application.csproj" />
     <ProjectReference Include="..\LendingSystem.Lending.Infrastructure\LendingSystem.Lending.Infrastructure.csproj" />
+    <ProjectReference Include="..\LendingSystem.Lending.WebApi\LendingSystem.Lending.WebApi.csproj" />
     <ProjectReference Include="..\LendingSystem.SharedKernel.Application\LendingSystem.SharedKernel.Application.csproj" />
     <ProjectReference Include="..\LendingSystem.SharedKernel.Domain\LendingSystem.SharedKernel.Domain.csproj" />
     <ProjectReference Include="..\LendingSystem.SharedKernel.Infrastructure\LendingSystem.SharedKernel.Infrastructure.csproj" />
+    <ProjectReference Include="..\LendingSystem.SharedKernel.WebApi\LendingSystem.SharedKernel.WebApi.csproj" />
   </ItemGroup>
 
 </Project>

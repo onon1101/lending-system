@@ -10,10 +10,11 @@ using LendingSystem.Lending.Application.Loans.RejectLoanRequestCommand;
 using LendingSystem.Lending.Application.Loans.ReturnLoanItem;
 using LendingSystem.Lending.Application.Loans.UpdateLoanRecordTime;
 using LendingSystem.WebApi.Configuration.Authorization;
+using LendingSystem.WebApi.Controllers;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
-namespace LendingSystem.WebApi.Controllers;
+namespace LendingSystem.Lending.WebApi.Controllers;
 
 [ApiController]
 public sealed class LoansController(IMediator mediator) : ControllerBase
