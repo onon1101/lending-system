@@ -26,7 +26,11 @@ public sealed class LoanRequestStatus : Enumeration<int, string>
     public static readonly LoanRequestStatus Cancelled =
         new(3, nameof(Cancelled));
 
-
+    /// <summary>
+    /// 建構子
+    /// </summary>
+    /// <param name="key"></param>
+    /// <param name="value"></param>
     public LoanRequestStatus(int key, string value) : base(key, value)
     {
     }
